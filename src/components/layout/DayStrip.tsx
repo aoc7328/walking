@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import {
   DndContext,
   PointerSensor,
@@ -23,6 +24,22 @@ export default function DayStrip() {
   const addDayAfter = useTripStore((s) => s.addDayAfter);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  // 滾輪垂直 → 橫向捲動（不影響 trackpad 原本就有的橫向 deltaX）
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      if (e.deltaY === 0) return;
+      // 只在元素內可橫向捲動時才接管，避免被卡死
+      if (el!.scrollWidth <= el!.clientWidth) return;
+      e.preventDefault();
+      el!.scrollLeft += e.deltaY;
+    }
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   if (!trip) return <div className="day-strip-wrap" />;
 
@@ -55,7 +72,7 @@ export default function DayStrip() {
             </button>
           </div>
         </div>
-        <div className="day-strip-list thin-scroll">
+        <div className="day-strip-list thin-scroll" ref={listRef}>
           <div className="day-tab add" title="往前新增一天" onClick={addDayBefore}>
             <span>+</span>
             <span className="add-label">往前</span>
