@@ -18,7 +18,6 @@ export default function MapPanel() {
           <span>搜尋結果</span>
         </div>
       </div>
-      <div className="helper-tip">提示：點 marker 可看詳細資料　·　在搜尋列輸入關鍵字加入行程</div>
     </section>
   );
 }

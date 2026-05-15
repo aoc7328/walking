@@ -4,7 +4,7 @@ import { useTripStore } from '../../stores/tripStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { fetchPlaceDetails, getGoogleMapsPlaceUrl, getGoogleMapsReviewsUrl } from '../../services/googleMaps';
 import type { Place, PlaceReview } from '../../types/place';
-import { formatStars } from '../../utils/format';
+import { formatStars, uuid } from '../../utils/format';
 
 export default function PlaceDetailModal() {
   const placeId = useUIStore((s) => s.detailModalPlaceId);
@@ -35,18 +35,41 @@ export default function PlaceDetailModal() {
 
   useEffect(() => {
     let cancelled = false;
-    setDetail(seed);
-    if (seed) {
-      fetchPlaceDetails(seed.placeId).then((more) => {
-        if (!cancelled && more) {
-          setDetail({ ...seed, ...more });
-        }
-      });
+    if (!placeId) {
+      setDetail(null);
+      return;
     }
+    setDetail(seed);
+    fetchPlaceDetails(placeId).then((more) => {
+      if (cancelled || !more) return;
+      if (seed) {
+        setDetail({ ...seed, ...more });
+      } else {
+        // 沒有 seed（例如直接從地圖 POI 點擊進來）：用 Google 回傳組一個 Place
+        if (!more.coordinates) return; // 沒座標就放棄
+        const fetched: Place = {
+          id: uuid(),
+          placeId,
+          name: more.name ?? '',
+          address: more.address ?? '',
+          coordinates: more.coordinates,
+          types: more.types ?? [],
+          rating: more.rating,
+          reviewCount: more.reviewCount,
+          phoneNumber: more.phoneNumber,
+          website: more.website,
+          openingHours: more.openingHours,
+          priceLevel: more.priceLevel,
+          photoUrls: more.photoUrls,
+          reviews: more.reviews,
+        };
+        setDetail(fetched);
+      }
+    });
     return () => {
       cancelled = true;
     };
-  }, [seed]);
+  }, [seed, placeId]);
 
   if (!placeId || !detail || !trip) return null;
 

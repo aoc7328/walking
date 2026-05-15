@@ -27,6 +27,7 @@ interface TripStore {
   removeItem: (dayId: string, itemId: string) => void;
   updateItem: (dayId: string, itemId: string, patch: Partial<Pick<ItineraryItem, 'arrivalTime' | 'stayMinutes' | 'notes' | 'arrivalManual'>>) => void;
   reorderItems: (dayId: string, fromIndex: number, toIndex: number) => void;
+  copyItemToDay: (srcDayId: string, itemId: string, destDayId: string) => void;
   setLegMode: (dayId: string, legIndex: number, mode: TransportMode) => void;
   setLegDuration: (dayId: string, legIndex: number, minutes: number) => void;
 
@@ -238,6 +239,30 @@ export const useTripStore = create<TripStore>((set, get) => ({
         if (!moved) return d;
         items.splice(toIndex, 0, moved);
         const legs = recalcLegsArray(items, d.legs);
+        return { ...d, items, legs };
+      });
+      return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };
+    }),
+
+  copyItemToDay: (srcDayId, itemId, destDayId) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const srcDay = state.trip.days.find((d) => d.id === srcDayId);
+      const srcItem = srcDay?.items.find((it) => it.id === itemId);
+      if (!srcItem) return {};
+      const days = state.trip.days.map((d) => {
+        if (d.id !== destDayId) return d;
+        const insertIndex = findBestInsertPosition(srcItem.place, d, 'driving');
+        const newItem: ItineraryItem = {
+          ...srcItem,
+          id: uuid(),
+          notes: srcItem.notes ? [...srcItem.notes] : undefined,
+          autoFilled: false,
+          arrivalManual: false,
+        };
+        const items = [...d.items];
+        items.splice(insertIndex, 0, newItem);
+        const legs = recalcLegsArray(items, [...d.legs, { mode: 'driving' }]);
         return { ...d, items, legs };
       });
       return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };

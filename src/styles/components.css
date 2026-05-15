@@ -1128,7 +1128,137 @@
   width: 50px;
 }
 
-/* ========== 停留／離開 兩段式輸入 ========== */
+/* ========== 兩行式時間輸入 ========== */
+.item-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.item-card-actions {
+  flex-shrink: 0;
+  position: relative;
+}
+
+.item-copy-wrap {
+  position: relative;
+}
+
+.item-copy-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all var(--t-fast);
+}
+
+.item-copy-btn:hover {
+  background: var(--bg-soft);
+  border-color: var(--ink-faint);
+}
+
+.item-copy-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  z-index: 40;
+  overflow: hidden;
+  animation: slideUp var(--t-fast);
+}
+
+.item-copy-menu-label {
+  padding: 6px 10px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--ink-muted);
+  background: var(--bg-softer);
+  border-bottom: 0.5px solid var(--border-soft);
+  letter-spacing: 0.05em;
+}
+
+.item-copy-menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  text-align: left;
+  transition: background var(--t-fast);
+}
+
+.item-copy-menu-item:hover {
+  background: var(--bg-soft);
+}
+
+.item-copy-menu-item.current {
+  background: var(--accent-primary-soft);
+}
+
+.item-copy-menu-day {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-primary);
+}
+
+.item-copy-menu-date {
+  font-size: 11px;
+  color: var(--ink-muted);
+  flex: 1;
+}
+
+.item-copy-menu-today {
+  font-size: 10px;
+  color: var(--accent-warm);
+  background: var(--accent-warm-soft);
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.05em;
+}
+
+.item-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.item-leave-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-primary);
+  padding: 2px 6px 2px 8px;
+  border: 0.5px solid transparent;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+}
+
+.item-stay-hint {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.02em;
+}
+
+/* 舊版命名相容（下面有 .item-duration-row 也許還在用）*/
 .item-duration-row {
   display: flex;
   align-items: center;

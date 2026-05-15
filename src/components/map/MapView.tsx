@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, useMap, type MapMouseEvent } from '@vis.gl/react-google-maps';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
@@ -44,6 +44,15 @@ export default function MapView() {
   const trip = useTripStore((s) => s.trip);
   const currentDayId = useUIStore((s) => s.currentDayId);
   const searchResults = useSearchStore((s) => s.results);
+  const openDetail = useUIStore((s) => s.openDetail);
+
+  function handleMapClick(e: MapMouseEvent) {
+    const placeId = e.detail?.placeId;
+    if (placeId) {
+      e.stop?.();
+      openDetail(placeId, 'search');
+    }
+  }
 
   const day = trip?.days.find((d) => d.id === currentDayId) ?? null;
 
@@ -104,6 +113,8 @@ export default function MapView() {
         defaultZoom={day ? 11 : DEFAULT_ZOOM}
         gestureHandling="greedy"
         disableDefaultUI={false}
+        clickableIcons={true}
+        onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}
       >
         <MapAutoCenter targetCenter={center} points={itineraryPath} />

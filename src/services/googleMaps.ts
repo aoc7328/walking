@@ -183,9 +183,20 @@ export async function fetchPlaceDetails(placeId: string): Promise<Partial<Place>
         time: rv.publishTime instanceof Date ? rv.publishTime.getTime() : undefined,
       }));
 
+    let coordinates: { lat: number; lng: number } | undefined;
+    const loc = place.location;
+    if (loc && typeof loc.lat === 'function' && typeof loc.lng === 'function') {
+      const lat = loc.lat();
+      const lng = loc.lng();
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        coordinates = { lat, lng };
+      }
+    }
+
     return {
       name: place.displayName ?? undefined,
       address: place.formattedAddress ?? undefined,
+      coordinates,
       rating: typeof place.rating === 'number' ? place.rating : undefined,
       reviewCount: typeof place.userRatingCount === 'number' ? place.userRatingCount : undefined,
       phoneNumber: place.nationalPhoneNumber ?? undefined,
