@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>走走　·　行旅編輯室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Noto+Serif+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-page: #FAF7F0;
+    --bg-card: #FFFFFF;
+    --bg-soft: #F2EDE0;
+    --bg-softer: #F7F2E5;
+
+    --ink-primary: #2C2620;
+    --ink-secondary: #6B5F50;
+    --ink-muted: #A89C8B;
+    --ink-faint: #C9B894;
+
+    --accent-primary: #2C4A3D;
+    --accent-primary-soft: #E5EDEA;
+    --accent-warm: #D85A30;
+    --accent-warm-soft: #FAEDE4;
+    --accent-purple: #5B4B7F;
+
+    --border-soft: #E8DFD0;
+    --border-medium: #D4C8B2;
+
+    --shadow-soft: 0 1px 2px rgba(60, 45, 20, 0.04);
+    --shadow-card: 0 1px 3px rgba(60, 45, 20, 0.06), 0 1px 2px rgba(60, 45, 20, 0.04);
+    --shadow-modal: 0 20px 50px rgba(60, 45, 20, 0.15), 0 4px 12px rgba(60, 45, 20, 0.08);
+
+    --font-display: 'Fraunces', 'Noto Serif TC', Georgia, serif;
+    --font-body: 'Noto Serif TC', 'Fraunces', Georgia, serif;
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 10px;
+    --radius-xl: 14px;
+
+    --t-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --t-med: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --t-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-body);
+    color: var(--ink-primary);
+    background: var(--bg-page);
+    font-feature-settings: "palt" 1, "kern" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 全域紙感背景 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(216, 90, 48, 0.025), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, rgba(44, 74, 61, 0.03), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ========== App Shell ========== */
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ========== Header ========== */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    border-bottom: 0.5px solid var(--border-soft);
+    background: var(--bg-page);
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+
+  .brand-mark {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--accent-primary);
+    letter-spacing: -0.02em;
+    font-style: italic;
+  }
+
+  .brand-divider {
+    width: 1px;
+    height: 14px;
+    background: var(--border-medium);
+    align-self: center;
+  }
+
+  .trip-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .trip-name {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+  }
+
+  .trip-meta {
+    font-size: 11px;
+    color: var(--ink-muted);
+    font-feature-settings: "tnum" 1;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink-secondary);
+    background: transparent;
+    border: 0.5px solid var(--border-medium);
+    padding: 5px 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--t-fast);
+    letter-spacing: 0.01em;
+  }
+
+  .btn:hover {
+    background: var(--bg-soft);
+    color: var(--ink-primary);
+    border-color: var(--ink-faint);
+  }
+
+  .btn-primary {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+  }
+
+  .btn-primary:hover {
+    background: #234037;
+    color: white;
+    border-color: #234037;
+  }
+
+  .btn-warm {
+    background: var(--accent-warm);
+    color: white;
+    border-color: var(--accent-warm);
+  }
+
+  .btn-warm:hover {
+    background: #C04F2A;
+    color: white;
+    border-color: #C04F2A;
+  }
+
+  /* ========== Search Bar ========== */
+  .search-bar-wrap {
+    padding: 10px 22px;
+    border-bottom: 0.5px solid var(--border-soft);
+    background: var(--bg-page);
+    transition: all var(--t-med);
+  }
+
+  .search-bar-wrap.collapsed {
+    padding: 4px 22px;
+    height: 24px;
+  }
+
+  .search-bar-wrap.collapsed .search-content {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .search-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity var(--t-fast);
+  }
+
+  .search-input-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 0.5px solid var(--accent-primary);
+    border-radius: var(--radius-md);
+    padding: 0 12px;
+    height: 32px;
+    box-shadow: 0 0 0 3px rgba(44, 74, 61, 0.06);
+    transition: all var(--t-fast);
+  }
+
+  .search-input-wrap:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(44, 74, 61, 0.12);
+  }
+
+  .search-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink-primary);
+    padding: 0 8px;
+    height: 100%;
+  }
+
+  .search-input::placeholder {
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  .search-clear {
+    font-size: 11px;
+    color: var(--ink-muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    transition: all var(--t-fast);
+  }
+
+  .search-clear:hover {
+    background: var(--bg-soft);
+    color: var(--ink-primary);
+  }
+
+  /* ========== Main 3-column ========== */
+  .main {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+  }
+
+  .main.no-left {
+    grid-template-columns: 0 1fr auto;
+  }
+
+  .main.no-right {
+    grid-template-columns: auto 1fr 0;
+  }
+
+  .main.no-left.no-right {
+    grid-template-columns: 0 1fr 0;
+  }
+
+  /* ========== Left Panel ========== */
+  .left-panel {
+    width: 260px;
+    background: var(--bg-softer);
+    border-right: 0.5px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width var(--t-med);
+    position: relative;
+  }
+
+  .left-panel.collapsed {
+    width: 0;
+    border-right: none;
+  }
+
+  .left-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 8px;
+    flex-shrink: 0;
+  }
+
+  .left-panel-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .left-panel-count {
+    font-size: 10px;
+    color: var(--ink-muted);
+    font-feature-settings: "tnum" 1;
+  }
+
+  .left-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .left-panel-list::-webkit-scrollbar { width: 4px; }
+  .left-panel-list::-webkit-scrollbar-track { background: transparent; }
+  .left-panel-list::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 2px; }
+
+  .place-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--t-fast);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .place-card:hover {
+    border-color: var(--border-medium);
+    box-shadow: var(--shadow-card);
+    transform: translateY(-1px);
+  }
+
+  .place-card-image {
+    width: 100%;
+    height: 90px;
+    background: linear-gradient(135deg, #E8DFD0 0%, #D4C8B2 100%);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .place-card-image.warm {
+    background: linear-gradient(135deg, #F0D5B8 0%, #E0B58A 100%);
+  }
+
+  .place-card-image.green {
+    background: linear-gradient(135deg, #C8D6CC 0%, #94B0A0 100%);
+  }
+
+  .place-card-image.blue {
+    background: linear-gradient(135deg, #C5D0DC 0%, #95A8BD 100%);
+  }
+
+  .place-card-image.dusty {
+    background: linear-gradient(135deg, #D8C8C0 0%, #B5A095 100%);
+  }
+
+  .place-card-image-label {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.05em;
+  }
+
+  .place-card-body {
+    padding: 8px 10px 10px;
+  }
+
+  .place-card-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    line-height: 1.3;
+    margin-bottom: 3px;
+  }
+
+  .place-card-meta {
+    font-size: 10px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+    margin-bottom: 8px;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .place-card-star {
+    color: var(--accent-warm);
+    font-size: 11px;
+  }
+
+  .place-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .icon-btn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0.5px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--t-fast);
+    font-size: 12px;
+    color: var(--ink-secondary);
+  }
+
+  .icon-btn:hover {
+    background: var(--bg-soft);
+    border-color: var(--ink-faint);
+    color: var(--ink-primary);
+  }
+
+  .icon-btn.add {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .icon-btn.add:hover {
+    background: #234037;
+    border-color: #234037;
+    color: white;
+  }
+
+  .icon-btn.favorited {
+    background: var(--accent-warm-soft);
+    border-color: var(--accent-warm);
+    color: var(--accent-warm);
+  }
+
+  /* ========== Map Panel ========== */
+  .map-panel {
+    position: relative;
+    overflow: hidden;
+    background: #EEEAE0;
+  }
+
+  .map-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(125deg, rgba(232, 220, 200, 0.5) 0%, transparent 40%),
+      linear-gradient(45deg, rgba(220, 230, 220, 0.4) 0%, transparent 50%),
+      #E5DFD0;
+  }
+
+  .map-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(170, 155, 130, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(170, 155, 130, 0.12) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* 模擬地圖的道路 */
+  .map-road {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.5);
+    height: 8px;
+  }
+
+  .map-road.thin {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  /* 模擬地圖的綠地 */
+  .map-park {
+    position: absolute;
+    background: rgba(170, 195, 165, 0.35);
+    border-radius: 30% 50% 40% 60%;
+  }
+
+  /* 模擬地圖的水域 */
+  .map-water {
+    position: absolute;
+    background: rgba(170, 195, 210, 0.4);
+    border-radius: 40% 60% 50% 40%;
+  }
+
+  .route-line {
+    fill: none;
+    stroke: var(--accent-primary);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 1px 2px rgba(44, 74, 61, 0.25));
+  }
+
+  .marker {
+    cursor: pointer;
+    transition: transform var(--t-fast);
+  }
+
+  .marker:hover {
+    transform: scale(1.15);
+  }
+
+  .marker-circle {
+    fill: var(--accent-primary);
+    stroke: white;
+    stroke-width: 2;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
+  }
+
+  .marker-hotel .marker-circle {
+    fill: var(--accent-purple);
+  }
+
+  .marker-search .marker-circle {
+    fill: white;
+    stroke: var(--accent-warm);
+    stroke-width: 2.5;
+  }
+
+  .marker-search .marker-dot {
+    fill: var(--accent-warm);
+  }
+
+  .marker-text {
+    fill: white;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 500;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+  }
+
+  .marker-search .marker-text {
+    fill: var(--accent-warm);
+  }
+
+  .map-legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    display: flex;
+    gap: 14px;
+    box-shadow: var(--shadow-card);
+    font-size: 11px;
+    color: var(--ink-secondary);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-dot.hotel { background: var(--accent-purple); }
+  .legend-dot.added { background: var(--accent-primary); }
+  .legend-dot.search {
+    background: white;
+    border: 2px solid var(--accent-warm);
+    box-sizing: content-box;
+    width: 6px;
+    height: 6px;
+  }
+
+  /* ========== Right Panel ========== */
+  .right-panel {
+    width: 320px;
+    background: var(--bg-page);
+    border-left: 0.5px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width var(--t-med);
+  }
+
+  .right-panel.collapsed {
+    width: 0;
+    border-left: none;
+  }
+
+  .right-panel-header {
+    padding: 14px 18px 12px;
+    border-bottom: 0.5px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+
+  .right-panel-day-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .right-panel-day-num {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--accent-primary);
+    letter-spacing: -0.02em;
+  }
+
+  .right-panel-day-num em {
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .right-panel-day-date {
+    font-size: 12px;
+    color: var(--ink-secondary);
+    font-feature-settings: "tnum" 1;
+  }
+
+  .right-panel-day-meta {
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .right-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .right-panel-list::-webkit-scrollbar { width: 4px; }
+  .right-panel-list::-webkit-scrollbar-track { background: transparent; }
+  .right-panel-list::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 2px; }
+
+  .itinerary-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all var(--t-fast);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+  }
+
+  .itinerary-card:hover {
+    border-color: var(--border-medium);
+    box-shadow: var(--shadow-card);
+  }
+
+  .itinerary-card.next-stop {
+    border-color: var(--accent-warm);
+    background: linear-gradient(180deg, var(--accent-warm-soft) 0%, var(--bg-card) 100%);
+    box-shadow: 0 1px 3px rgba(216, 90, 48, 0.12);
+  }
+
+  .itinerary-card.next-stop::before {
+    content: '下一站';
+    position: absolute;
+    top: -7px;
+    left: 12px;
+    background: var(--accent-warm);
+    color: white;
+    font-size: 9px;
+    padding: 1px 7px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    font-family: var(--font-display);
+    font-weight: 500;
+  }
+
+  .item-marker {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(44, 74, 61, 0.2);
+  }
+
+  .item-marker.hotel {
+    background: var(--accent-purple);
+  }
+
+  .item-body {
+    min-width: 0;
+  }
+
+  .item-time-name {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 2px;
+  }
+
+  .item-time {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent-primary);
+    font-feature-settings: "tnum" 1;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  .item-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .item-stay {
+    font-size: 10px;
+    color: var(--ink-muted);
+    margin-bottom: 4px;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .item-notes {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 0.5px dashed var(--border-medium);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .item-note {
+    font-size: 11px;
+    color: var(--ink-secondary);
+    line-height: 1.4;
+    padding-left: 10px;
+    position: relative;
+  }
+
+  .item-note::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--accent-warm);
+  }
+
+  .leg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 6px 30px;
+    color: var(--ink-muted);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .leg-line {
+    flex: 0 0 16px;
+    height: 12px;
+    border-left: 1px dashed var(--border-medium);
+    margin-left: -16px;
+  }
+
+  .leg-mode {
+    color: var(--accent-primary);
+    font-weight: 500;
+    font-family: var(--font-display);
+  }
+
+  .leg-divider {
+    color: var(--ink-faint);
+  }
+
+  /* ========== Day Strip ========== */
+  .day-strip-wrap {
+    border-top: 0.5px solid var(--border-soft);
+    background: var(--bg-page);
+    transition: all var(--t-med);
+    flex-shrink: 0;
+  }
+
+  .day-strip-wrap.collapsed {
+    height: 24px;
+    overflow: hidden;
+  }
+
+  .day-strip-wrap.collapsed .day-strip-content {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .day-strip-content {
+    transition: opacity var(--t-fast);
+  }
+
+  .day-strip-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 22px 4px;
+  }
+
+  .day-strip-label {
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .day-strip-tools {
+    display: flex;
+    gap: 6px;
+  }
+
+  .day-strip-list {
+    display: flex;
+    gap: 6px;
+    padding: 4px 22px 14px;
+    overflow-x: auto;
+    align-items: stretch;
+  }
+
+  .day-strip-list::-webkit-scrollbar { height: 4px; }
+  .day-strip-list::-webkit-scrollbar-track { background: transparent; }
+  .day-strip-list::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 2px; }
+
+  .day-tab {
+    flex-shrink: 0;
+    width: 88px;
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--t-fast);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .day-tab:hover {
+    border-color: var(--border-medium);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card);
+  }
+
+  .day-tab.active {
+    background: var(--accent-primary-soft);
+    border-color: var(--accent-primary);
+    border-width: 1px;
+  }
+
+  .day-tab.active .day-tab-num {
+    color: var(--accent-primary);
+  }
+
+  .day-tab-date {
+    font-size: 10px;
+    color: var(--ink-muted);
+    font-feature-settings: "tnum" 1;
+  }
+
+  .day-tab-num {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+
+  .day-tab-num em {
+    font-style: italic;
+  }
+
+  .day-tab-meta {
+    font-size: 10px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+
+  .day-tab.add {
+    background: transparent;
+    border: 1px dashed var(--border-medium);
+    width: 44px;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-muted);
+    font-family: var(--font-display);
+    font-size: 18px;
+  }
+
+  .day-tab.add:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    background: var(--accent-primary-soft);
+  }
+
+  .day-tab.add .add-label {
+    font-size: 9px;
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ========== Collapse toggle (各區塊邊緣) ========== */
+  .collapse-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--ink-secondary);
+    font-size: 11px;
+    transition: all var(--t-fast);
+  }
+
+  .collapse-toggle:hover {
+    background: var(--bg-soft);
+    color: var(--ink-primary);
+  }
+
+  /* 區塊收合後的「重新展開」按鈕 */
+  .expand-btn {
+    position: absolute;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-medium);
+    color: var(--ink-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--t-fast);
+    z-index: 5;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .expand-btn:hover {
+    background: var(--bg-soft);
+    color: var(--accent-primary);
+  }
+
+  .expand-search {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 18px;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    border-top: none;
+  }
+
+  .expand-left {
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 36px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    border-left: none;
+  }
+
+  .expand-right {
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 36px;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    border-right: none;
+  }
+
+  .expand-day {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 18px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    border-bottom: none;
+  }
+
+  /* ========== Modal ========== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(44, 38, 32, 0.4);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn var(--t-med);
+  }
+
+  .modal-backdrop.show {
+    display: flex;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal {
+    background: var(--bg-page);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
+    max-width: 480px;
+    width: calc(100% - 40px);
+    max-height: calc(100vh - 80px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp var(--t-med);
+  }
+
+  .modal-large {
+    max-width: 580px;
+  }
+
+  /* ========== Place Detail Modal ========== */
+  .detail-hero {
+    height: 200px;
+    background: linear-gradient(135deg, #D8A87A 0%, #B8845A 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .detail-hero-label {
+    position: absolute;
+    bottom: 14px;
+    left: 18px;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+
+  .detail-actions {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .detail-add-btn {
+    background: var(--accent-warm);
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(216, 90, 48, 0.3);
+    transition: all var(--t-fast);
+  }
+
+  .detail-add-btn:hover {
+    background: #C04F2A;
+    transform: translateY(-1px);
+  }
+
+  .detail-close {
+    width: 30px;
+    height: 30px;
+    background: rgba(44, 38, 32, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    transition: all var(--t-fast);
+    font-size: 14px;
+  }
+
+  .detail-close:hover {
+    background: rgba(44, 38, 32, 0.7);
+  }
+
+  .detail-body {
+    padding: 20px 24px 24px;
+    overflow-y: auto;
+  }
+
+  .detail-name {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--ink-primary);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+
+  .detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--ink-secondary);
+    margin-bottom: 16px;
+  }
+
+  .detail-rating {
+    color: var(--accent-warm);
+    font-weight: 500;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .detail-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 0.5px solid var(--border-soft);
+  }
+
+  .detail-section-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .detail-row {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--ink-primary);
+    line-height: 1.6;
+  }
+
+  .detail-row-label {
+    color: var(--ink-muted);
+    font-size: 12px;
+  }
+
+  .detail-hours {
+    font-feature-settings: "tnum" 1;
+    font-size: 12px;
+  }
+
+  .detail-photos {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .detail-photo {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+
+  .detail-photo:nth-child(1) { background: linear-gradient(135deg, #D8A87A, #B8845A); }
+  .detail-photo:nth-child(2) { background: linear-gradient(135deg, #C8D6CC, #94B0A0); }
+  .detail-photo:nth-child(3) { background: linear-gradient(135deg, #E0B58A, #C9A073); }
+  .detail-photo:nth-child(4) { background: linear-gradient(135deg, #C5D0DC, #95A8BD); }
+
+  .review {
+    padding: 10px 0;
+    border-bottom: 0.5px dashed var(--border-soft);
+  }
+
+  .review:last-child { border-bottom: none; }
+
+  .review-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .review-author {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-primary);
+  }
+
+  .review-stars {
+    color: var(--accent-warm);
+    font-size: 11px;
+  }
+
+  .review-text {
+    font-size: 12px;
+    color: var(--ink-secondary);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  /* ========== Change Start Date Modal ========== */
+  .modal-date {
+    padding: 24px;
+  }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .modal-subtitle {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-bottom: 20px;
+  }
+
+  .date-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 0.5px solid var(--border-soft);
+  }
+
+  .date-row:last-of-type {
+    border-bottom: none;
+  }
+
+  .date-row-label {
+    font-size: 12px;
+    color: var(--ink-secondary);
+  }
+
+  .date-row-value {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    font-feature-settings: "tnum" 1;
+  }
+
+  .date-input {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border: 0.5px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--ink-primary);
+    width: 100%;
+    cursor: pointer;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .date-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(44, 74, 61, 0.1);
+  }
+
+  .date-row-value-readonly {
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  /* ========== Empty / Helper ========== */
+  .helper-tip {
+    position: absolute;
+    bottom: 70px;
+    right: 16px;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-soft);
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: 11px;
+    color: var(--ink-muted);
+    box-shadow: var(--shadow-card);
+    max-width: 200px;
+    line-height: 1.5;
+  }
+
+  /* utility */
+  .italic { font-style: italic; }
+  .display-num { font-family: var(--font-display); font-feature-settings: "tnum" 1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ========== Header ========== -->
+  <header class="header">
+    <div class="brand">
+      <span class="brand-mark"><em>走走</em></span>
+      <span class="brand-divider"></span>
+      <div class="trip-info">
+        <span class="trip-name">臺灣西部　七日行旅</span>
+        <span class="trip-meta">2026/06/01 — 06/07　·　7 天　·　臺北・臺中・高雄</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn">儲存</button>
+      <button class="btn">匯出 PDF</button>
+      <button class="btn">分享</button>
+    </div>
+  </header>
+
+  <!-- ========== Search Bar ========== -->
+  <div class="search-bar-wrap" id="searchBar">
+    <div class="search-content">
+      <div class="search-input-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="search-input" type="text" id="searchInput" value="臺中　牛肉麵" placeholder="搜尋地點、餐廳、景點　·　或貼上 Google Maps 連結">
+        <span class="search-clear" id="searchClear">✕　清除</span>
+      </div>
+      <button class="collapse-toggle" onclick="toggleSection('search')" title="收合搜尋列">▴</button>
+    </div>
+  </div>
+
+  <!-- ========== Main 3-column ========== -->
+  <main class="main" id="main">
+
+    <!-- ========== Left Panel ========== -->
+    <aside class="left-panel" id="leftPanel">
+      <div class="left-panel-header">
+        <span class="left-panel-title">搜尋結果</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="left-panel-count">18 筆</span>
+          <button class="collapse-toggle" onclick="toggleSection('left')" style="width:18px;height:18px;font-size:9px;" title="收合左欄">◂</button>
+        </div>
+      </div>
+      <div class="left-panel-list">
+
+        <div class="place-card" onclick="openDetail()">
+          <div class="place-card-image warm"><span class="place-card-image-label">photograph</span></div>
+          <div class="place-card-body">
+            <div class="place-card-name">林家牛肉麵</div>
+            <div class="place-card-meta"><span class="place-card-star">★ 4.6</span>　·　北區　·　350 評</div>
+            <div class="place-card-actions">
+              <button class="icon-btn" title="收藏">♡</button>
+              <button class="icon-btn add" title="加入 Day 3">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="place-card" onclick="openDetail()">
+          <div class="place-card-image dusty"><span class="place-card-image-label">photograph</span></div>
+          <div class="place-card-body">
+            <div class="place-card-name">老王牛肉麵</div>
+            <div class="place-card-meta"><span class="place-card-star">★ 4.5</span>　·　西區　·　412 評</div>
+            <div class="place-card-actions">
+              <button class="icon-btn favorited" title="已收藏">♥</button>
+              <button class="icon-btn add" title="加入 Day 3">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="place-card" onclick="openDetail()">
+          <div class="place-card-image green"><span class="place-card-image-label">photograph</span></div>
+          <div class="place-card-body">
+            <div class="place-card-name">永川牛肉麵</div>
+            <div class="place-card-meta"><span class="place-card-star">★ 4.4</span>　·　南區　·　208 評</div>
+            <div class="place-card-actions">
+              <button class="icon-btn" title="收藏">♡</button>
+              <button class="icon-btn add" title="加入 Day 3">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="place-card" onclick="openDetail()">
+          <div class="place-card-image blue"><span class="place-card-image-label">photograph</span></div>
+          <div class="place-card-body">
+            <div class="place-card-name">清真包子館牛肉麵</div>
+            <div class="place-card-meta"><span class="place-card-star">★ 4.3</span>　·　中區　·　156 評</div>
+            <div class="place-card-actions">
+              <button class="icon-btn" title="收藏">♡</button>
+              <button class="icon-btn add" title="加入 Day 3">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="place-card" onclick="openDetail()">
+          <div class="place-card-image"><span class="place-card-image-label">photograph</span></div>
+          <div class="place-card-body">
+            <div class="place-card-name">三槐堂牛肉麵</div>
+            <div class="place-card-meta"><span class="place-card-star">★ 4.2</span>　·　北屯　·　98 評</div>
+            <div class="place-card-actions">
+              <button class="icon-btn" title="收藏">♡</button>
+              <button class="icon-btn add" title="加入 Day 3">+</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <button class="expand-btn expand-left" id="expandLeft" onclick="toggleSection('left')" style="display: none;">▸</button>
+
+    <!-- ========== Map Panel ========== -->
+    <section class="map-panel">
+      <div class="map-bg"></div>
+      <div class="map-grid"></div>
+
+      <!-- 模擬地圖元素 -->
+      <div class="map-park" style="left: 8%; top: 15%; width: 18%; height: 25%;"></div>
+      <div class="map-park" style="right: 12%; bottom: 18%; width: 20%; height: 22%;"></div>
+      <div class="map-water" style="left: 35%; top: 8%; width: 14%; height: 10%;"></div>
+
+      <div class="map-road" style="left: 5%; top: 35%; width: 90%; transform: rotate(-2deg);"></div>
+      <div class="map-road" style="left: 5%; top: 62%; width: 90%; transform: rotate(1deg);"></div>
+      <div class="map-road thin" style="left: 25%; top: 10%; width: 60%; transform: rotate(85deg); transform-origin: left;"></div>
+      <div class="map-road thin" style="left: 50%; top: 5%; width: 70%; transform: rotate(85deg); transform-origin: left;"></div>
+      <div class="map-road thin" style="left: 75%; top: 8%; width: 65%; transform: rotate(85deg); transform-origin: left;"></div>
+
+      <svg style="position: absolute; inset: 0; width: 100%; height: 100%;" viewBox="0 0 700 500" preserveAspectRatio="xMidYMid slice">
+        <!-- 路線（當天行程） -->
+        <path class="route-line" d="M 130,250 Q 200,200 250,210 T 350,240 T 460,200 T 540,260 Q 560,300 500,360" />
+
+        <!-- 已加入的點 markers -->
+        <g class="marker">
+          <circle class="marker-circle marker-hotel-bg" cx="130" cy="250" r="18" style="fill: var(--accent-purple); stroke: white; stroke-width: 2;"/>
+          <text class="marker-text" x="130" y="250">H</text>
+        </g>
+        <g class="marker">
+          <circle class="marker-circle" cx="220" cy="195" r="16"/>
+          <text class="marker-text" x="220" y="195">1</text>
+        </g>
+        <g class="marker">
+          <circle class="marker-circle" cx="310" cy="235" r="16"/>
+          <text class="marker-text" x="310" y="235">2</text>
+        </g>
+        <g class="marker">
+          <circle class="marker-circle" cx="400" cy="215" r="16"/>
+          <text class="marker-text" x="400" y="215">3</text>
+        </g>
+        <g class="marker">
+          <circle class="marker-circle" cx="490" cy="245" r="16"/>
+          <text class="marker-text" x="490" y="245">4</text>
+        </g>
+        <g class="marker">
+          <circle class="marker-circle" cx="540" cy="290" r="16"/>
+          <text class="marker-text" x="540" y="290">5</text>
+        </g>
+        <g class="marker marker-hotel">
+          <circle class="marker-circle" cx="500" cy="360" r="18"/>
+          <text class="marker-text" x="500" y="360">H</text>
+        </g>
+
+        <!-- 搜尋結果 markers -->
+        <g class="marker marker-search">
+          <circle class="marker-circle" cx="265" cy="320" r="14"/>
+          <circle class="marker-dot" cx="265" cy="320" r="5"/>
+        </g>
+        <g class="marker marker-search">
+          <circle class="marker-circle" cx="420" cy="140" r="14"/>
+          <circle class="marker-dot" cx="420" cy="140" r="5"/>
+        </g>
+        <g class="marker marker-search">
+          <circle class="marker-circle" cx="370" cy="380" r="14"/>
+          <circle class="marker-dot" cx="370" cy="380" r="5"/>
+        </g>
+        <g class="marker marker-search">
+          <circle class="marker-circle" cx="580" cy="180" r="14"/>
+          <circle class="marker-dot" cx="580" cy="180" r="5"/>
+        </g>
+      </svg>
+
+      <div class="map-legend">
+        <div class="legend-item">
+          <span class="legend-dot hotel"></span>
+          <span>飯店</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot added"></span>
+          <span>已加入</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot search"></span>
+          <span>搜尋結果</span>
+        </div>
+      </div>
+
+      <div class="helper-tip">
+        提示：點 marker 可看詳細資料　·　拖左欄卡片到右欄即加入
+      </div>
+    </section>
+
+    <button class="expand-btn expand-right" id="expandRight" onclick="toggleSection('right')" style="display: none;">◂</button>
+
+    <!-- ========== Right Panel ========== -->
+    <aside class="right-panel" id="rightPanel">
+      <div class="right-panel-header">
+        <div class="right-panel-day-top">
+          <span class="right-panel-day-num">Day <em>3</em></span>
+          <span class="right-panel-day-date">06/03（三）</span>
+        </div>
+        <div class="right-panel-day-meta">臺中　·　7 個點　·　拖拉重排</div>
+        <button class="collapse-toggle" onclick="toggleSection('right')" style="position:absolute;top:14px;right:18px;width:18px;height:18px;font-size:9px;" title="收合右欄">▸</button>
+      </div>
+      <div class="right-panel-list">
+
+        <div class="itinerary-card" onclick="openDetail()">
+          <div class="item-marker hotel">H</div>
+          <div class="item-body">
+            <div class="item-time-name">
+              <span class="item-time">09:00</span>
+              <span class="item-name">福華大飯店</span>
+            </div>
+            <div class="item-stay">停留 1 小時</div>
+            <div class="item-notes">
+              <div class="item-note">含早餐，自助式</div>
+              <div class="item-note">退房 11:00 前</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="leg">
+          <span class="leg-line"></span>
+          <span class="leg-mode">車</span>
+          <span class="leg-divider">·</span>
+          <span>15 分</span>
+        </div>
+
+        <div class="itinerary-card" onclick="openDetail()">
+          <div class="item-marker">1</div>
+          <div class="item-body">
+            <div class="item-time-name">
+              <span class="item-time">10:00</span>
+              <span class="item-name">國立自然科學博物館</span>
+            </div>
+            <div class="item-stay">停留 2 小時</div>
+          </div>
+        </div>
+
+        <div class="leg">
+          <span class="leg-line"></span>
+          <span class="leg-mode">走</span>
+          <span class="leg-divider">·</span>
+          <span>8 分</span>
+        </div>
+
+        <div class="itinerary-card next-stop" onclick="openDetail()">
+          <div class="item-marker">2</div>
+          <div class="item-body">
+            <div class="item-time-name">
+              <span class="item-time">12:30</span>
+              <span class="item-name">鼎泰豐臺中店</span>
+            </div>
+            <div class="item-stay">停留 1.5 小時</div>
+            <div class="item-notes">
+              <div class="item-note">訂位代碼 A823</div>
+              <div class="item-note">點小籠包要等 30 分</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="leg">
+          <span class="leg-line"></span>
+          <span class="leg-mode">車</span>
+          <span class="leg-divider">·</span>
+          <span>5 分</span>
+        </div>
+
+        <div class="itinerary-card" onclick="openDetail()">
+          <div class="item-marker">3</div>
+          <div class="item-body">
+            <div class="item-time-name">
+              <span class="item-time">14:00</span>
+              <span class="item-name">草悟道</span>
+            </div>
+            <div class="item-stay">停留 1.5 小時</div>
+          </div>
+        </div>
+
+        <div class="leg">
+          <span class="leg-line"></span>
+          <span class="leg-mode">走</span>
+          <span class="leg-divider">·</span>
+          <span>12 分</span>
+        </div>
+
+        <div class="itinerary-card" onclick="openDetail()">
+          <div class="item-marker">4</div>
+          <div class="item-body">
+            <div class="item-time-name">
+              <span class="item-time">16:00</span>
+              <span class="item-name">審計新村</span>
+            </div>
+            <div class="item-stay">停留 1.5 小時</div>
+          </div>
+        </div>
+
+        <div class="leg">
+          <span class="leg-line"></span>
+          <span class="leg-mode">車</span>
+          <span class="leg-divider">·</span>
+          <span>20 分</span>
+        </div>
+
+        <div class="itinerary-card" onclick="openDetail()">
+          <div class="item-marker">5</div>
+          <div class="item-body">
+            <div class="item-time-name">
+              <span class="item-time">18:00</span>
+              <span class="item-name">逢甲夜市</span>
+            </div>
+            <div class="item-stay">停留 2 小時</div>
+            <div class="item-notes">
+              <div class="item-note">必吃：明倫蛋餅、官芝霖大腸包小腸</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="leg">
+          <span class="leg-line"></span>
+          <span class="leg-mode">車</span>
+          <span class="leg-divider">·</span>
+          <span>18 分</span>
+        </div>
+
+        <div class="itinerary-card" onclick="openDetail()">
+          <div class="item-marker hotel">H</div>
+          <div class="item-body">
+            <div class="item-time-name">
+              <span class="item-time">20:30</span>
+              <span class="item-name">福華大飯店</span>
+            </div>
+            <div class="item-stay">回飯店休息</div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+  </main>
+
+  <!-- ========== Day Strip ========== -->
+  <div class="day-strip-wrap" id="dayStrip">
+    <div class="day-strip-content">
+      <div class="day-strip-toolbar">
+        <span class="day-strip-label">7 個 Day　·　拖動標籤調整順序　·　點選切換右欄</span>
+        <div class="day-strip-tools">
+          <button class="btn" onclick="openDateModal()">更換起始日</button>
+          <button class="collapse-toggle" onclick="toggleSection('day')" title="收合日程表">▾</button>
+        </div>
+      </div>
+      <div class="day-strip-list">
+
+        <div class="day-tab add" title="往前新增一天">
+          <span>+</span>
+          <span class="add-label">往前</span>
+        </div>
+
+        <div class="day-tab" onclick="selectDay(this)">
+          <span class="day-tab-date">06/01　一</span>
+          <span class="day-tab-num">Day <em>1</em></span>
+          <span class="day-tab-meta">臺北　·　6 點</span>
+        </div>
+
+        <div class="day-tab" onclick="selectDay(this)">
+          <span class="day-tab-date">06/02　二</span>
+          <span class="day-tab-num">Day <em>2</em></span>
+          <span class="day-tab-meta">臺北　·　5 點</span>
+        </div>
+
+        <div class="day-tab active" onclick="selectDay(this)">
+          <span class="day-tab-date">06/03　三</span>
+          <span class="day-tab-num">Day <em>3</em></span>
+          <span class="day-tab-meta">臺中　·　7 點</span>
+        </div>
+
+        <div class="day-tab" onclick="selectDay(this)">
+          <span class="day-tab-date">06/04　四</span>
+          <span class="day-tab-num">Day <em>4</em></span>
+          <span class="day-tab-meta">臺中　·　4 點</span>
+        </div>
+
+        <div class="day-tab" onclick="selectDay(this)">
+          <span class="day-tab-date">06/05　五</span>
+          <span class="day-tab-num">Day <em>5</em></span>
+          <span class="day-tab-meta">高雄　·　6 點</span>
+        </div>
+
+        <div class="day-tab" onclick="selectDay(this)">
+          <span class="day-tab-date">06/06　六</span>
+          <span class="day-tab-num">Day <em>6</em></span>
+          <span class="day-tab-meta">高雄　·　5 點</span>
+        </div>
+
+        <div class="day-tab" onclick="selectDay(this)">
+          <span class="day-tab-date">06/07　日</span>
+          <span class="day-tab-num">Day <em>7</em></span>
+          <span class="day-tab-meta">高雄　·　3 點</span>
+        </div>
+
+        <div class="day-tab add" title="往後新增一天">
+          <span>+</span>
+          <span class="add-label">往後</span>
+        </div>
+
+      </div>
+    </div>
+    <button class="expand-btn expand-day" id="expandDay" onclick="toggleSection('day')" style="display: none;">▴</button>
+  </div>
+
+</div>
+
+<!-- ========== Place Detail Modal ========== -->
+<div class="modal-backdrop" id="detailModal" onclick="closeDetail(event)">
+  <div class="modal modal-large" onclick="event.stopPropagation()">
+    <div class="detail-hero">
+      <div class="detail-actions">
+        <button class="detail-add-btn">+　加入 Day 3</button>
+        <button class="detail-close" onclick="closeDetail()">✕</button>
+      </div>
+      <span class="detail-hero-label">photograph　·　rooftop view</span>
+    </div>
+    <div class="detail-body">
+      <h2 class="detail-name">林家牛肉麵</h2>
+      <div class="detail-meta">
+        <span class="detail-rating">★ 4.6</span>
+        <span>·</span>
+        <span>牛肉麵餐廳</span>
+        <span>·</span>
+        <span>$$　·　平均 $180</span>
+        <span>·</span>
+        <span>350 則評論</span>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-label">資訊</div>
+        <div class="detail-row">
+          <span class="detail-row-label">地址</span>
+          <span>40452 臺中市北區一中街 125 巷 10 號</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row-label">電話</span>
+          <span>04-2225-8392</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row-label">營業時間</span>
+          <div class="detail-hours">
+            週一至週五　11:00 — 14:30，17:00 — 21:00<br>
+            週六至週日　11:00 — 21:00 不打烊
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-label">照片</div>
+        <div class="detail-photos">
+          <div class="detail-photo"></div>
+          <div class="detail-photo"></div>
+          <div class="detail-photo"></div>
+          <div class="detail-photo"></div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-label">熱門評論</div>
+        <div class="review">
+          <div class="review-head">
+            <span class="review-author">陳先生</span>
+            <span class="review-stars">★★★★★</span>
+          </div>
+          <div class="review-text">湯頭濃郁不死鹹，牛肉軟嫩入味，麵條 Q 彈。在地老店，難怪人氣這麼旺。</div>
+        </div>
+        <div class="review">
+          <div class="review-head">
+            <span class="review-author">林小姐</span>
+            <span class="review-stars">★★★★</span>
+          </div>
+          <div class="review-text">推薦半筋半肉，份量足。週末用餐時段需要排隊約 20 分鐘。</div>
+        </div>
+        <div class="review">
+          <div class="review-head">
+            <span class="review-author">王同學</span>
+            <span class="review-stars">★★★★★</span>
+          </div>
+          <div class="review-text">學區附近最好吃的牛肉麵，價格公道，老闆親切。小菜也很值得點。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Change Start Date Modal ========== -->
+<div class="modal-backdrop" id="dateModal" onclick="closeDateModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-date">
+      <h2 class="modal-title">更換起始日</h2>
+      <p class="modal-subtitle">整段行程會一起平移　·　天數固定不變，要增減天數請用日程表的 + 按鈕</p>
+
+      <div class="date-row">
+        <span class="date-row-label">目前起始日</span>
+        <span class="date-row-value date-row-value-readonly">2026/06/01（一）</span>
+      </div>
+
+      <div class="date-row">
+        <span class="date-row-label">新起始日</span>
+        <input type="date" class="date-input" value="2026-07-10">
+      </div>
+
+      <div class="date-row">
+        <span class="date-row-label">新結束日</span>
+        <span class="date-row-value date-row-value-readonly">2026/07/16（四）</span>
+      </div>
+
+      <div class="date-row">
+        <span class="date-row-label">天數</span>
+        <span class="date-row-value date-row-value-readonly">7 天　·　不變</span>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" onclick="closeDateModal()">取消</button>
+        <button class="btn btn-primary" onclick="closeDateModal()">確定平移</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== Section collapse ==========
+  function toggleSection(name) {
+    const map = {
+      search: { wrap: document.getElementById('searchBar'), expand: null, key: 'searchBar' },
+      left: { wrap: document.getElementById('leftPanel'), expand: document.getElementById('expandLeft'), key: 'leftPanel' },
+      right: { wrap: document.getElementById('rightPanel'), expand: document.getElementById('expandRight'), key: 'rightPanel' },
+      day: { wrap: document.getElementById('dayStrip'), expand: document.getElementById('expandDay'), key: 'dayStrip' }
+    };
+    const target = map[name];
+    if (!target) return;
+
+    target.wrap.classList.toggle('collapsed');
+
+    // 處理 main 的 grid 模板
+    const main = document.getElementById('main');
+    if (name === 'left') {
+      main.classList.toggle('no-left');
+    } else if (name === 'right') {
+      main.classList.toggle('no-right');
+    }
+
+    // 顯示／隱藏「展開」按鈕
+    if (target.expand) {
+      const isCollapsed = target.wrap.classList.contains('collapsed');
+      target.expand.style.display = isCollapsed ? 'flex' : 'none';
+    }
+  }
+
+  // ========== Day select ==========
+  function selectDay(el) {
+    document.querySelectorAll('.day-tab.active').forEach(t => t.classList.remove('active'));
+    if (!el.classList.contains('add')) el.classList.add('active');
+  }
+
+  // ========== Detail Modal ==========
+  function openDetail() {
+    document.getElementById('detailModal').classList.add('show');
+  }
+  function closeDetail(e) {
+    if (e && e.target.id !== 'detailModal' && !e.target.classList.contains('detail-close')) return;
+    document.getElementById('detailModal').classList.remove('show');
+  }
+
+  // ========== Date Modal ==========
+  function openDateModal() {
+    document.getElementById('dateModal').classList.add('show');
+  }
+  function closeDateModal(e) {
+    if (e && e.target.id !== 'dateModal' && e.target.tagName !== 'BUTTON') return;
+    document.getElementById('dateModal').classList.remove('show');
+  }
+
+  // Search clear
+  document.getElementById('searchClear').addEventListener('click', () => {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchInput').focus();
+  });
+
+  // ESC 關閉 modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop.show').forEach(m => m.classList.remove('show'));
+    }
+  });
+</script>
+
+</body>
+</html>

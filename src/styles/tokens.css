@@ -1,0 +1,36 @@
+:root {
+  --bg-page: #FAF7F0;
+  --bg-card: #FFFFFF;
+  --bg-soft: #F2EDE0;
+  --bg-softer: #F7F2E5;
+
+  --ink-primary: #2C2620;
+  --ink-secondary: #6B5F50;
+  --ink-muted: #A89C8B;
+  --ink-faint: #C9B894;
+
+  --accent-primary: #2C4A3D;
+  --accent-primary-soft: #E5EDEA;
+  --accent-warm: #D85A30;
+  --accent-warm-soft: #FAEDE4;
+  --accent-purple: #5B4B7F;
+
+  --border-soft: #E8DFD0;
+  --border-medium: #D4C8B2;
+
+  --shadow-soft: 0 1px 2px rgba(60, 45, 20, 0.04);
+  --shadow-card: 0 1px 3px rgba(60, 45, 20, 0.06), 0 1px 2px rgba(60, 45, 20, 0.04);
+  --shadow-modal: 0 20px 50px rgba(60, 45, 20, 0.15), 0 4px 12px rgba(60, 45, 20, 0.08);
+
+  --font-display: 'Fraunces', 'Noto Serif TC', Georgia, serif;
+  --font-body: 'Noto Serif TC', 'Fraunces', Georgia, serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  --t-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --t-med: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --t-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
