@@ -97,7 +97,7 @@ export default function MapView() {
 
   let nonHotelCount = 0;
   return (
-    <APIProvider apiKey={apiKey} language="zh-TW" region="TW">
+    <APIProvider apiKey={apiKey} language="zh-TW" region="TW" libraries={['places', 'marker']}>
       <Map
         mapId={MAP_ID}
         defaultCenter={center}

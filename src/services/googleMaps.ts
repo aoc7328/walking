@@ -7,146 +7,199 @@ export function hasApiKey(): boolean {
   return Boolean(API_KEY && API_KEY !== 'your_api_key_here');
 }
 
-let placesService: google.maps.places.PlacesService | null = null;
-let scriptLoadingPromise: Promise<void> | null = null;
+let waitingPromise: Promise<void> | null = null;
 
+/**
+ * 等待 Google Maps + Places 載入完成。
+ * 腳本由 @vis.gl/react-google-maps 的 APIProvider 載入（含 places、marker 套件），
+ * 這裡只負責等 `google.maps.places.Place` 類別出現。
+ */
 export function loadGoogleMaps(): Promise<void> {
-  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-    return Promise.resolve();
-  }
-  if (scriptLoadingPromise) return scriptLoadingPromise;
-  if (!hasApiKey()) {
-    return Promise.reject(new Error('未設定 VITE_GOOGLE_MAPS_API_KEY'));
-  }
-
-  scriptLoadingPromise = new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>('script[data-walking-gmaps]');
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('Google Maps 載入失敗')));
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&language=zh-TW&region=TW`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.walkingGmaps = '1';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Google Maps 載入失敗'));
-    document.head.appendChild(script);
+  // 已經備好
+  const ready = (): boolean =>
+    typeof google !== 'undefined' &&
+    Boolean(google.maps) &&
+    Boolean((google.maps as any).places) &&
+    Boolean((google.maps as any).places.Place);
+  if (ready()) return Promise.resolve();
+  if (waitingPromise) return waitingPromise;
+  waitingPromise = new Promise<void>((resolve, reject) => {
+    const STEP = 100;
+    const TIMEOUT = 15000;
+    let elapsed = 0;
+    const id = window.setInterval(() => {
+      if (ready()) {
+        window.clearInterval(id);
+        resolve();
+      } else if ((elapsed += STEP) >= TIMEOUT) {
+        window.clearInterval(id);
+        waitingPromise = null;
+        reject(new Error('Google Maps 載入逾時，請確認 API Key 或網路狀況'));
+      }
+    }, STEP);
   });
-  return scriptLoadingPromise;
+  return waitingPromise;
 }
 
-function getPlacesService(): google.maps.places.PlacesService | null {
-  if (placesService) return placesService;
-  if (typeof google === 'undefined' || !google.maps?.places) return null;
-  const div = document.createElement('div');
-  const map = new google.maps.Map(div);
-  placesService = new google.maps.places.PlacesService(map);
-  return placesService;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+interface PlaceLite {
+  id?: string | null;
+  displayName?: string | null;
+  formattedAddress?: string | null;
+  location?: { lat: () => number; lng: () => number } | null;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  types?: string[] | null;
+  photos?: Array<{ getURI?: (o?: any) => string; getUrl?: (o?: any) => string }> | null;
+  priceLevel?: number | string | null;
+  nationalPhoneNumber?: string | null;
+  websiteURI?: string | null;
+  regularOpeningHours?: { weekdayDescriptions?: string[] } | null;
+  reviews?: Array<{
+    authorAttribution?: { displayName?: string };
+    rating?: number | null;
+    text?: string | null;
+    publishTime?: Date | null;
+  }> | null;
 }
 
-function buildPhotoUrl(photo: google.maps.places.PlacePhoto, maxWidth = 800): string {
-  return photo.getUrl({ maxWidth });
+function getPhotoUrls(photos: PlaceLite['photos']): string[] | undefined {
+  if (!photos || photos.length === 0) return undefined;
+  const urls: string[] = [];
+  for (const photo of photos.slice(0, 6)) {
+    try {
+      const url =
+        typeof photo.getURI === 'function'
+          ? photo.getURI({ maxWidth: 800 })
+          : typeof photo.getUrl === 'function'
+            ? photo.getUrl({ maxWidth: 800 })
+            : '';
+      if (url) urls.push(url);
+    } catch {
+      // ignore
+    }
+  }
+  return urls.length > 0 ? urls : undefined;
 }
 
-function placeResultToPlace(r: google.maps.places.PlaceResult): Place | null {
-  const lat = r.geometry?.location?.lat();
-  const lng = r.geometry?.location?.lng();
-  if (lat === undefined || lng === undefined || !r.place_id || !r.name) return null;
-  const place: Place = {
+function placeToInternal(p: PlaceLite): Place | null {
+  const id = p.id;
+  const name = p.displayName;
+  const loc = p.location;
+  if (!id || !name || !loc) return null;
+  let lat: number, lng: number;
+  try {
+    lat = typeof loc.lat === 'function' ? loc.lat() : Number((loc as any).lat);
+    lng = typeof loc.lng === 'function' ? loc.lng() : Number((loc as any).lng);
+  } catch {
+    return null;
+  }
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return {
     id: uuid(),
-    placeId: r.place_id,
-    name: r.name,
-    address: r.formatted_address ?? r.vicinity ?? '',
+    placeId: id,
+    name,
+    address: p.formattedAddress ?? '',
     coordinates: { lat, lng },
-    rating: r.rating,
-    reviewCount: r.user_ratings_total,
-    types: r.types ?? [],
-    photoUrls: r.photos?.slice(0, 6).map((p) => buildPhotoUrl(p)) ?? undefined,
-    priceLevel: r.price_level,
+    rating: typeof p.rating === 'number' ? p.rating : undefined,
+    reviewCount: typeof p.userRatingCount === 'number' ? p.userRatingCount : undefined,
+    types: p.types ?? [],
+    photoUrls: getPhotoUrls(p.photos),
+    priceLevel: typeof p.priceLevel === 'number' ? p.priceLevel : undefined,
   };
-  return place;
 }
+
+const PLACE_LIST_FIELDS = [
+  'id',
+  'displayName',
+  'formattedAddress',
+  'location',
+  'rating',
+  'userRatingCount',
+  'types',
+  'photos',
+  'priceLevel',
+];
+
+const PLACE_DETAIL_FIELDS = [
+  'id',
+  'displayName',
+  'formattedAddress',
+  'location',
+  'rating',
+  'userRatingCount',
+  'types',
+  'photos',
+  'nationalPhoneNumber',
+  'websiteURI',
+  'regularOpeningHours',
+  'priceLevel',
+  'reviews',
+];
 
 export async function textSearch(query: string, biasLocation?: string): Promise<Place[]> {
   if (!hasApiKey()) return [];
   await loadGoogleMaps();
-  const service = getPlacesService();
-  if (!service) return [];
-
+  const PlaceCls = (google.maps as any).places.Place;
   const fullQuery = biasLocation ? `${biasLocation} ${query}` : query;
-  return new Promise((resolve) => {
-    service.textSearch({ query: fullQuery, language: 'zh-TW', region: 'TW' }, (results, status) => {
-      if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
-        resolve([]);
-        return;
-      }
-      const places = results
-        .map(placeResultToPlace)
-        .filter((p): p is Place => p !== null);
-      resolve(places);
+  try {
+    const result = await PlaceCls.searchByText({
+      textQuery: fullQuery,
+      fields: PLACE_LIST_FIELDS,
+      language: 'zh-TW',
+      region: 'TW',
+      maxResultCount: 20,
     });
-  });
+    const places: PlaceLite[] = result?.places ?? [];
+    return places.map(placeToInternal).filter((p): p is Place => p !== null);
+  } catch (err) {
+    console.error('[walking] textSearch 失敗：', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/PERMISSION_DENIED|has not been used|disabled/i.test(msg)) {
+      throw new Error('需要啟用 Places API (New)。請到 Google Cloud Console → API 和服務 → 程式庫 → 搜尋「Places API (New)」並啟用。');
+    }
+    if (/REQUEST_DENIED|key.*not.*valid|InvalidKeyMapError/i.test(msg)) {
+      throw new Error('API Key 無效或被擋。請檢查 referrer 限制與啟用的 API。');
+    }
+    throw new Error('搜尋失敗：' + msg);
+  }
 }
 
 export async function fetchPlaceDetails(placeId: string): Promise<Partial<Place> | null> {
   if (!hasApiKey()) return null;
-  await loadGoogleMaps();
-  const service = getPlacesService();
-  if (!service) return null;
+  try {
+    await loadGoogleMaps();
+    const PlaceCls = (google.maps as any).places.Place;
+    const place: PlaceLite = new PlaceCls({ id: placeId });
+    await (place as any).fetchFields({ fields: PLACE_DETAIL_FIELDS });
 
-  return new Promise((resolve) => {
-    service.getDetails(
-      {
-        placeId,
-        language: 'zh-TW',
-        region: 'TW',
-        fields: [
-          'place_id',
-          'name',
-          'formatted_address',
-          'geometry',
-          'rating',
-          'user_ratings_total',
-          'photos',
-          'types',
-          'formatted_phone_number',
-          'website',
-          'opening_hours',
-          'price_level',
-          'reviews',
-        ],
-      },
-      (r, status) => {
-        if (status !== google.maps.places.PlacesServiceStatus.OK || !r) {
-          resolve(null);
-          return;
-        }
-        const photos = r.photos?.slice(0, 6).map((p) => buildPhotoUrl(p));
-        const reviews: PlaceReview[] | undefined = r.reviews?.slice(0, 5).map((rv) => ({
-          author: rv.author_name,
-          rating: rv.rating ?? 0,
-          text: rv.text,
-          time: rv.time,
-        }));
-        resolve({
-          name: r.name,
-          address: r.formatted_address,
-          rating: r.rating,
-          reviewCount: r.user_ratings_total,
-          phoneNumber: r.formatted_phone_number,
-          website: r.website,
-          openingHours: r.opening_hours?.weekday_text,
-          priceLevel: r.price_level,
-          types: r.types,
-          photoUrls: photos,
-          reviews,
-        });
-      },
-    );
-  });
+    const reviews: PlaceReview[] | undefined = place.reviews
+      ?.slice(0, 5)
+      .map((rv) => ({
+        author: rv.authorAttribution?.displayName ?? '匿名',
+        rating: rv.rating ?? 0,
+        text: rv.text ?? '',
+        time: rv.publishTime instanceof Date ? rv.publishTime.getTime() : undefined,
+      }));
+
+    return {
+      name: place.displayName ?? undefined,
+      address: place.formattedAddress ?? undefined,
+      rating: typeof place.rating === 'number' ? place.rating : undefined,
+      reviewCount: typeof place.userRatingCount === 'number' ? place.userRatingCount : undefined,
+      phoneNumber: place.nationalPhoneNumber ?? undefined,
+      website: place.websiteURI ?? undefined,
+      openingHours: place.regularOpeningHours?.weekdayDescriptions ?? undefined,
+      priceLevel: typeof place.priceLevel === 'number' ? place.priceLevel : undefined,
+      types: place.types ?? undefined,
+      photoUrls: getPhotoUrls(place.photos),
+      reviews: reviews && reviews.length > 0 ? reviews : undefined,
+    };
+  } catch (err) {
+    console.error('[walking] fetchPlaceDetails 失敗：', err);
+    return null;
+  }
 }
 
 const GOOGLE_MAPS_URL_RE = /https?:\/\/(?:www\.|maps\.)?google\.[a-z.]+\/maps?\/[^\s]+/i;
@@ -161,7 +214,6 @@ export function detectGoogleMapsLink(text: string): string | null {
  * 簡化版：抽取 query 串或 @lat,lng,zoom。
  */
 export async function resolveGoogleMapsLink(url: string): Promise<Place[]> {
-  // 簡單抽取 place query
   const placeMatch = url.match(/\/place\/([^/]+)/);
   if (placeMatch) {
     const query = decodeURIComponent(placeMatch[1]!).replace(/\+/g, ' ');
@@ -170,18 +222,10 @@ export async function resolveGoogleMapsLink(url: string): Promise<Place[]> {
   return textSearch(url);
 }
 
-/**
- * 產生指向 Google Maps 該地點頁的 URL。
- * 使用 place_id 格式，能精準定位（不會被名稱搜尋誤判）。
- */
 export function getGoogleMapsPlaceUrl(placeId: string): string {
   return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
 }
 
-/**
- * 產生指向該地點評論區的 Google Maps URL。
- * 點開後 Google Maps 會直接展開該地點的所有評論。
- */
 export function getGoogleMapsReviewsUrl(placeId: string): string {
   return `https://search.google.com/local/reviews?placeid=${placeId}`;
 }
