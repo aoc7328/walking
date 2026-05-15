@@ -19,8 +19,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: '走走',
-        short_name: '走走',
+        name: '胖齊肥柔去走走',
+        short_name: '胖齊肥柔去走走',
         description: '個人國內外旅行行程規劃',
         theme_color: '#2C4A3D',
         background_color: '#FAF7F0',

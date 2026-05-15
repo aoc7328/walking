@@ -79,7 +79,7 @@ export default function Header() {
     <header className="header">
       <div className="brand">
         <span className="brand-mark">
-          <em>走走</em>
+          <em>胖齊肥柔去走走</em>
         </span>
         <span className="brand-divider" />
         <div className="trip-info">
