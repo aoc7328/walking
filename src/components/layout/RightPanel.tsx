@@ -1,4 +1,5 @@
-﻿import {
+﻿import { useEffect } from 'react';
+import {
   DndContext,
   PointerSensor,
   closestCenter,
@@ -23,8 +24,17 @@ export default function RightPanel() {
   const reorderItems = useTripStore((s) => s.reorderItems);
   const setLegMode = useTripStore((s) => s.setLegMode);
   const removeDay = useTripStore((s) => s.removeDay);
+  const refreshLegsForDay = useTripStore((s) => s.refreshLegsForDay);
 
   const day = trip?.days.find((d) => d.id === currentDayId) ?? null;
+
+  // 當日或行程任何 leg 缺少 duration 時，跟 Google 拿一次真實時間
+  useEffect(() => {
+    if (!day) return;
+    const needsFetch = day.items.length >= 2 && day.legs.some((l) => l.durationMinutes === undefined);
+    if (!needsFetch) return;
+    void refreshLegsForDay(day.id);
+  }, [day?.id, day?.items.length, day?.legs, refreshLegsForDay, day]);
 
   function handleDeleteDay() {
     if (!day || !trip) return;

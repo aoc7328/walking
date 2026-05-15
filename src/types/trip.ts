@@ -13,6 +13,12 @@ export interface ItineraryItem {
    * 使用者手動加入的項目不會有這個旗標，因此不會被覆蓋。
    */
   autoFilled?: boolean;
+  /**
+   * true 代表抵達時間是使用者手動鎖定的，
+   * 時間鏈重算（前一站變動）時不會被覆寫。
+   * false / undefined：抵達時間由前一站 + 停留 + 交通時間 自動算出。
+   */
+  arrivalManual?: boolean;
 }
 
 export interface Leg {

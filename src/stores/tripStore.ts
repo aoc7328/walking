@@ -12,6 +12,7 @@ import {
   listAllTrips,
 } from '../db/repository';
 import { db } from '../db/schema';
+import { fetchLegDuration } from './../services/directions';
 
 interface TripStore {
   trip: Trip | null;
@@ -24,7 +25,7 @@ interface TripStore {
 
   addItemToDay: (dayId: string, place: Place, opts?: { isHotel?: boolean }) => string | null;
   removeItem: (dayId: string, itemId: string) => void;
-  updateItem: (dayId: string, itemId: string, patch: Partial<Pick<ItineraryItem, 'arrivalTime' | 'stayMinutes' | 'notes'>>) => void;
+  updateItem: (dayId: string, itemId: string, patch: Partial<Pick<ItineraryItem, 'arrivalTime' | 'stayMinutes' | 'notes' | 'arrivalManual'>>) => void;
   reorderItems: (dayId: string, fromIndex: number, toIndex: number) => void;
   setLegMode: (dayId: string, legIndex: number, mode: TransportMode) => void;
   setLegDuration: (dayId: string, legIndex: number, minutes: number) => void;
@@ -33,6 +34,9 @@ interface TripStore {
   addDayBefore: () => void;
   addDayAfter: () => void;
   removeDay: (dayId: string) => void;
+
+  // 重新跟 Google 拿當日各段交通時間
+  refreshLegsForDay: (dayId: string) => Promise<void>;
 
   toggleFavorite: (place: Place) => void;
   isFavorited: (placeId: string) => boolean;
@@ -52,6 +56,31 @@ function recalcLegsArray(items: ItineraryItem[], legs: Leg[]): Leg[] {
     return padded;
   }
   return legs.slice(0, targetLen);
+}
+
+/**
+ * 重算當日時間鏈：非手動鎖定（arrivalManual !== true）的項目，
+ * 抵達時間 = 前一站抵達 + 前一站停留 + 對應 leg 的 durationMinutes。
+ */
+function recomputeChain(day: DayPlan): DayPlan {
+  if (day.items.length === 0) return day;
+  const items = [...day.items];
+  for (let i = 1; i < items.length; i++) {
+    const item = items[i]!;
+    if (item.arrivalManual) continue;
+    const prev = items[i - 1]!;
+    const leg = day.legs[i - 1];
+    const travel = leg?.durationMinutes ?? 0;
+    const newArrival = addMinutesToTime(prev.arrivalTime, prev.stayMinutes + travel);
+    if (newArrival !== item.arrivalTime) {
+      items[i] = { ...item, arrivalTime: newArrival };
+    }
+  }
+  return { ...day, items };
+}
+
+function chainAll(days: DayPlan[]): DayPlan[] {
+  return days.map(recomputeChain);
 }
 
 function reindexDays(days: DayPlan[], startDate: string): DayPlan[] {
@@ -120,14 +149,14 @@ export const useTripStore = create<TripStore>((set, get) => ({
 
   setTrip: (trip) => {
     setActiveTripId(trip.id);
-    set({ trip: { ...trip, days: withAutoFill(trip.days) } });
+    set({ trip: { ...trip, days: chainAll(withAutoFill(trip.days)) } });
   },
   reset: () => {
     setActiveTripId(MOCK_TRIP.id);
     set({
       trip: {
         ...MOCK_TRIP,
-        days: withAutoFill(MOCK_TRIP.days),
+        days: chainAll(withAutoFill(MOCK_TRIP.days)),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
@@ -169,7 +198,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = recalcLegsArray(items, [...d.legs, { mode: 'driving' }]);
         return { ...d, items, legs };
       });
-      return { trip: { ...state.trip, days: withAutoFill(days), updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };
     });
     return newId;
   },
@@ -185,7 +214,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = recalcLegsArray(items, d.legs.filter((_, i) => i !== Math.min(idx, d.legs.length - 1)));
         return { ...d, items, legs };
       });
-      return { trip: { ...state.trip, days: withAutoFill(days), updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };
     }),
 
   updateItem: (dayId, itemId, patch) =>
@@ -196,7 +225,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const items = d.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it));
         return { ...d, items };
       });
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: chainAll(days), updatedAt: Date.now() } };
     }),
 
   reorderItems: (dayId, fromIndex, toIndex) =>
@@ -211,7 +240,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = recalcLegsArray(items, d.legs);
         return { ...d, items, legs };
       });
-      return { trip: { ...state.trip, days: withAutoFill(days), updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };
     }),
 
   setLegMode: (dayId, legIndex, mode) =>
@@ -219,10 +248,13 @@ export const useTripStore = create<TripStore>((set, get) => ({
       if (!state.trip) return {};
       const days = state.trip.days.map((d) => {
         if (d.id !== dayId) return d;
-        const legs = d.legs.map((l, i) => (i === legIndex ? { ...l, mode } : l));
+        // 切換模式時把舊的時間清掉，由 refreshLegsForDay 重新取
+        const legs = d.legs.map((l, i) =>
+          i === legIndex ? { ...l, mode, durationMinutes: undefined, distanceMeters: undefined } : l,
+        );
         return { ...d, legs };
       });
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: chainAll(days), updatedAt: Date.now() } };
     }),
 
   setLegDuration: (dayId, legIndex, minutes) =>
@@ -233,7 +265,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = d.legs.map((l, i) => (i === legIndex ? { ...l, durationMinutes: minutes } : l));
         return { ...d, legs };
       });
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: chainAll(days), updatedAt: Date.now() } };
     }),
 
   reorderDays: (fromIndex, toIndex) =>
@@ -316,6 +348,42 @@ export const useTripStore = create<TripStore>((set, get) => ({
   isFavorited: (placeId) => {
     const trip = get().trip;
     return !!trip?.favorites.find((f) => f.placeId === placeId);
+  },
+
+  refreshLegsForDay: async (dayId) => {
+    const trip = get().trip;
+    if (!trip) return;
+    const day = trip.days.find((d) => d.id === dayId);
+    if (!day || day.items.length < 2) return;
+
+    // 一個個 leg 跟 Google 拿
+    let changed = false;
+    const updatedLegs = await Promise.all(
+      day.legs.map(async (leg, idx) => {
+        const origin = day.items[idx]?.place.coordinates;
+        const dest = day.items[idx + 1]?.place.coordinates;
+        if (!origin || !dest) return leg;
+        if (leg.durationMinutes !== undefined && leg.distanceMeters !== undefined) {
+          // 已經有資料，跳過（換 mode 時會被清掉，所以這條等於只在首次取）
+          return leg;
+        }
+        const result = await fetchLegDuration(origin, dest, leg.mode);
+        if (!result) return leg;
+        changed = true;
+        return {
+          ...leg,
+          durationMinutes: result.durationMinutes,
+          distanceMeters: result.distanceMeters,
+        };
+      }),
+    );
+    if (!changed) return;
+
+    set((state) => {
+      if (!state.trip) return {};
+      const days = state.trip.days.map((d) => (d.id === dayId ? { ...d, legs: updatedLegs } : d));
+      return { trip: { ...state.trip, days: chainAll(days), updatedAt: Date.now() } };
+    });
   },
 
   createNewTrip: async (name, startDate, dayCount) => {

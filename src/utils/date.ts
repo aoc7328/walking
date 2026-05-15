@@ -75,3 +75,32 @@ export function addMinutesToTime(time: string, minutes: number): string {
   const nm = total % 60;
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }
+
+/** 把分鐘數轉成 HH:MM (用於停留時間輸入)，超過 24 小時截到 23:59 */
+export function minutesToHHMM(minutes: number): string {
+  const total = Math.max(0, Math.min(24 * 60 - 1, minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** HH:MM (停留時間) 轉成總分鐘數，無效回 null */
+export function hhmmToMinutes(hhmm: string): number | null {
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1]!, 10);
+  const min = parseInt(m[2]!, 10);
+  if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/** 計算兩個 HH:MM 時刻的分鐘差（end - start），可能為負（end 隔日早於 start 視為加一天） */
+export function timeDiffMinutes(start: string, end: string): number {
+  const a = hhmmToMinutes(start);
+  const b = hhmmToMinutes(end);
+  if (a === null || b === null) return 0;
+  let diff = b - a;
+  if (diff < 0) diff += 24 * 60;
+  return diff;
+}
