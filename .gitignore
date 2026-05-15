@@ -30,3 +30,6 @@ Thumbs.db
 
 # PWA generated files
 dev-dist
+
+# 匯入腳本產出的 trip JSON（不需要進 git）
+nz-trip-import.json
