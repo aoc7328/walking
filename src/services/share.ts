@@ -163,12 +163,55 @@ function buildSharePayloadV2(trip: Trip): SharePayloadV2 {
   };
 }
 
-export function buildShareUrl(trip: Trip): string {
+/**
+ * 舊版「資料壓在 URL hash」的方式。保留是因為朋友手上的舊連結仍要能打開。
+ * 新分享預設不再用這個，行程太大會塞不進 QR。
+ */
+export function buildShareUrlInline(trip: Trip): string {
   const payload = buildSharePayloadV2(trip);
   const json = JSON.stringify(payload);
   const encoded = compressToEncodedURIComponent(json);
   const base = window.location.origin + window.location.pathname;
   return `${base}#view=${encoded}`;
+}
+
+/**
+ * 把行程上傳到 Cloudflare KV，回傳短 ID。
+ * KV 沒設定 / 網路失敗會丟例外，由 caller 處理 fallback。
+ */
+export async function uploadTrip(trip: Trip, signal?: AbortSignal): Promise<{ id: string }> {
+  const payload = buildSharePayloadV2(trip);
+  const res = await fetch('/api/trip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  if (!res.ok) {
+    const err: { error?: string } = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? `上傳失敗（HTTP ${res.status}）`);
+  }
+  return res.json();
+}
+
+/** 上傳行程並回傳短分享 URL（含 #v=<id>）。失敗丟例外。 */
+export async function buildShareUrlWithId(trip: Trip, signal?: AbortSignal): Promise<string> {
+  const { id } = await uploadTrip(trip, signal);
+  const base = window.location.origin + window.location.pathname;
+  return `${base}#v=${id}`;
+}
+
+/** 從 KV 取行程（給 TripViewer 用）。失敗回 null。 */
+export async function fetchTripById(id: string): Promise<ShareTrip | null> {
+  try {
+    const res = await fetch(`/api/trip/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    const parsed = await res.json();
+    if (!parsed || (parsed.v !== 1 && parsed.v !== 2)) return null;
+    return flatten(parsed as SharePayload);
+  } catch {
+    return null;
+  }
 }
 
 /** 把 v1 或 v2 payload 展平成 viewer 統一用的 ShareTrip 結構 */
@@ -223,19 +266,40 @@ function flatten(payload: SharePayload): ShareTrip {
   };
 }
 
-export function decodeShareFromHash(): ShareTrip | null {
+export type ShareHashKind =
+  | { type: 'inline'; trip: ShareTrip }
+  | { type: 'id'; id: string }
+  | null;
+
+/**
+ * 解析 URL hash：
+ * - `#v=<id>` → 回傳 type='id'，caller 自己 fetchTripById
+ * - `#view=<encoded>` → 立刻解壓回傳 type='inline' 的展平 trip（舊連結相容）
+ */
+export function readShareHash(): ShareHashKind {
   const hash = window.location.hash;
-  const m = hash.match(/#view=(.+)/);
-  if (!m) return null;
-  try {
-    const json = decompressFromEncodedURIComponent(m[1]!);
-    if (!json) return null;
-    const parsed = JSON.parse(json);
-    if (!parsed || (parsed.v !== 1 && parsed.v !== 2)) return null;
-    return flatten(parsed as SharePayload);
-  } catch {
-    return null;
+  const mid = hash.match(/#v=([a-f0-9]{6,16})/i);
+  if (mid) return { type: 'id', id: mid[1]! };
+
+  const minl = hash.match(/#view=(.+)/);
+  if (minl) {
+    try {
+      const json = decompressFromEncodedURIComponent(minl[1]!);
+      if (!json) return null;
+      const parsed = JSON.parse(json);
+      if (!parsed || (parsed.v !== 1 && parsed.v !== 2)) return null;
+      return { type: 'inline', trip: flatten(parsed as SharePayload) };
+    } catch {
+      return null;
+    }
   }
+  return null;
+}
+
+/** @deprecated 改用 readShareHash + fetchTripById */
+export function decodeShareFromHash(): ShareTrip | null {
+  const r = readShareHash();
+  return r && r.type === 'inline' ? r.trip : null;
 }
 
 /** QR Code Data URL（PNG）。資料過大時會拋例外，請 caller 自己接住。 */

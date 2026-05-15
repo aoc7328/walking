@@ -590,6 +590,15 @@
   color: var(--accent-primary);
 }
 
+.share-error-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-style: italic;
+  border-top: 0.5px dashed var(--border-soft);
+  padding-top: 8px;
+}
+
 .share-url-row {
   display: flex;
   gap: 6px;

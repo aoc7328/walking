@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
-import { buildShareUrl, generateQRDataUrl } from '../../services/share';
+import { buildShareUrlInline, buildShareUrlWithId, generateQRDataUrl } from '../../services/share';
 import { exportTripAsHTML } from '../../services/exportImport';
 
-type QRState = 'pending' | 'ready' | 'tooBig' | 'failed';
+type LoadState = 'uploading' | 'ready' | 'tooBig' | 'uploadFailed';
 
 export default function ShareModal() {
   const open = useUIStore((s) => s.shareModalOpen);
@@ -13,42 +13,56 @@ export default function ShareModal() {
 
   const [url, setUrl] = useState<string>('');
   const [qr, setQr] = useState<string>('');
-  const [qrState, setQrState] = useState<QRState>('pending');
+  const [state, setState] = useState<LoadState>('uploading');
+  const [errorDetail, setErrorDetail] = useState<string>('');
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
 
   useEffect(() => {
     if (!open || !trip) return;
     setCopyState('idle');
     setQr('');
-    setQrState('pending');
-    let cancelled = false;
+    setUrl('');
+    setErrorDetail('');
+    setState('uploading');
+
+    const controller = new AbortController();
+
     (async () => {
+      // 先試新方案：上傳到 KV 拿短 ID
       try {
-        const shareUrl = buildShareUrl(trip);
-        if (cancelled) return;
-        setUrl(shareUrl);
+        const shortUrl = await buildShareUrlWithId(trip, controller.signal);
+        if (controller.signal.aborted) return;
+        setUrl(shortUrl);
         try {
-          const qrDataUrl = await generateQRDataUrl(shareUrl);
-          if (!cancelled) {
-            setQr(qrDataUrl);
-            setQrState('ready');
-          }
-        } catch (qrErr) {
-          if (cancelled) return;
-          const msg = qrErr instanceof Error ? qrErr.message : String(qrErr);
-          if (/too big|big to be stored/i.test(msg)) {
-            setQrState('tooBig');
-          } else {
-            setQrState('failed');
-          }
+          const qrDataUrl = await generateQRDataUrl(shortUrl);
+          if (controller.signal.aborted) return;
+          setQr(qrDataUrl);
+          setState('ready');
+        } catch {
+          // 短 URL 應該短到 QR 都吃得下，理論上不會走到這裡
+          setState('uploadFailed');
+          setErrorDetail('QR Code 產生失敗');
         }
-      } catch {
-        if (!cancelled) setQrState('failed');
+        return;
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        // 後端失敗 → fallback 到舊的 inline URL
+        const inlineUrl = buildShareUrlInline(trip);
+        setUrl(inlineUrl);
+        try {
+          const qrDataUrl = await generateQRDataUrl(inlineUrl);
+          if (controller.signal.aborted) return;
+          setQr(qrDataUrl);
+          setState('ready');
+        } catch {
+          if (controller.signal.aborted) return;
+          setState('tooBig');
+          setErrorDetail(err instanceof Error ? err.message : String(err));
+        }
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+
+    return () => controller.abort();
   }, [open, trip]);
 
   if (!open || !trip) return null;
@@ -93,7 +107,7 @@ export default function ShareModal() {
   }
 
   const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
-  const urlKB = (url.length / 1024).toFixed(1);
+  const urlKB = url ? (url.length / 1024).toFixed(1) : '0';
 
   return (
     <div
@@ -106,32 +120,34 @@ export default function ShareModal() {
         <div className="share-modal-body">
           <h2 className="modal-title">分享行程</h2>
           <p className="modal-subtitle">
-            {qrState === 'tooBig'
-              ? '行程資料太大，無法塞進 QR Code。改用下方「複製連結」或「下載 HTML 檔」分享。'
+            {state === 'tooBig'
+              ? '行程上傳失敗，改用 fallback 連結（含完整資料，較長）但塞不進 QR Code。請直接複製連結或下載 HTML。'
               : '掃描下方 QR Code 或複製連結　·　朋友打開後會看到手機版的行程瀏覽頁'}
           </p>
 
-          {qrState !== 'tooBig' && (
+          {state !== 'tooBig' && (
             <div className="share-qr-wrap">
-              {qrState === 'ready' && qr ? (
+              {state === 'ready' && qr ? (
                 <img className="share-qr-img" src={qr} alt="行程 QR Code" />
-              ) : qrState === 'failed' ? (
-                <div className="share-qr-placeholder">QR Code 產生失敗</div>
+              ) : state === 'uploadFailed' ? (
+                <div className="share-qr-placeholder">{errorDetail || 'QR Code 產生失敗'}</div>
               ) : (
-                <div className="share-qr-placeholder">產生中…</div>
+                <div className="share-qr-placeholder">上傳行程中…</div>
               )}
             </div>
           )}
 
-          {qrState === 'tooBig' && (
+          {state === 'tooBig' && (
             <div className="share-error">
-              行程資料壓縮後約 {urlKB} KB，超過 QR Code 容量上限（約 2.9 KB）。
-              <br />
-              QR 分享需要先做後端儲存（Cloudflare KV）才能支援這麼大的行程，目前先用下面兩個方式：
+              KV 後端無法使用（可能尚未設定 KV namespace），改用網址直接帶資料的舊方案。
+              這個連結約 {urlKB} KB，超過 QR Code 容量。請改用：
               <ul className="share-error-list">
-                <li><strong>複製連結</strong>：貼到 LINE / Email / 訊息給朋友，他點開就能看（網址很長但能用）</li>
-                <li><strong>下載 HTML 檔</strong>：產生獨立檔案，傳給朋友開瀏覽器就能離線看完整行程</li>
+                <li><strong>複製連結</strong>：貼到 LINE / Email 給朋友，他點開就能看</li>
+                <li><strong>下載 HTML 檔</strong>：傳獨立檔給朋友，瀏覽器離線就能看</li>
               </ul>
+              <div className="share-error-hint">
+                想啟用 QR Code 分享？請參考下方 README 設定 Cloudflare KV namespace。
+              </div>
             </div>
           )}
 
@@ -148,7 +164,7 @@ export default function ShareModal() {
                 分享到…
               </button>
             )}
-            <button className="btn" onClick={handleDownloadQR} disabled={qrState !== 'ready'}>
+            <button className="btn" onClick={handleDownloadQR} disabled={state !== 'ready'}>
               下載 QR Code
             </button>
             <button className="btn" onClick={handleFallbackHTML}>

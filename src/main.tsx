@@ -10,7 +10,8 @@ if (!rootEl) {
 }
 
 function isViewerRoute(): boolean {
-  return window.location.hash.startsWith('#view=');
+  const hash = window.location.hash;
+  return hash.startsWith('#view=') || hash.startsWith('#v=');
 }
 
 createRoot(rootEl).render(

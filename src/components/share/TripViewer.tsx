@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { decodeShareFromHash, type ShareTrip, type ShareDay, type ShareItem, type ShareLeg } from '../../services/share';
+import { readShareHash, fetchTripById, type ShareTrip, type ShareDay, type ShareItem, type ShareLeg } from '../../services/share';
 import { addDays, formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
 import { buildStaticMapUrl, hasApiKey } from '../../services/googleMaps';
@@ -116,24 +116,71 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
 
 export default function TripViewer() {
   const [payload, setPayload] = useState<ShareTrip | null>(null);
+  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error'>('loading');
+  const [errorMsg, setErrorMsg] = useState<string>('');
   const [activeDay, setActiveDay] = useState(0);
 
   useEffect(() => {
-    const decoded = decodeShareFromHash();
-    setPayload(decoded);
+    let cancelled = false;
+
+    async function loadFromHash() {
+      const r = readShareHash();
+      if (!r) {
+        if (!cancelled) {
+          setPayload(null);
+          setLoadState('error');
+          setErrorMsg('分享連結看起來不完整。請向分享者重新索取。');
+        }
+        return;
+      }
+      if (r.type === 'inline') {
+        if (!cancelled) {
+          setPayload(r.trip);
+          setLoadState('idle');
+        }
+        return;
+      }
+      // type === 'id'，跟 KV 拿
+      if (!cancelled) setLoadState('loading');
+      const trip = await fetchTripById(r.id);
+      if (cancelled) return;
+      if (trip) {
+        setPayload(trip);
+        setLoadState('idle');
+      } else {
+        setLoadState('error');
+        setErrorMsg('找不到該行程。可能已過期（180 天）或 ID 錯誤。');
+      }
+    }
+
+    loadFromHash();
     function onHash() {
-      setPayload(decodeShareFromHash());
+      loadFromHash();
     }
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('hashchange', onHash);
+    };
   }, []);
+
+  if (loadState === 'loading') {
+    return (
+      <div className="tv-root">
+        <div className="tv-empty">
+          <h2>讀取中…</h2>
+          <p>正在從伺服器載入行程資料</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!payload) {
     return (
       <div className="tv-root">
         <div className="tv-empty">
           <h2>無法載入行程</h2>
-          <p>分享連結看起來不完整。請向分享者重新索取。</p>
+          <p>{errorMsg || '分享連結看起來不完整。請向分享者重新索取。'}</p>
         </div>
       </div>
     );
