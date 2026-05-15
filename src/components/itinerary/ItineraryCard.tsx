@@ -113,13 +113,11 @@ export default function ItineraryCard({
     >
       <div className={`item-marker${item.isHotel ? ' hotel' : ''}`}>{markerLabel}</div>
       <div className="item-body">
+        {showArrivalInline && (
+          <div className="item-big-time">{item.arrivalTime}</div>
+        )}
         <div className="item-head-row">
-          <div className="item-head-text">
-            {showArrivalInline && (
-              <span className="item-arrival-inline">{item.arrivalTime}</span>
-            )}
-            <span className="item-name">{item.place.name}</span>
-          </div>
+          <span className="item-name">{item.place.name}</span>
           <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
             <div className="item-copy-wrap" ref={copyRef}>
               <button

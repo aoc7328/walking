@@ -1267,22 +1267,15 @@
   margin-bottom: 6px;
 }
 
-.item-head-text {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  flex: 1;
-}
-
-.item-arrival-inline {
+.item-big-time {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 22px;
   font-weight: 500;
   color: var(--accent-primary);
+  letter-spacing: -0.01em;
   font-feature-settings: 'tnum' 1;
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
+  line-height: 1.1;
+  margin-bottom: 4px;
 }
 
 .item-stay-line {
@@ -1314,30 +1307,34 @@
 .item-footer-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  font-size: 12px;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 0.5px dashed var(--border-soft);
+  font-size: 13px;
 }
 
 .footer-link {
   font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-primary);
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 0;
   letter-spacing: 0.02em;
-  transition: color var(--t-fast);
+  transition: opacity var(--t-fast);
 }
 
 .footer-link:hover {
-  color: var(--ink-primary);
+  text-decoration: underline;
+  opacity: 0.85;
 }
 
 .footer-sep {
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .item-card-actions {
