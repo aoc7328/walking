@@ -14,6 +14,8 @@ import {
   normalizeTimeInput,
 } from '../../utils/date';
 import NoteEditor from './NoteEditor';
+import PlaceIconBadge from '../common/PlaceIconBadge';
+import IconPicker from '../common/IconPicker';
 
 interface Props {
   item: ItineraryItem;
@@ -34,14 +36,31 @@ export default function ItineraryCard({
   const updateItem = useTripStore((s) => s.updateItem);
   const copyItemToDay = useTripStore((s) => s.copyItemToDay);
   const removeItem = useTripStore((s) => s.removeItem);
+  const setPlaceIcon = useTripStore((s) => s.setPlaceIcon);
   const trip = useTripStore((s) => s.trip);
 
   const [editingNotes, setEditingNotes] = useState(false);
   const [row1Mode, setRow1Mode] = useState<Row1Mode>('arrival');
   const [copyOpen, setCopyOpen] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   // 預設展開 = 已手動鎖定抵達時間的卡片，否則收折
   const [timeExpanded, setTimeExpanded] = useState(Boolean(item.arrivalManual));
   const copyRef = useRef<HTMLDivElement>(null);
+
+  function handleBadgeClick() {
+    if (item.place.iconEmoji) {
+      const ok = window.confirm(`移除「${item.place.name}」的圖示？`);
+      if (ok) {
+        setPlaceIcon(item.place.placeId, undefined);
+      }
+    } else {
+      setIconPickerOpen(true);
+    }
+  }
+
+  function handleIconSelect(emoji: string) {
+    setPlaceIcon(item.place.placeId, emoji);
+  }
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -110,7 +129,10 @@ export default function ItineraryCard({
       {...attributes}
       {...listeners}
     >
-      <div className="item-marker">{markerLabel}</div>
+      <div className="item-marker-stack">
+        <div className="item-marker">{markerLabel}</div>
+        <PlaceIconBadge iconEmoji={item.place.iconEmoji} onClick={handleBadgeClick} />
+      </div>
       <div className="item-body">
         {showArrivalInline && (
           <div className="item-big-time">{item.arrivalTime}</div>
@@ -283,6 +305,11 @@ export default function ItineraryCard({
           )}
         </div>
       </div>
+      <IconPicker
+        open={iconPickerOpen}
+        onSelect={handleIconSelect}
+        onClose={() => setIconPickerOpen(false)}
+      />
     </div>
   );
 }

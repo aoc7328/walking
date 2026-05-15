@@ -13,6 +13,8 @@ export interface Place {
   openingHours?: string[];
   priceLevel?: number;
   reviews?: PlaceReview[];
+  /** 使用者自選的 emoji 圖示，例如 '🍜' '🏧' '⛰️' */
+  iconEmoji?: string;
 }
 
 export interface PlaceReview {

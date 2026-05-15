@@ -42,6 +42,9 @@ interface TripStore {
   toggleFavorite: (place: Place) => void;
   isFavorited: (placeId: string) => boolean;
 
+  /** 設定某地點的 emoji 圖示（同 placeId 的所有 item 與收藏同步更新；傳 undefined 清除） */
+  setPlaceIcon: (placeId: string, emoji: string | undefined) => void;
+
   // 多 trip 管理
   createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
   switchToTrip: (id: string) => Promise<void>;
@@ -383,6 +386,21 @@ export const useTripStore = create<TripStore>((set, get) => ({
     const trip = get().trip;
     return !!trip?.favorites.find((f) => f.placeId === placeId);
   },
+
+  setPlaceIcon: (placeId, emoji) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const updatePlace = (p: Place): Place =>
+        p.placeId === placeId ? { ...p, iconEmoji: emoji } : p;
+      const days = state.trip.days.map((d) => ({
+        ...d,
+        items: d.items.map((it) =>
+          it.place.placeId === placeId ? { ...it, place: updatePlace(it.place) } : it,
+        ),
+      }));
+      const favorites = state.trip.favorites.map(updatePlace);
+      return { trip: { ...state.trip, days, favorites, updatedAt: Date.now() } };
+    }),
 
   refreshLegsForDay: async (dayId) => {
     const trip = get().trip;

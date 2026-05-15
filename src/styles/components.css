@@ -1569,8 +1569,170 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
+}
+
+/* ========== 地點圖示徽章 (emoji badge) ========== */
+.place-icon-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  border: 1px dashed var(--border-medium);
+  background: transparent;
+  transition: box-shadow var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+
+.place-icon-badge.selected {
+  background: var(--bg-soft);
+  border: none;
+}
+
+.place-icon-badge:hover {
+  box-shadow: 0 1px 4px rgba(60, 45, 20, 0.18);
+  border-color: var(--ink-faint);
+}
+
+.place-icon-badge-content {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.place-icon-badge:not(.selected) .place-icon-badge-content {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faint);
+}
+
+/* ========== Icon Picker (emoji 選擇器) ========== */
+.icon-picker {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: 460px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp var(--t-med);
+}
+
+.icon-picker-search-row {
+  padding: 12px 16px 8px;
+  border-bottom: 0.5px solid var(--border-soft);
+  background: var(--bg-page);
+}
+
+.icon-picker-search {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink-primary);
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color var(--t-fast);
+}
+
+.icon-picker-search:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(44, 74, 61, 0.08);
+}
+
+.icon-picker-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 12px;
+  background: var(--bg-page);
+  border-bottom: 0.5px solid var(--border-soft);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.icon-picker-tab {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid transparent;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.icon-picker-tab:hover {
+  color: var(--ink-primary);
+}
+
+.icon-picker-tab.active {
+  font-weight: 500;
+}
+
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+  align-content: start;
+}
+
+.icon-picker-cell {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0;
+  cursor: pointer;
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+
+.icon-picker-cell:hover {
+  background: var(--bg-softer);
+  transform: scale(1.08);
+}
+
+.icon-picker-cell:active {
+  transform: scale(0.96);
+}
+
+.icon-picker-emoji {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-picker-empty {
+  grid-column: 1 / -1;
+  padding: 30px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-style: italic;
 }
 
 .item-marker {
