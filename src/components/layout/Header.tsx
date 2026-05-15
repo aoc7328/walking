@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import { formatRange, diffDays, addDays } from '../../utils/date';
-import { exportTripAsJSON, exportTripAsHTML, importTripJSONFile } from '../../services/exportImport';
+import { exportTripAsJSON, importTripJSONFile } from '../../services/exportImport';
 import { exportTripAsPDF } from '../../services/pdfExport';
 import TripSwitcher from './TripSwitcher';
+import { useUIStore } from '../../stores/uiStore';
 
 function EditableTripName({ name, onSave }: { name: string; onSave: (v: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -57,6 +58,7 @@ export default function Header() {
   const trip = useTripStore((s) => s.trip);
   const setTrip = useTripStore((s) => s.setTrip);
   const renameTrip = useTripStore((s) => s.renameTrip);
+  const openShareModal = useUIStore((s) => s.openShareModal);
 
   if (!trip) return <header className="header" />;
 
@@ -92,7 +94,7 @@ export default function Header() {
         <button className="btn" onClick={() => exportTripAsJSON(trip)} title="匯出 JSON 行程檔（之後可從另一台裝置匯入還原）">匯出</button>
         <button className="btn" onClick={handleImport} title="從 JSON 行程檔匯入（會覆蓋目前的）">匯入</button>
         <button className="btn" onClick={() => exportTripAsPDF(trip)} title="下載 PDF 旅遊小冊">下載</button>
-        <button className="btn" onClick={() => exportTripAsHTML(trip)} title="產生獨立 HTML 檔，丟給朋友開瀏覽器就能看">分享</button>
+        <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結，讓朋友掃描看手機版行程">分享</button>
       </div>
     </header>
   );
