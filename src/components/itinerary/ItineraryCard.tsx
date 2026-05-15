@@ -10,9 +10,9 @@ import {
   hhmmToMinutes,
   timeDiffMinutes,
   formatWithWeekday,
+  formatStayDuration,
   normalizeTimeInput,
 } from '../../utils/date';
-import { formatDuration } from '../../utils/format';
 import NoteEditor from './NoteEditor';
 
 interface Props {
@@ -20,12 +20,20 @@ interface Props {
   dayId: string;
   markerLabel: string;
   isFirst?: boolean;
+  isFirstNonHotel?: boolean;
   isNextStop?: boolean;
 }
 
 type Row1Mode = 'arrival' | 'stay';
 
-export default function ItineraryCard({ item, dayId, markerLabel, isFirst, isNextStop }: Props) {
+export default function ItineraryCard({
+  item,
+  dayId,
+  markerLabel,
+  isFirst,
+  isFirstNonHotel,
+  isNextStop,
+}: Props) {
   const openDetail = useUIStore((s) => s.openDetail);
   const updateItem = useTripStore((s) => s.updateItem);
   const copyItemToDay = useTripStore((s) => s.copyItemToDay);
@@ -35,6 +43,8 @@ export default function ItineraryCard({ item, dayId, markerLabel, isFirst, isNex
   const [editingNotes, setEditingNotes] = useState(false);
   const [row1Mode, setRow1Mode] = useState<Row1Mode>('arrival');
   const [copyOpen, setCopyOpen] = useState(false);
+  // 預設展開 = 已手動鎖定抵達時間的卡片，否則收折
+  const [timeExpanded, setTimeExpanded] = useState(Boolean(item.arrivalManual));
   const copyRef = useRef<HTMLDivElement>(null);
 
   function handleDelete(e: React.MouseEvent) {
@@ -81,10 +91,16 @@ export default function ItineraryCard({ item, dayId, markerLabel, isFirst, isNex
 
   function resetArrivalToSystem() {
     updateItem(dayId, item.id, { arrivalManual: false });
+    setTimeExpanded(false);
   }
 
   const stayHHMM = minutesToHHMM(item.stayMinutes);
   const leaveTime = addMinutesToTime(item.arrivalTime, item.stayMinutes);
+
+  const showArrivalInline = !isFirst && !isFirstNonHotel;
+  const showTimeToggle = !isFirstNonHotel;
+  const hasNotes = !!item.notes && item.notes.length > 0;
+  const showAddNotesBtn = !hasNotes && !editingNotes;
 
   return (
     <div
@@ -97,11 +113,13 @@ export default function ItineraryCard({ item, dayId, markerLabel, isFirst, isNex
     >
       <div className={`item-marker${item.isHotel ? ' hotel' : ''}`}>{markerLabel}</div>
       <div className="item-body">
-        {!isFirst && (
-          <div className="item-big-time">{item.arrivalTime}</div>
-        )}
         <div className="item-head-row">
-          <span className="item-name">{item.place.name}</span>
+          <div className="item-head-text">
+            {showArrivalInline && (
+              <span className="item-arrival-inline">{item.arrivalTime}</span>
+            )}
+            <span className="item-name">{item.place.name}</span>
+          </div>
           <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
             <div className="item-copy-wrap" ref={copyRef}>
               <button
@@ -155,83 +173,88 @@ export default function ItineraryCard({ item, dayId, markerLabel, isFirst, isNex
           </div>
         </div>
 
-        <div className="item-time-row" onClick={(e) => e.stopPropagation()}>
-          <select
-            className="item-duration-mode"
-            value={row1Mode}
-            onChange={(e) => setRow1Mode(e.target.value as Row1Mode)}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <option value="arrival">抵達</option>
-            <option value="stay">停留</option>
-          </select>
-          {row1Mode === 'arrival' ? (
-            <input
-              className="item-duration-input"
-              type="text"
-              inputMode="numeric"
-              pattern="\d{2}:\d{2}"
-              key={`${item.id}-arr-${item.arrivalTime}`}
-              defaultValue={item.arrivalTime}
-              maxLength={5}
-              placeholder="09:00"
-              onBlur={(e) => commitArrival(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              onClick={(e) => e.stopPropagation()}
-              title="24 小時制 HH:MM（例：17:30）"
-            />
-          ) : (
-            <input
-              className="item-duration-input"
-              type="text"
-              inputMode="numeric"
-              pattern="\d{2}:\d{2}"
-              key={`${item.id}-stay-${stayHHMM}`}
-              defaultValue={stayHHMM}
-              maxLength={5}
-              placeholder="01:00"
-              onBlur={(e) => commitStayHHMM(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              onClick={(e) => e.stopPropagation()}
-              title="格式 HH:MM，例如 01:00 表示停留 1 小時"
-            />
-          )}
-          {item.arrivalManual && (
-            <button
-              className="item-time-manual-tag"
-              title="目前抵達時間是手動設定，點擊改為自動推算"
-              onClick={(e) => {
-                e.stopPropagation();
-                resetArrivalToSystem();
-              }}
-            >
-              自訂 ↺
-            </button>
-          )}
-        </div>
+        <div className="item-stay-line">{formatStayDuration(item.stayMinutes)}</div>
 
-        <div className="item-time-row" onClick={(e) => e.stopPropagation()}>
-          <span className="item-leave-label">離開</span>
-          <input
-            className="item-duration-input"
-            type="text"
-            inputMode="numeric"
-            pattern="\d{2}:\d{2}"
-            key={`${item.id}-leave-${leaveTime}`}
-            defaultValue={leaveTime}
-            maxLength={5}
-            placeholder="10:00"
-            onBlur={(e) => commitLeave(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-            onClick={(e) => e.stopPropagation()}
-            title="24 小時制 HH:MM，會回算成停留時間"
-          />
-          <span className="item-stay-hint">停留 {formatDuration(item.stayMinutes)}</span>
-        </div>
+        {timeExpanded && (
+          <div className="item-time-inputs">
+            <div className="item-time-row" onClick={(e) => e.stopPropagation()}>
+              <select
+                className="item-duration-mode"
+                value={row1Mode}
+                onChange={(e) => setRow1Mode(e.target.value as Row1Mode)}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <option value="arrival">抵達</option>
+                <option value="stay">停留</option>
+              </select>
+              {row1Mode === 'arrival' ? (
+                <input
+                  className="item-duration-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{2}:\d{2}"
+                  key={`${item.id}-arr-${item.arrivalTime}`}
+                  defaultValue={item.arrivalTime}
+                  maxLength={5}
+                  placeholder="09:00"
+                  onBlur={(e) => commitArrival(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  onClick={(e) => e.stopPropagation()}
+                  title="24 小時制 HH:MM（例：17:30）"
+                />
+              ) : (
+                <input
+                  className="item-duration-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{2}:\d{2}"
+                  key={`${item.id}-stay-${stayHHMM}`}
+                  defaultValue={stayHHMM}
+                  maxLength={5}
+                  placeholder="01:00"
+                  onBlur={(e) => commitStayHHMM(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  onClick={(e) => e.stopPropagation()}
+                  title="格式 HH:MM，例如 01:00 表示停留 1 小時"
+                />
+              )}
+              {item.arrivalManual && (
+                <button
+                  className="item-time-manual-tag"
+                  title="目前抵達時間是手動設定，點擊改為自動推算"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetArrivalToSystem();
+                  }}
+                >
+                  自訂 ↺
+                </button>
+              )}
+            </div>
 
-        {item.notes && item.notes.length > 0 && !editingNotes && (
+            <div className="item-time-row" onClick={(e) => e.stopPropagation()}>
+              <span className="item-leave-label">離開</span>
+              <input
+                className="item-duration-input"
+                type="text"
+                inputMode="numeric"
+                pattern="\d{2}:\d{2}"
+                key={`${item.id}-leave-${leaveTime}`}
+                defaultValue={leaveTime}
+                maxLength={5}
+                placeholder="10:00"
+                onBlur={(e) => commitLeave(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                onClick={(e) => e.stopPropagation()}
+                title="24 小時制 HH:MM，會回算成停留時間"
+              />
+            </div>
+          </div>
+        )}
+
+        {hasNotes && !editingNotes && (
           <div className="item-notes" onClick={(e) => { e.stopPropagation(); setEditingNotes(true); }}>
-            {item.notes.map((n, i) => (
+            {item.notes!.map((n, i) => (
               <div key={i} className="item-note">{n}</div>
             ))}
           </div>
@@ -242,11 +265,26 @@ export default function ItineraryCard({ item, dayId, markerLabel, isFirst, isNex
             onChange={(next) => updateItem(dayId, item.id, { notes: next })}
           />
         )}
-        {(!item.notes || item.notes.length === 0) && !editingNotes && (
-          <button className="note-add-btn" onClick={(e) => { e.stopPropagation(); setEditingNotes(true); }}>
-            + 加備註
-          </button>
-        )}
+
+        <div className="item-footer-row" onClick={(e) => e.stopPropagation()}>
+          {showAddNotesBtn && (
+            <button
+              className="footer-link"
+              onClick={(e) => { e.stopPropagation(); setEditingNotes(true); }}
+            >
+              + 加備註
+            </button>
+          )}
+          {showAddNotesBtn && showTimeToggle && <span className="footer-sep">·</span>}
+          {showTimeToggle && (
+            <button
+              className="footer-link"
+              onClick={(e) => { e.stopPropagation(); setTimeExpanded((v) => !v); }}
+            >
+              {timeExpanded ? '收起 ⌃' : '設定到達時間 ⌄'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

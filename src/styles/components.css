@@ -19,7 +19,7 @@
 
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
 }
 
@@ -96,12 +96,12 @@
 /* ========== Trip Switcher ========== */
 .trip-switcher {
   position: relative;
-  margin-left: 14px;
 }
 
 .trip-switcher-trigger {
   font-family: var(--font-body);
   font-size: 16px;
+  font-weight: 400;
   color: var(--ink-secondary);
   background: transparent;
   border: 0.5px solid var(--border-medium);
@@ -112,6 +112,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  letter-spacing: 0.01em;
 }
 
 .trip-switcher-trigger:hover {
@@ -1258,23 +1259,85 @@
 }
 
 /* ========== 兩行式時間輸入 ========== */
-.item-big-time {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 500;
-  color: var(--accent-primary);
-  letter-spacing: -0.01em;
-  font-feature-settings: 'tnum' 1;
-  line-height: 1.1;
-  margin-bottom: 4px;
-}
-
 .item-head-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 6px;
+}
+
+.item-head-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.item-arrival-inline {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--accent-primary);
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.item-stay-line {
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-feature-settings: 'tnum' 1;
+  margin-bottom: 4px;
+}
+
+@keyframes timeInputsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.item-time-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 6px 0 2px;
+  animation: timeInputsFadeIn 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.item-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.footer-link {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  letter-spacing: 0.02em;
+  transition: color var(--t-fast);
+}
+
+.footer-link:hover {
+  color: var(--ink-primary);
+}
+
+.footer-sep {
+  color: var(--ink-faint);
+  font-size: 12px;
 }
 
 .item-card-actions {

@@ -86,9 +86,9 @@ export default function Header() {
           <EditableTripName name={trip.name} onSave={renameTrip} />
           <span className="trip-meta">{meta}</span>
         </div>
-        <TripSwitcher />
       </div>
       <div className="header-actions">
+        <TripSwitcher />
         <button className="btn" onClick={() => exportTripAsJSON(trip)} title="匯出 JSON 行程檔（之後可從另一台裝置匯入還原）">匯出</button>
         <button className="btn" onClick={handleImport} title="從 JSON 行程檔匯入（會覆蓋目前的）">匯入</button>
         <button className="btn" onClick={() => exportTripAsPDF(trip)} title="下載 PDF 旅遊小冊">下載</button>

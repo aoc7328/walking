@@ -71,6 +71,7 @@ export default function RightPanel() {
   // 計算當天第一個 / 最後一個飯店 item 的 id（給 marker 文字用）
   let firstHotelId: string | null = null;
   let lastHotelId: string | null = null;
+  let firstNonHotelId: string | null = null;
   if (day) {
     for (let i = 0; i < day.items.length; i++) {
       if (day.items[i]!.isHotel) {
@@ -81,6 +82,12 @@ export default function RightPanel() {
     for (let i = day.items.length - 1; i >= 0; i--) {
       if (day.items[i]!.isHotel) {
         lastHotelId = day.items[i]!.id;
+        break;
+      }
+    }
+    for (let i = 0; i < day.items.length; i++) {
+      if (!day.items[i]!.isHotel) {
+        firstNonHotelId = day.items[i]!.id;
         break;
       }
     }
@@ -146,6 +153,7 @@ export default function RightPanel() {
                         dayId={day.id}
                         markerLabel={markerLabel}
                         isFirst={idx === 0}
+                        isFirstNonHotel={item.id === firstNonHotelId}
                         isNextStop={false}
                       />
                     );
