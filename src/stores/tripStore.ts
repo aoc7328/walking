@@ -112,14 +112,18 @@ function withAutoFill(days: DayPlan[]): DayPlan[] {
 
     const prevLast = prev.items[prev.items.length - 1]!;
 
+    // 防止連鎖：若前一天本身就是自動填出來的單一 item（autoFilled），
+    // 表示前面已經是一連串空白天，這一天就不再自動填了。
+    const prevIsAutoFilledOnly = prev.items.length === 1 && prev.items[0]!.autoFilled === true;
+
     // 情況 1：空白天 → 填入前一天的最後一站，標記為 autoFilled
-    if (d.items.length === 0) {
+    if (d.items.length === 0 && !prevIsAutoFilledOnly) {
       const seed: ItineraryItem = {
         id: uuid(),
         place: prevLast.place,
         arrivalTime: '09:00',
         stayMinutes: 30,
-        isHotel: true,
+        isHotel: false,
         autoFilled: true,
         notes: prevLast.notes ? [...prevLast.notes] : undefined,
       };

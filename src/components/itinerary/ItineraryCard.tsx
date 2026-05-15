@@ -19,7 +19,6 @@ interface Props {
   item: ItineraryItem;
   dayId: string;
   markerLabel: string;
-  isFirst?: boolean;
   isNextStop?: boolean;
 }
 
@@ -29,7 +28,6 @@ export default function ItineraryCard({
   item,
   dayId,
   markerLabel,
-  isFirst,
   isNextStop,
 }: Props) {
   const openDetail = useUIStore((s) => s.openDetail);
@@ -95,8 +93,11 @@ export default function ItineraryCard({
   const stayHHMM = minutesToHHMM(item.stayMinutes);
   const leaveTime = addMinutesToTime(item.arrivalTime, item.stayMinutes);
 
-  const showArrivalInline = !isFirst;
-  const showTimeToggle = !isFirst;
+  // 抵達時間與「設定到達時間」toggle 永遠顯示。
+  // 原本針對第一站（idx===0）的隱藏邏輯是為「起床飯店」設計，
+  // 但匯入行程第一站可能是機場等真實抵達點，一律顯示比較不會誤導。
+  const showArrivalInline = true;
+  const showTimeToggle = true;
   const hasNotes = !!item.notes && item.notes.length > 0;
   const showAddNotesBtn = !hasNotes && !editingNotes;
 
