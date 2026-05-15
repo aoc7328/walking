@@ -62,7 +62,7 @@ export default function TripSwitcher() {
   return (
     <div className="trip-switcher" ref={wrapRef}>
       <button className="trip-switcher-trigger" onClick={toggle} title="切換／管理行程">
-        📁　行程
+        行程
         <span className="trip-switcher-arrow">{open ? '▴' : '▾'}</span>
       </button>
       {open && (

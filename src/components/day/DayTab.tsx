@@ -32,9 +32,7 @@ export default function DayTab({ day, active, onSelect }: Props) {
       <span className="day-tab-num">
         Day <em>{day.dayIndex}</em>
       </span>
-      <span className="day-tab-meta">
-        {day.city ?? '—'}　·　{nonHotelCount} 點
-      </span>
+      <span className="day-tab-meta">{nonHotelCount} 點</span>
     </div>
   );
 }

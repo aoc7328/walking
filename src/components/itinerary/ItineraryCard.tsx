@@ -5,7 +5,6 @@ import type { ItineraryItem } from '../../types/trip';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { formatStayDuration } from '../../utils/date';
-import { getPlaceIcon } from '../../utils/placeIcon';
 import NoteEditor from './NoteEditor';
 
 interface Props {
@@ -13,20 +12,6 @@ interface Props {
   dayId: string;
   markerLabel: string;
   isNextStop?: boolean;
-}
-
-function ItemMarker({ item, markerLabel }: { item: ItineraryItem; markerLabel: string }) {
-  const iconInfo = getPlaceIcon(item.place.types, item.place.name);
-  return (
-    <div className="item-marker-stack">
-      <div className={`item-marker${item.isHotel ? ' hotel' : ''}`}>{markerLabel}</div>
-      {iconInfo && (
-        <span className="item-marker-icon" title={iconInfo.label}>
-          {iconInfo.icon}
-        </span>
-      )}
-    </div>
-  );
 }
 
 export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: Props) {
@@ -64,7 +49,7 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
       {...attributes}
       {...listeners}
     >
-      <ItemMarker item={item} markerLabel={markerLabel} />
+      <div className={`item-marker${item.isHotel ? ' hotel' : ''}`}>{markerLabel}</div>
       <div className="item-body">
         <div className="item-time-name">
           <input
