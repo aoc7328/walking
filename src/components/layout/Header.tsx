@@ -94,9 +94,9 @@ export default function Header() {
         <button
           className="btn"
           onClick={openUserIdModal}
-          title="同步 ID：跨裝置看相同行程；點開可複製或切換 ID"
+          title="帳號資訊與登出"
         >
-          🔑 同步 ID
+          🔑 帳號
         </button>
         <TripSwitcher />
         <button className="btn" onClick={() => exportTripAsJSON(trip)} title="匯出 JSON 行程檔（之後可從另一台裝置匯入還原）">匯出</button>

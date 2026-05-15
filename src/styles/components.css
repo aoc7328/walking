@@ -101,7 +101,161 @@
   box-shadow: 0 0 0 3px rgba(44, 74, 61, 0.1);
 }
 
-/* ========== 同步 ID Modal ========== */
+/* ========== 登入頁 ========== */
+.login-root {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-page);
+  padding: 20px;
+  position: relative;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  box-shadow: var(--shadow-card);
+}
+
+.login-brand {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--accent-primary);
+  text-align: center;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.login-brand em {
+  font-style: italic;
+}
+
+.login-tagline {
+  font-size: 13px;
+  color: var(--ink-muted);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.login-label {
+  font-size: 13px;
+  color: var(--ink-secondary);
+  letter-spacing: 0.02em;
+}
+
+.login-input {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink-primary);
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.login-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(44, 74, 61, 0.08);
+}
+
+.login-input:disabled {
+  background: var(--bg-soft);
+  cursor: not-allowed;
+}
+
+.login-error {
+  font-size: 13px;
+  color: var(--accent-warm);
+  background: var(--accent-warm-soft);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.login-submit {
+  margin-top: 6px;
+  padding: 10px 16px;
+  font-size: 15px;
+}
+
+.login-create-prompt {
+  margin-top: 6px;
+  padding: 14px;
+  background: var(--accent-primary-soft);
+  border: 0.5px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+}
+
+.login-create-text {
+  font-size: 14px;
+  color: var(--ink-primary);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.login-create-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.login-hint {
+  margin-top: 20px;
+  padding: 10px 12px;
+  background: var(--bg-soft);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--ink-secondary);
+  line-height: 1.6;
+}
+
+.login-hint strong {
+  color: var(--accent-warm);
+}
+
+/* ========== 帳號 Modal ========== */
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--border-soft);
+  margin-bottom: 8px;
+}
+
+.account-label {
+  font-size: 13px;
+  color: var(--ink-secondary);
+}
+
+.account-value {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-primary);
+}
+
+/* ========== 同步 ID Modal (legacy class names 保留兼容) ========== */
 .user-id-row {
   margin-bottom: 16px;
 }

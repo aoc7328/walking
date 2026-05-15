@@ -13,7 +13,7 @@ import UserIdModal from './UserIdModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
-import { loadActiveTrip, persistTripDebounced, recordDailyBackup, migrateLocalTripsToKV } from '../../db/repository';
+import { loadActiveTrip, persistTripDebounced, recordDailyBackup, migrateAccountData } from '../../db/repository';
 
 export default function AppShell() {
   const trip = useTripStore((s) => s.trip);
@@ -32,7 +32,7 @@ export default function AppShell() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await migrateLocalTripsToKV();
+      await migrateAccountData();
       if (cancelled) return;
       const loaded = await loadActiveTrip();
       if (cancelled) return;

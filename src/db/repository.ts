@@ -2,6 +2,7 @@ import { db, ACTIVE_TRIP_ID_KEY } from './schema';
 import type { Trip } from '../types/trip';
 import { toISODate } from '../utils/date';
 import { getUserId } from '../services/identity';
+import { isAccountMigrationDone, markAccountMigrationDone, getLegacyUserId } from '../services/auth';
 
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingWrite: Trip | null = null;
@@ -128,11 +129,73 @@ export async function migrateLocalTripsToKV(): Promise<{ migrated: number; faile
         failed += 1;
       }
     }
-    // 即使有失敗也標記，避免每次啟動都重試；用戶可手動清 localStorage 重新跑
     localStorage.setItem(MIGRATION_FLAG_KEY, String(Date.now()));
   } catch (err) {
     console.error('[walking] migration error:', err);
   }
+  return { migrated, failed };
+}
+
+/**
+ * 帳號系統上線後，把舊 UUID 命名空間（KV）裡的行程搬到新帳號雜湊命名空間。
+ * 同時補做 Dexie → KV 的遷移（避免該裝置從沒上過 KV）。
+ * 一次性，靠 `walking.migratedToAccount` flag 防止重跑。
+ */
+export async function migrateAccountData(): Promise<{ migrated: number; failed: number }> {
+  if (isAccountMigrationDone()) return { migrated: 0, failed: 0 };
+  let migrated = 0;
+  let failed = 0;
+
+  // 取目前 KV 已有的行程 id 集合，避免重複 PUT
+  let existingIds: Set<string>;
+  try {
+    const current = await apiFetch<Trip[]>('');
+    existingIds = new Set(current.map((t) => t.id));
+  } catch {
+    existingIds = new Set();
+  }
+
+  // (a) 從舊 UUID 命名空間搬資料
+  const oldUserId = getLegacyUserId();
+  if (oldUserId && /^[a-f0-9]{16,40}$/i.test(oldUserId)) {
+    try {
+      const res = await fetch(`/api/trips?u=${encodeURIComponent(oldUserId)}`);
+      if (res.ok) {
+        const trips = (await res.json()) as Trip[];
+        for (const trip of trips) {
+          if (existingIds.has(trip.id)) continue;
+          try {
+            await putTripToKV(trip);
+            existingIds.add(trip.id);
+            migrated += 1;
+          } catch {
+            failed += 1;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // (b) 從本地 Dexie 補搬（如果還有沒上 KV 過的）
+  try {
+    const localTrips = await db.trips.toArray();
+    for (const trip of localTrips) {
+      if (existingIds.has(trip.id)) continue;
+      try {
+        await putTripToKV(trip);
+        existingIds.add(trip.id);
+        migrated += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  markAccountMigrationDone();
   return { migrated, failed };
 }
 
