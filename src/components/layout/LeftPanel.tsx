@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
@@ -36,7 +36,7 @@ export default function LeftPanel() {
             <button
               className="collapse-toggle"
               onClick={() => toggle('leftPanel')}
-              style={{ width: 18, height: 18, fontSize: 9 }}
+              style={{ width: 18, height: 18, fontSize: 13 }}
               title="收合左欄"
             >
               ◂

@@ -1,4 +1,4 @@
-import { AdvancedMarker } from '@vis.gl/react-google-maps';
+﻿import { AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { LatLng } from '../../utils/geo';
 import { useUIStore } from '../../stores/uiStore';
 
@@ -25,7 +25,7 @@ export default function ItineraryMarker({ position, label, isHotel, placeId }: P
           border: '2px solid white',
           color: 'white',
           fontFamily: 'var(--font-display)',
-          fontSize: 13,
+          fontSize: 17,
           fontWeight: 500,
           display: 'flex',
           alignItems: 'center',

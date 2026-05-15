@@ -1,4 +1,4 @@
-import type { Trip } from '../types/trip';
+﻿import type { Trip } from '../types/trip';
 import { TRANSPORT_LABEL, formatDuration } from '../utils/format';
 import { formatWithWeekday, formatStayDuration } from '../utils/date';
 import { buildStaticMapUrl, hasApiKey } from './googleMaps';
@@ -129,22 +129,22 @@ function generateShareHTML(trip: Trip): string {
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Noto Serif TC', Georgia, serif; color: var(--ink-primary); background: var(--bg-page); padding: 40px 20px; max-width: 700px; margin: 0 auto; }
-  h1 { font-family: 'Fraunces', serif; font-style: italic; color: var(--accent-primary); font-size: 32px; margin-bottom: 6px; }
-  .meta { color: var(--ink-muted); font-size: 13px; margin-bottom: 30px; }
+  h1 { font-family: 'Fraunces', serif; font-style: italic; color: var(--accent-primary); font-size: 36px; margin-bottom: 6px; }
+  .meta { color: var(--ink-muted); font-size: 17px; margin-bottom: 30px; }
   .day { margin-bottom: 40px; }
-  .day h2 { font-family: 'Fraunces', serif; font-size: 20px; color: var(--accent-primary); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 0.5px solid var(--border-soft); }
+  .day h2 { font-family: 'Fraunces', serif; font-size: 24px; color: var(--accent-primary); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 0.5px solid var(--border-soft); }
   .static-map { width: 100%; border-radius: 8px; margin-bottom: 14px; }
   .card { background: var(--bg-card); border: 0.5px solid var(--border-soft); border-radius: 6px; padding: 10px 14px; display: grid; grid-template-columns: 30px 1fr; gap: 12px; margin-bottom: 4px; }
-  .marker { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-primary); color: white; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-size: 13px; }
+  .marker { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-primary); color: white; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-size: 17px; }
   .marker.hotel { background: var(--accent-purple); }
   .time-name { display: flex; gap: 10px; align-items: baseline; margin-bottom: 2px; }
   .time { font-family: 'Fraunces', serif; color: var(--accent-primary); font-weight: 500; }
   .name { font-weight: 500; }
-  .stay, .addr { font-size: 11px; color: var(--ink-muted); }
+  .stay, .addr { font-size: 15px; color: var(--ink-muted); }
   .addr { margin-top: 2px; }
   .notes { margin-top: 6px; padding-left: 16px; }
-  .notes li { font-size: 12px; color: var(--ink-secondary); list-style: '• '; padding-left: 4px; }
-  .leg { font-size: 11px; color: var(--ink-muted); padding: 6px 0 6px 42px; }
+  .notes li { font-size: 16px; color: var(--ink-secondary); list-style: '• '; padding-left: 4px; }
+  .leg { font-size: 15px; color: var(--ink-muted); padding: 6px 0 6px 42px; }
 </style>
 </head>
 <body>

@@ -49,12 +49,50 @@ function reindexDays(days: DayPlan[], startDate: string): DayPlan[] {
   }));
 }
 
+/**
+ * 把每個空白的日子（items.length === 0）自動填入前一天的最後一站，
+ * 並標記為飯店（isHotel），預設 09:00 抵達、停留 30 分。Day 1 不處理。
+ *
+ * 純函數，可重複套用（idempotent）：填好的日子下一次跑就會跳過。
+ */
+function withAutoFill(days: DayPlan[]): DayPlan[] {
+  if (days.length <= 1) return days;
+  const next: DayPlan[] = [];
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i]!;
+    const prev = next[i - 1];
+    if (d.items.length === 0 && prev && prev.items.length > 0) {
+      const last = prev.items[prev.items.length - 1]!;
+      const seed: ItineraryItem = {
+        id: uuid(),
+        place: last.place,
+        arrivalTime: '09:00',
+        stayMinutes: 30,
+        isHotel: true,
+        notes: last.notes ? [...last.notes] : undefined,
+      };
+      next.push({ ...d, items: [seed], legs: [] });
+    } else {
+      next.push(d);
+    }
+  }
+  return next;
+}
+
 export const useTripStore = create<TripStore>((set, get) => ({
   trip: null,
   isLoading: false,
 
-  setTrip: (trip) => set({ trip }),
-  reset: () => set({ trip: { ...MOCK_TRIP, createdAt: Date.now(), updatedAt: Date.now() } }),
+  setTrip: (trip) => set({ trip: { ...trip, days: withAutoFill(trip.days) } }),
+  reset: () =>
+    set({
+      trip: {
+        ...MOCK_TRIP,
+        days: withAutoFill(MOCK_TRIP.days),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    }),
 
   renameTrip: (name) =>
     set((state) => (state.trip ? { trip: { ...state.trip, name, updatedAt: Date.now() } } : {})),
@@ -107,7 +145,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = recalcLegsArray(items, d.legs.filter((_, i) => i !== Math.min(idx, d.legs.length - 1)));
         return { ...d, items, legs };
       });
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: withAutoFill(days), updatedAt: Date.now() } };
     }),
 
   updateItem: (dayId, itemId, patch) =>
@@ -168,7 +206,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
       return {
         trip: {
           ...state.trip,
-          days: reindexDays(days, state.trip.startDate),
+          days: withAutoFill(reindexDays(days, state.trip.startDate)),
           updatedAt: Date.now(),
         },
       };
@@ -185,7 +223,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         legs: [],
       };
       const newStart = addDays(state.trip.startDate, -1);
-      const days = reindexDays([newDay, ...state.trip.days], newStart);
+      const days = withAutoFill(reindexDays([newDay, ...state.trip.days], newStart));
       return { trip: { ...state.trip, startDate: newStart, days, updatedAt: Date.now() } };
     }),
 
@@ -199,7 +237,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         items: [],
         legs: [],
       };
-      const days = reindexDays([...state.trip.days, newDay], state.trip.startDate);
+      const days = withAutoFill(reindexDays([...state.trip.days, newDay], state.trip.startDate));
       return { trip: { ...state.trip, days, updatedAt: Date.now() } };
     }),
 

@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+﻿import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import type { Trip } from '../../types/trip';
 import { formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
@@ -12,17 +12,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF7F0',
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     color: '#2C4A3D',
     marginBottom: 4,
   },
   meta: {
-    fontSize: 10,
+    fontSize: 14,
     color: '#A89C8B',
     marginBottom: 16,
   },
   dayHeading: {
-    fontSize: 16,
+    fontSize: 20,
     color: '#2C4A3D',
     marginBottom: 6,
     borderBottom: '0.5pt solid #E8DFD0',
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2C4A3D',
     color: 'white',
     textAlign: 'center',
-    fontSize: 10,
+    fontSize: 14,
     paddingTop: 5,
   },
   markerHotel: {
@@ -66,31 +66,31 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   time: {
-    fontSize: 11,
+    fontSize: 15,
     color: '#2C4A3D',
     fontWeight: 500,
   },
   name: {
-    fontSize: 11,
+    fontSize: 15,
     color: '#2C2620',
     fontWeight: 500,
   },
   stay: {
-    fontSize: 9,
+    fontSize: 13,
     color: '#A89C8B',
   },
   addr: {
-    fontSize: 9,
+    fontSize: 13,
     color: '#A89C8B',
     marginTop: 1,
   },
   note: {
-    fontSize: 9,
+    fontSize: 13,
     color: '#6B5F50',
     marginTop: 2,
   },
   leg: {
-    fontSize: 9,
+    fontSize: 13,
     color: '#A89C8B',
     paddingLeft: 32,
     paddingVertical: 4,

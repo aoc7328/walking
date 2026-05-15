@@ -36,7 +36,11 @@ export default function DayStrip() {
   }
 
   return (
-    <div className={`day-strip-wrap${collapsed ? ' collapsed' : ''}`}>
+    <div
+      className={`day-strip-wrap${collapsed ? ' collapsed' : ''}`}
+      onMouseEnter={collapsed ? () => toggle('dayStrip') : undefined}
+    >
+      {collapsed && <div className="day-strip-peek">日程表　·　移到此處展開</div>}
       <div className="day-strip-content">
         <div className="day-strip-toolbar">
           <span className="day-strip-label">
@@ -74,11 +78,6 @@ export default function DayStrip() {
           </div>
         </div>
       </div>
-      {collapsed && (
-        <button className="expand-btn expand-day" onClick={() => toggle('dayStrip')} title="展開日程表">
-          ▴
-        </button>
-      )}
     </div>
   );
 }

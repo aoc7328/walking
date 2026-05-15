@@ -10,11 +10,11 @@ import NoteEditor from './NoteEditor';
 interface Props {
   item: ItineraryItem;
   dayId: string;
-  index: number;
+  markerLabel: string;
   isNextStop?: boolean;
 }
 
-export default function ItineraryCard({ item, dayId, index, isNextStop }: Props) {
+export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: Props) {
   const openDetail = useUIStore((s) => s.openDetail);
   const updateItem = useTripStore((s) => s.updateItem);
   const [editingNotes, setEditingNotes] = useState(false);
@@ -25,8 +25,6 @@ export default function ItineraryCard({ item, dayId, index, isNextStop }: Props)
     transform: CSS.Transform.toString(transform),
     transition,
   };
-
-  const markerLabel = item.isHotel ? 'H' : String(index);
 
   function handleTimeBlur(e: React.FocusEvent<HTMLInputElement>) {
     const value = e.target.value.trim();
