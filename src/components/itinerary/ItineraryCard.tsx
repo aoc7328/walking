@@ -20,7 +20,6 @@ interface Props {
   dayId: string;
   markerLabel: string;
   isFirst?: boolean;
-  isFirstNonHotel?: boolean;
   isNextStop?: boolean;
 }
 
@@ -31,7 +30,6 @@ export default function ItineraryCard({
   dayId,
   markerLabel,
   isFirst,
-  isFirstNonHotel,
   isNextStop,
 }: Props) {
   const openDetail = useUIStore((s) => s.openDetail);
@@ -97,8 +95,8 @@ export default function ItineraryCard({
   const stayHHMM = minutesToHHMM(item.stayMinutes);
   const leaveTime = addMinutesToTime(item.arrivalTime, item.stayMinutes);
 
-  const showArrivalInline = !isFirst && !isFirstNonHotel;
-  const showTimeToggle = !isFirstNonHotel;
+  const showArrivalInline = !isFirst;
+  const showTimeToggle = !isFirst;
   const hasNotes = !!item.notes && item.notes.length > 0;
   const showAddNotesBtn = !hasNotes && !editingNotes;
 
@@ -111,7 +109,7 @@ export default function ItineraryCard({
       {...attributes}
       {...listeners}
     >
-      <div className={`item-marker${item.isHotel ? ' hotel' : ''}`}>{markerLabel}</div>
+      <div className="item-marker">{markerLabel}</div>
       <div className="item-body">
         {showArrivalInline && (
           <div className="item-big-time">{item.arrivalTime}</div>

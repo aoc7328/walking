@@ -86,25 +86,6 @@ export default function MapView() {
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 
-  // 計算第一個和最後一個飯店 item 的 id，給 marker label 用
-  let firstHotelId: string | null = null;
-  let lastHotelId: string | null = null;
-  if (day) {
-    for (let i = 0; i < day.items.length; i++) {
-      if (day.items[i]!.isHotel) {
-        firstHotelId = day.items[i]!.id;
-        break;
-      }
-    }
-    for (let i = day.items.length - 1; i >= 0; i--) {
-      if (day.items[i]!.isHotel) {
-        lastHotelId = day.items[i]!.id;
-        break;
-      }
-    }
-  }
-
-  let nonHotelCount = 0;
   return (
     <APIProvider apiKey={apiKey} language="zh-TW" region="TW" libraries={['places', 'marker']}>
       <Map
@@ -119,22 +100,13 @@ export default function MapView() {
       >
         <MapAutoCenter targetCenter={center} points={itineraryPath} />
         {day &&
-          day.items.map((it) => {
-            let label: string;
-            if (it.isHotel) {
-              if (it.id === firstHotelId) label = 'S';
-              else if (it.id === lastHotelId) label = 'E';
-              else label = 'H';
-            } else {
-              nonHotelCount += 1;
-              label = String(nonHotelCount);
-            }
+          day.items.map((it, idx) => {
+            const label = String(idx + 1);
             return (
               <ItineraryMarker
                 key={it.id}
                 position={it.place.coordinates}
                 label={label}
-                isHotel={it.isHotel}
                 placeId={it.place.placeId}
               />
             );

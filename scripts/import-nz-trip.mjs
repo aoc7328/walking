@@ -123,20 +123,8 @@ const DAYS_RAW = {
   ],
 };
 
-// 飯店 / 住宿類關鍵字（用來標記 isHotel）
-const HOTEL_KEYWORDS = [
-  /sudima/i,
-  /hampton/i,
-  /edit hanmer springs/i,
-  /vicarage/i,
-  /hermitage/i,
-  /skyscape/i,
-  /rose creek farm/i,
-  /848J\+RF/i, // 看起來是 Vincent 在 Central Otago 的住宿 Plus Code
-  /hotel/i,
-  / inn$/i,
-  /lodge/i,
-];
+// 飯店判斷拿掉：所有項目都標 isHotel: false，
+// UI 統一用 idx+1 編號顯示，不再有 S/E/H 與紫色區分。
 
 // 搜尋時的特殊提示（中文地點補上英文／加上地區 bias，避免 Google 找不到）
 const SEARCH_HINTS = {
@@ -160,10 +148,6 @@ function addDays(iso, n) {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d + n));
   return date.toISOString().slice(0, 10);
-}
-
-function isHotel(name) {
-  return HOTEL_KEYWORDS.some((re) => re.test(name));
 }
 
 async function searchPlace(name) {
@@ -256,7 +240,7 @@ async function main() {
             },
             arrivalTime: raw.time,
             stayMinutes: raw.stay,
-            isHotel: isHotel(raw.name),
+            isHotel: false,
             arrivalManual: true,
           };
         }
@@ -272,7 +256,7 @@ async function main() {
           },
           arrivalTime: raw.time,
           stayMinutes: raw.stay,
-          isHotel: isHotel(raw.name),
+          isHotel: false,
           arrivalManual: true,
         };
       })

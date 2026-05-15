@@ -1,27 +1,24 @@
-﻿import { AdvancedMarker } from '@vis.gl/react-google-maps';
+import { AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { LatLng } from '../../utils/geo';
 import { useUIStore } from '../../stores/uiStore';
 
 interface Props {
   position: LatLng;
   label: string;
-  isHotel: boolean;
   placeId: string;
 }
 
-export default function ItineraryMarker({ position, label, isHotel, placeId }: Props) {
+export default function ItineraryMarker({ position, label, placeId }: Props) {
   const openDetail = useUIStore((s) => s.openDetail);
-  const color = isHotel ? 'var(--accent-purple)' : 'var(--accent-primary)';
-  const size = isHotel ? 36 : 32;
 
   return (
     <AdvancedMarker position={position} onClick={() => openDetail(placeId, 'itinerary')}>
       <div
         style={{
-          width: size,
-          height: size,
+          width: 32,
+          height: 32,
           borderRadius: '50%',
-          background: color,
+          background: 'var(--accent-primary)',
           border: '2px solid white',
           color: 'white',
           fontFamily: 'var(--font-display)',

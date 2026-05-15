@@ -45,7 +45,6 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
     );
   }, [day]);
 
-  let nonHotelCount = 0;
   return (
     <section className="tv-day">
       <header className="tv-day-head">
@@ -67,15 +66,7 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
           const prev = idx > 0 ? day.i[idx - 1] : null;
           const pUrl = placeUrl(it.p, it.n, it.la, it.lo);
           const navUrl = prev ? directionsUrl({ la: prev.la, lo: prev.lo }, { la: it.la, lo: it.lo, p: it.p }, legMode) : null;
-          let label: string;
-          if (it.h) {
-            const isFirstHotel = idx === 0;
-            const isLastHotel = idx === day.i.length - 1;
-            label = isFirstHotel ? 'S' : isLastHotel ? 'E' : 'H';
-          } else {
-            nonHotelCount += 1;
-            label = String(nonHotelCount);
-          }
+          const label = String(idx + 1);
           return (
             <div key={idx}>
               {leg && (
@@ -87,9 +78,9 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
                 </div>
               )}
               <article className="tv-card">
-                <div className={`tv-marker${it.h ? ' hotel' : ''}`}>{label}</div>
+                <div className="tv-marker">{label}</div>
                 <div className="tv-card-body">
-                  {!it.h && idx > 0 && <div className="tv-time">{it.t}</div>}
+                  {idx > 0 && <div className="tv-time">{it.t}</div>}
                   <div className="tv-name-row">
                     {pUrl ? (
                       <a href={pUrl} target="_blank" rel="noreferrer" className="tv-name">
