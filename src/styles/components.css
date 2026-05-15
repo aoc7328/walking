@@ -1684,6 +1684,17 @@
   font-weight: 500;
 }
 
+.icon-picker-tab-clear {
+  margin-left: auto;
+  color: var(--accent-warm);
+  font-weight: 500;
+}
+
+.icon-picker-tab-clear:hover {
+  color: var(--accent-warm);
+  text-decoration: underline;
+}
+
 .icon-picker-grid {
   display: grid;
   grid-template-columns: repeat(10, 1fr);

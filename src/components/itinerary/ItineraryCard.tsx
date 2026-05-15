@@ -48,18 +48,11 @@ export default function ItineraryCard({
   const copyRef = useRef<HTMLDivElement>(null);
 
   function handleBadgeClick() {
-    if (item.place.iconEmoji) {
-      const ok = window.confirm(`移除「${item.place.name}」的圖示？`);
-      if (ok) {
-        setPlaceIcon(item.place.placeId, undefined);
-      }
-    } else {
-      setIconPickerOpen(true);
-    }
+    setIconPickerOpen(true);
   }
 
-  function handleIconSelect(emoji: string) {
-    setPlaceIcon(item.place.placeId, emoji);
+  function handleIconSelect(emoji: string | null) {
+    setPlaceIcon(item.place.placeId, emoji ?? undefined);
   }
 
   function handleDelete(e: React.MouseEvent) {
@@ -307,6 +300,7 @@ export default function ItineraryCard({
       </div>
       <IconPicker
         open={iconPickerOpen}
+        currentEmoji={item.place.iconEmoji}
         onSelect={handleIconSelect}
         onClose={() => setIconPickerOpen(false)}
       />

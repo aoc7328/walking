@@ -3,7 +3,8 @@ import { EMOJI_CATEGORIES, type EmojiCategory, type EmojiItem } from '../../data
 
 interface Props {
   open: boolean;
-  onSelect: (emoji: string) => void;
+  currentEmoji?: string;
+  onSelect: (emoji: string | null) => void;
   onClose: () => void;
 }
 
@@ -23,7 +24,7 @@ function buildFlatIndex(): FlatItem[] {
 
 const FLAT_INDEX: FlatItem[] = buildFlatIndex();
 
-export default function IconPicker({ open, onSelect, onClose }: Props) {
+export default function IconPicker({ open, currentEmoji, onSelect, onClose }: Props) {
   const [query, setQuery] = useState('');
   const [activeKey, setActiveKey] = useState<string>(EMOJI_CATEGORIES[0]!.key);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +64,11 @@ export default function IconPicker({ open, onSelect, onClose }: Props) {
     onClose();
   }
 
+  function handleClear() {
+    onSelect(null);
+    onClose();
+  }
+
   return (
     <div
       className="modal-backdrop"
@@ -98,6 +104,16 @@ export default function IconPicker({ open, onSelect, onClose }: Props) {
                 </button>
               );
             })}
+            {currentEmoji && (
+              <button
+                type="button"
+                className="icon-picker-tab icon-picker-tab-clear"
+                onClick={handleClear}
+                title="移除目前的圖示"
+              >
+                清空
+              </button>
+            )}
           </div>
         )}
 
