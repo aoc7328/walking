@@ -106,28 +106,23 @@ export default function RightPanel() {
                 </span>
                 <span className="right-panel-day-date">{formatWithWeekday(day.date)}</span>
               </div>
-              <div className="right-panel-meta-row">
-                <span className="right-panel-day-meta">
-                  {day.city ?? '尚未設定城市'}　·　{day.items.length} 個點
-                </span>
-                <div className="right-panel-header-tools">
-                  <button
-                    className="right-panel-delete-day"
-                    onClick={handleDeleteDay}
-                    title="刪除本日"
-                    disabled={trip ? trip.days.length <= 1 : true}
-                  >
-                    🗑　刪除本日
-                  </button>
-                  <button
-                    className="collapse-toggle"
-                    onClick={() => toggle('rightPanel')}
-                    style={{ width: 18, height: 18, fontSize: 13 }}
-                    title="收合右欄"
-                  >
-                    ▸
-                  </button>
-                </div>
+              <div className="right-panel-tools-row">
+                <button
+                  className="right-panel-delete-day"
+                  onClick={handleDeleteDay}
+                  title="刪除本日"
+                  disabled={trip ? trip.days.length <= 1 : true}
+                >
+                  🗑　刪除本日
+                </button>
+                <button
+                  className="collapse-toggle"
+                  onClick={() => toggle('rightPanel')}
+                  style={{ width: 18, height: 18, fontSize: 13 }}
+                  title="收合右欄"
+                >
+                  ▸
+                </button>
               </div>
             </div>
             <div className="right-panel-list thin-scroll">

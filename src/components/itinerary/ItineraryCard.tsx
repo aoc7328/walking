@@ -27,12 +27,20 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
   const openDetail = useUIStore((s) => s.openDetail);
   const updateItem = useTripStore((s) => s.updateItem);
   const copyItemToDay = useTripStore((s) => s.copyItemToDay);
+  const removeItem = useTripStore((s) => s.removeItem);
   const trip = useTripStore((s) => s.trip);
 
   const [editingNotes, setEditingNotes] = useState(false);
   const [row1Mode, setRow1Mode] = useState<Row1Mode>('arrival');
   const [copyOpen, setCopyOpen] = useState(false);
   const copyRef = useRef<HTMLDivElement>(null);
+
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    const ok = window.confirm(`確定刪除「${item.place.name}」這個行程？此操作無法復原。`);
+    if (!ok) return;
+    removeItem(dayId, item.id);
+  }
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
 
@@ -91,14 +99,18 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
           <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
             <div className="item-copy-wrap" ref={copyRef}>
               <button
-                className="item-copy-btn"
+                className="item-icon-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   setCopyOpen((o) => !o);
                 }}
                 title="複製到其他天"
+                aria-label="複製"
               >
-                📋
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
               </button>
               {copyOpen && trip && (
                 <div className="item-copy-menu">
@@ -121,6 +133,19 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
                 </div>
               )}
             </div>
+            <button
+              className="item-icon-btn item-icon-btn-danger"
+              onClick={handleDelete}
+              title="刪除此行程"
+              aria-label="刪除"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                <path d="M10 11v6M14 11v6"></path>
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
           </div>
         </div>
 

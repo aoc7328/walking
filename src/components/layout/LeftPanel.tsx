@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
@@ -10,13 +10,17 @@ export default function LeftPanel() {
   const results = useSearchStore((s) => s.results);
   const isLoading = useSearchStore((s) => s.isLoading);
   const error = useSearchStore((s) => s.error);
+  const query = useSearchStore((s) => s.query);
   const currentDayId = useUIStore((s) => s.currentDayId);
   const trip = useTripStore((s) => s.trip);
 
   const currentDay = trip?.days.find((d) => d.id === currentDayId) ?? null;
+  const favorites = trip?.favorites ?? [];
+  const isSearching = query.trim() !== '' || results.length > 0 || isLoading || !!error;
+
   const favoritePlaceIds = useMemo(
-    () => new Set((trip?.favorites ?? []).map((f) => f.placeId)),
-    [trip?.favorites],
+    () => new Set(favorites.map((f) => f.placeId)),
+    [favorites],
   );
 
   const sortedResults = useMemo(() => {
@@ -26,13 +30,18 @@ export default function LeftPanel() {
     return [...favored, ...others];
   }, [results, favoritePlaceIds]);
 
+  // 標題與資料來源依「是否在搜尋」切換
+  const title = isSearching ? '搜尋結果' : '我的收藏';
+  const count = isSearching ? results.length : favorites.length;
+  const listData = isSearching ? sortedResults : favorites;
+
   return (
     <>
       <aside className={`left-panel${collapsed ? ' collapsed' : ''}`}>
         <div className="left-panel-header">
-          <span className="left-panel-title">搜尋結果</span>
+          <span className="left-panel-title">{title}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="left-panel-count">{results.length} 筆</span>
+            <span className="left-panel-count">{count} 筆</span>
             <button
               className="collapse-toggle"
               onClick={() => toggle('leftPanel')}
@@ -46,10 +55,12 @@ export default function LeftPanel() {
         <div className="left-panel-list thin-scroll">
           {isLoading && <div className="empty-search">搜尋中…</div>}
           {error && <div className="empty-search">{error}</div>}
-          {!isLoading && !error && sortedResults.length === 0 && (
-            <div className="empty-search">在上方輸入關鍵字　·　按 Enter 搜尋</div>
+          {!isLoading && !error && listData.length === 0 && (
+            <div className="empty-search">
+              {isSearching ? '沒有結果' : '還沒有收藏的地點　·　點搜尋結果上的 ♡ 來收藏'}
+            </div>
           )}
-          {sortedResults.map((place) => (
+          {listData.map((place) => (
             <SearchResultCard key={place.id} place={place} dayIndex={currentDay?.dayIndex ?? null} />
           ))}
         </div>

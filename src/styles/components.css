@@ -244,6 +244,14 @@
 }
 
 /* ========== 右欄 header 工具列 ========== */
+.right-panel-tools-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .right-panel-meta-row {
   display: flex;
   align-items: center;
@@ -1146,6 +1154,40 @@
   position: relative;
 }
 
+.item-card-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.item-icon-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--ink-secondary);
+  transition: all var(--t-fast);
+  padding: 0;
+}
+
+.item-icon-btn:hover {
+  background: var(--bg-soft);
+  border-color: var(--ink-faint);
+  color: var(--ink-primary);
+}
+
+.item-icon-btn-danger:hover {
+  background: var(--accent-warm-soft);
+  border-color: var(--accent-warm);
+  color: var(--accent-warm);
+}
+
+/* 舊命名保留兼容 */
 .item-copy-btn {
   width: 24px;
   height: 24px;

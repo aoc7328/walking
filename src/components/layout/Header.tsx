@@ -62,8 +62,7 @@ export default function Header() {
 
   const endDate = addDays(trip.startDate, trip.days.length - 1);
   const totalDays = diffDays(trip.startDate, endDate) + 1;
-  const cities = Array.from(new Set(trip.days.map((d) => d.city).filter(Boolean))).join('・');
-  const meta = `${formatRange(trip.startDate, endDate)}　·　${totalDays} 天${cities ? `　·　${cities}` : ''}`;
+  const meta = `${formatRange(trip.startDate, endDate)}　·　${totalDays} 天`;
 
   async function handleImport() {
     const ok = window.confirm('匯入會覆蓋目前的行程，確定要繼續嗎？');
@@ -90,10 +89,10 @@ export default function Header() {
         <TripSwitcher />
       </div>
       <div className="header-actions">
-        <button className="btn" onClick={() => exportTripAsJSON(trip)} title="匯出 JSON">儲存</button>
-        <button className="btn" onClick={handleImport} title="從 JSON 匯入">匯入</button>
-        <button className="btn" onClick={() => exportTripAsPDF(trip)}>匯出 PDF</button>
-        <button className="btn" onClick={() => exportTripAsHTML(trip)}>分享 HTML</button>
+        <button className="btn" onClick={() => exportTripAsJSON(trip)} title="匯出 JSON 行程檔（之後可從另一台裝置匯入還原）">匯出</button>
+        <button className="btn" onClick={handleImport} title="從 JSON 行程檔匯入（會覆蓋目前的）">匯入</button>
+        <button className="btn" onClick={() => exportTripAsPDF(trip)} title="下載 PDF 旅遊小冊">下載</button>
+        <button className="btn" onClick={() => exportTripAsHTML(trip)} title="產生獨立 HTML 檔，丟給朋友開瀏覽器就能看">分享</button>
       </div>
     </header>
   );

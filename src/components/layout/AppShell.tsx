@@ -59,15 +59,17 @@ export default function AppShell() {
     recordDailyBackup(trip);
   }, [trip]);
 
-  // 沒搜尋結果且沒有搜尋字串時，自動收合左欄
+  // 自動收合左欄：沒搜尋（無 query 無 results）且沒收藏 → 收合；有任一就展開
   useEffect(() => {
-    if (!searchResults.length && !searchQuery.trim() && !collapse.leftPanel) {
+    const hasContent =
+      searchResults.length > 0 || searchQuery.trim() !== '' || (trip?.favorites.length ?? 0) > 0;
+    if (!hasContent && !collapse.leftPanel) {
       toggleCollapse('leftPanel');
-    } else if ((searchResults.length > 0 || searchQuery.trim()) && collapse.leftPanel) {
+    } else if (hasContent && collapse.leftPanel) {
       toggleCollapse('leftPanel');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchResults.length, searchQuery]);
+  }, [searchResults.length, searchQuery, trip?.favorites.length]);
 
   // ESC 關閉 modal
   useEffect(() => {
