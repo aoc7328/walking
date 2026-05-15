@@ -1,11 +1,31 @@
-﻿import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+﻿import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import type { Trip } from '../../types/trip';
 import { formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
 import { buildStaticMapUrl, hasApiKey } from '../../services/googleMaps';
 
+// 註冊繁中字型，否則 @react-pdf 預設 Helvetica 沒有 CJK 字元 → 亂碼
+Font.register({
+  family: 'NotoSansTC',
+  fonts: [
+    {
+      src: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/TC/NotoSansTC-Regular.otf',
+      fontWeight: 400,
+    },
+    {
+      src: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/TC/NotoSansTC-Medium.otf',
+      fontWeight: 500,
+    },
+    {
+      src: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/TC/NotoSansTC-Bold.otf',
+      fontWeight: 700,
+    },
+  ],
+});
+
 const styles = StyleSheet.create({
   page: {
+    fontFamily: 'NotoSansTC',
     paddingTop: 36,
     paddingBottom: 36,
     paddingHorizontal: 40,
