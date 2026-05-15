@@ -38,6 +38,7 @@ interface UIStore {
   newTripModalOpen: boolean;
   tripSwitcherOpen: boolean;
   shareModalOpen: boolean;
+  userIdModalOpen: boolean;
   collapse: CollapseState;
   setCurrentDay: (dayId: string | null) => void;
   setSelectedItem: (itemId: string | null) => void;
@@ -51,6 +52,8 @@ interface UIStore {
   closeTripSwitcher: () => void;
   openShareModal: () => void;
   closeShareModal: () => void;
+  openUserIdModal: () => void;
+  closeUserIdModal: () => void;
   toggleCollapse: (key: keyof CollapseState) => void;
 }
 
@@ -63,6 +66,7 @@ export const useUIStore = create<UIStore>((set) => ({
   newTripModalOpen: false,
   tripSwitcherOpen: false,
   shareModalOpen: false,
+  userIdModalOpen: false,
   collapse: loadCollapse(),
   setCurrentDay: (dayId) => set({ currentDayId: dayId }),
   setSelectedItem: (itemId) => set({ selectedItemId: itemId }),
@@ -77,6 +81,8 @@ export const useUIStore = create<UIStore>((set) => ({
   closeTripSwitcher: () => set({ tripSwitcherOpen: false }),
   openShareModal: () => set({ shareModalOpen: true }),
   closeShareModal: () => set({ shareModalOpen: false }),
+  openUserIdModal: () => set({ userIdModalOpen: true }),
+  closeUserIdModal: () => set({ userIdModalOpen: false }),
   toggleCollapse: (key) =>
     set((state) => {
       const next = { ...state.collapse, [key]: !state.collapse[key] };

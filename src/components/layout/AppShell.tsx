@@ -9,10 +9,11 @@ import PlaceDetailModal from '../detail/PlaceDetailModal';
 import ChangeStartDateModal from '../day/ChangeStartDateModal';
 import NewTripModal from './NewTripModal';
 import ShareModal from '../share/ShareModal';
+import UserIdModal from './UserIdModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
-import { loadActiveTrip, persistTripDebounced, recordDailyBackup } from '../../db/repository';
+import { loadActiveTrip, persistTripDebounced, recordDailyBackup, migrateLocalTripsToKV } from '../../db/repository';
 
 export default function AppShell() {
   const trip = useTripStore((s) => s.trip);
@@ -27,10 +28,12 @@ export default function AppShell() {
   const searchQuery = useSearchStore((s) => s.query);
   const toggleCollapse = useUIStore((s) => s.toggleCollapse);
 
-  // 啟動載入
+  // 啟動載入：先把 IndexedDB 舊資料遷移到 KV (一次性)，再從 KV 拉
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      await migrateLocalTripsToKV();
+      if (cancelled) return;
       const loaded = await loadActiveTrip();
       if (cancelled) return;
       if (loaded) {
@@ -102,6 +105,7 @@ export default function AppShell() {
       <ChangeStartDateModal />
       <NewTripModal />
       <ShareModal />
+      <UserIdModal />
     </div>
   );
 }

@@ -201,17 +201,50 @@ export async function buildShareUrlWithId(trip: Trip, signal?: AbortSignal): Pro
   return `${base}#v=${id}`;
 }
 
-/** 從 KV 取行程（給 TripViewer 用）。失敗回 null。 */
-export async function fetchTripById(id: string): Promise<ShareTrip | null> {
+function shareCacheKey(id: string): string {
+  return `walking.shareCache.${id}`;
+}
+
+function readShareCache(id: string): ShareTrip | null {
   try {
-    const res = await fetch(`/api/trip/${encodeURIComponent(id)}`);
-    if (!res.ok) return null;
-    const parsed = await res.json();
+    const raw = localStorage.getItem(shareCacheKey(id));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
     if (!parsed || (parsed.v !== 1 && parsed.v !== 2)) return null;
     return flatten(parsed as SharePayload);
   } catch {
     return null;
   }
+}
+
+function writeShareCache(id: string, payload: unknown): void {
+  try {
+    localStorage.setItem(shareCacheKey(id), JSON.stringify(payload));
+  } catch {
+    // 配額滿 / 無痕，忽略
+  }
+}
+
+/**
+ * 從 KV 取行程（給 TripViewer 用）。
+ * 策略：先嘗試網路，成功就更新 localStorage 快取；失敗（離線）退回快取。
+ * 都失敗才回 null。
+ */
+export async function fetchTripById(id: string): Promise<ShareTrip | null> {
+  try {
+    const res = await fetch(`/api/trip/${encodeURIComponent(id)}`);
+    if (res.ok) {
+      const parsed = await res.json();
+      if (parsed && (parsed.v === 1 || parsed.v === 2)) {
+        writeShareCache(id, parsed);
+        return flatten(parsed as SharePayload);
+      }
+    }
+  } catch {
+    // 離線或網路錯誤
+  }
+  // fallback: 看 localStorage 有沒有先前看過的快取
+  return readShareCache(id);
 }
 
 /** 把 v1 或 v2 payload 展平成 viewer 統一用的 ShareTrip 結構 */
