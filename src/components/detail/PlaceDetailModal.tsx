@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { useSearchStore } from '../../stores/searchStore';
-import { fetchPlaceDetails } from '../../services/googleMaps';
+import { fetchPlaceDetails, getGoogleMapsPlaceUrl, getGoogleMapsReviewsUrl } from '../../services/googleMaps';
 import type { Place, PlaceReview } from '../../types/place';
 import { formatStars } from '../../utils/format';
 
@@ -137,6 +137,16 @@ export default function PlaceDetailModal() {
             )}
           </div>
 
+          <a
+            className="detail-gmaps-link"
+            href={getGoogleMapsPlaceUrl(detail.placeId)}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            📍 在 Google Maps 開啟　<span className="arrow">↗</span>
+          </a>
+
           <div className="detail-section">
             <div className="detail-section-label">資訊</div>
             <div className="detail-row">
@@ -193,15 +203,34 @@ export default function PlaceDetailModal() {
 
           {detail.reviews && detail.reviews.length > 0 && (
             <div className="detail-section">
-              <div className="detail-section-label">熱門評論</div>
+              <div className="detail-section-label">
+                熱門評論
+                <a
+                  className="detail-section-more"
+                  href={getGoogleMapsReviewsUrl(detail.placeId)}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  看全部評論 ↗
+                </a>
+              </div>
               {detail.reviews.slice(0, 5).map((r: PlaceReview, i) => (
-                <div key={i} className="review">
+                <a
+                  key={i}
+                  className="review"
+                  href={getGoogleMapsReviewsUrl(detail.placeId)}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="review-head">
                     <span className="review-author">{r.author}</span>
                     <span className="review-stars">{formatStars(r.rating)}</span>
+                    <span className="review-jump">↗</span>
                   </div>
                   <div className="review-text">{r.text}</div>
-                </div>
+                </a>
               ))}
             </div>
           )}

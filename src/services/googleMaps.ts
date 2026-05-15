@@ -170,6 +170,22 @@ export async function resolveGoogleMapsLink(url: string): Promise<Place[]> {
   return textSearch(url);
 }
 
+/**
+ * 產生指向 Google Maps 該地點頁的 URL。
+ * 使用 place_id 格式，能精準定位（不會被名稱搜尋誤判）。
+ */
+export function getGoogleMapsPlaceUrl(placeId: string): string {
+  return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
+}
+
+/**
+ * 產生指向該地點評論區的 Google Maps URL。
+ * 點開後 Google Maps 會直接展開該地點的所有評論。
+ */
+export function getGoogleMapsReviewsUrl(placeId: string): string {
+  return `https://search.google.com/local/reviews?placeid=${placeId}`;
+}
+
 const STATIC_MAP_BASE = 'https://maps.googleapis.com/maps/api/staticmap';
 
 export function buildStaticMapUrl(
