@@ -521,6 +521,127 @@
   color: var(--accent-warm);
 }
 
+/* ========== 周邊地點 ========== */
+.nearby-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.nearby-tag {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-secondary);
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-medium);
+  border-radius: 14px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+.nearby-tag:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: var(--accent-primary-soft);
+}
+
+.nearby-tag.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.nearby-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nearby-item {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+.nearby-item:hover {
+  border-color: var(--border-medium);
+  background: var(--bg-softer);
+}
+
+.nearby-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.nearby-item-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-primary);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nearby-item-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 2px;
+  font-feature-settings: 'tnum' 1;
+}
+
+.nearby-item-rating {
+  color: var(--accent-warm);
+  font-weight: 500;
+}
+
+.nearby-item-distance {
+  color: var(--ink-muted);
+}
+
+.nearby-item-address {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nearby-item-add {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: all var(--t-fast);
+}
+
+.nearby-item-add:hover:not(:disabled) {
+  background: #234037;
+}
+
+.nearby-item-add:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* ========== 電話 tel: 連結 ========== */
 .detail-tel-link {
   color: var(--accent-primary);

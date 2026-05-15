@@ -2,9 +2,32 @@ import { useEffect, useMemo, useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { useSearchStore } from '../../stores/searchStore';
-import { fetchPlaceDetails, getGoogleMapsPlaceUrl, getGoogleMapsReviewsUrl } from '../../services/googleMaps';
+import { fetchPlaceDetails, getGoogleMapsPlaceUrl, getGoogleMapsReviewsUrl, searchNearby } from '../../services/googleMaps';
 import type { Place, PlaceReview } from '../../types/place';
 import { formatStars, uuid } from '../../utils/format';
+import { haversineKm } from '../../utils/geo';
+
+interface NearbyCategory {
+  key: string;
+  label: string;
+  types: string[];
+}
+
+const NEARBY_CATEGORIES: NearbyCategory[] = [
+  { key: 'restaurant', label: '餐廳', types: ['restaurant'] },
+  { key: 'cafe', label: '咖啡店', types: ['cafe'] },
+  { key: 'convenience', label: '便利商店', types: ['convenience_store'] },
+  { key: 'lodging', label: '飯店', types: ['lodging'] },
+  { key: 'transit', label: '車站', types: ['transit_station', 'train_station', 'subway_station', 'bus_station'] },
+  { key: 'bank', label: 'ATM', types: ['atm', 'bank'] },
+  { key: 'attraction', label: '景點', types: ['tourist_attraction'] },
+  { key: 'pharmacy', label: '藥局', types: ['pharmacy'] },
+];
+
+function formatDistance(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} 公尺`;
+  return `${km.toFixed(1)} 公里`;
+}
 
 export default function PlaceDetailModal() {
   const placeId = useUIStore((s) => s.detailModalPlaceId);
@@ -17,6 +40,17 @@ export default function PlaceDetailModal() {
   const searchResults = useSearchStore((s) => s.results);
 
   const [detail, setDetail] = useState<Place | null>(null);
+  const [nearbyKey, setNearbyKey] = useState<string | null>(null);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyResults, setNearbyResults] = useState<Place[]>([]);
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
+
+  // 切換地點時清空周邊結果
+  useEffect(() => {
+    setNearbyKey(null);
+    setNearbyResults([]);
+    setNearbyError(null);
+  }, [placeId]);
 
   // 從 store 找出對應 Place（行程或搜尋結果）
   const seed: Place | null = useMemo(() => {
@@ -97,6 +131,41 @@ export default function PlaceDetailModal() {
     if (!dayWithItem) return;
     removeItem(dayWithItem.dayId, dayWithItem.itemId);
     close();
+  }
+
+  async function handleNearby(cat: NearbyCategory) {
+    if (!detail) return;
+    if (nearbyKey === cat.key) {
+      // 已選 → 再點一次收起
+      setNearbyKey(null);
+      setNearbyResults([]);
+      return;
+    }
+    setNearbyKey(cat.key);
+    setNearbyLoading(true);
+    setNearbyError(null);
+    setNearbyResults([]);
+    try {
+      const results = await searchNearby(detail.coordinates, cat.types, 2500);
+      // 排除「自己」這個地點
+      const filtered = results.filter((p) => p.placeId !== detail.placeId);
+      setNearbyResults(filtered);
+    } catch (err) {
+      setNearbyError(err instanceof Error ? err.message : '搜尋失敗');
+    } finally {
+      setNearbyLoading(false);
+    }
+  }
+
+  function handleNearbyAdd(e: React.MouseEvent, place: Place) {
+    e.stopPropagation();
+    if (!currentDay) return;
+    addToDay(currentDay.id, place);
+  }
+
+  function handleNearbyClick(place: Place) {
+    // 切到該地點的詳細視窗
+    useUIStore.getState().openDetail(place.placeId, 'search');
   }
 
   const photos = detail.photoUrls ?? [];
@@ -263,6 +332,62 @@ export default function PlaceDetailModal() {
               ))}
             </div>
           )}
+
+          <div className="detail-section">
+            <div className="detail-section-label">周邊地點（步行 30 分內）</div>
+            <div className="nearby-tags">
+              {NEARBY_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.key}
+                  className={`nearby-tag${nearbyKey === cat.key ? ' active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleNearby(cat);
+                  }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+            {nearbyLoading && <div className="empty-search">搜尋周邊地點中…</div>}
+            {nearbyError && <div className="empty-search">{nearbyError}</div>}
+            {!nearbyLoading && !nearbyError && nearbyKey && nearbyResults.length === 0 && (
+              <div className="empty-search">附近 2.5 公里內沒有結果</div>
+            )}
+            {!nearbyLoading && nearbyResults.length > 0 && (
+              <div className="nearby-list">
+                {nearbyResults.map((p) => {
+                  const distKm = haversineKm(detail.coordinates, p.coordinates);
+                  return (
+                    <div
+                      key={p.id}
+                      className="nearby-item"
+                      onClick={() => handleNearbyClick(p)}
+                    >
+                      <div className="nearby-item-main">
+                        <div className="nearby-item-name">{p.name}</div>
+                        <div className="nearby-item-meta">
+                          {p.rating !== undefined && (
+                            <span className="nearby-item-rating">★ {p.rating.toFixed(1)}</span>
+                          )}
+                          <span className="nearby-item-distance">距離 {formatDistance(distKm)}</span>
+                        </div>
+                        <div className="nearby-item-address">{p.address}</div>
+                      </div>
+                      <button
+                        className="nearby-item-add"
+                        onClick={(e) => handleNearbyAdd(e, p)}
+                        title={currentDay ? `加入 Day ${currentDay.dayIndex}` : '請先選日期'}
+                        disabled={!currentDay}
+                      >
+                        +
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

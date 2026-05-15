@@ -166,6 +166,42 @@ export async function textSearch(query: string, biasLocation?: string): Promise<
   }
 }
 
+/**
+ * 找出指定座標附近的地點。
+ * @param center 中心座標
+ * @param includedTypes Google Places type 陣列（例：['restaurant', 'cafe']）
+ * @param radiusMeters 搜尋半徑（公尺），預設 2500（步行 30 分鐘約 2.5 km）
+ */
+export async function searchNearby(
+  center: { lat: number; lng: number },
+  includedTypes: string[],
+  radiusMeters = 2500,
+): Promise<Place[]> {
+  if (!hasApiKey()) return [];
+  try {
+    await loadGoogleMaps();
+    const PlaceCls = (google.maps as any).places.Place;
+    const result = await PlaceCls.searchNearby({
+      fields: PLACE_LIST_FIELDS,
+      locationRestriction: { center, radius: radiusMeters },
+      includedTypes,
+      maxResultCount: 12,
+      language: 'zh-TW',
+      region: 'TW',
+      rankPreference: (google.maps as any).places.SearchNearbyRankPreference?.POPULARITY ?? 'POPULARITY',
+    });
+    const places: PlaceLite[] = result?.places ?? [];
+    return places.map(placeToInternal).filter((p): p is Place => p !== null);
+  } catch (err) {
+    console.error('[walking] searchNearby 失敗：', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/PERMISSION_DENIED|has not been used|disabled/i.test(msg)) {
+      throw new Error('需要啟用 Places API (New)');
+    }
+    return [];
+  }
+}
+
 export async function fetchPlaceDetails(placeId: string): Promise<Partial<Place> | null> {
   if (!hasApiKey()) return null;
   try {
