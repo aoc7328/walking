@@ -2,13 +2,29 @@ import type { Place } from '../../types/place';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 
-const GRADIENT_CLASSES = ['warm', 'dusty', 'green', 'blue', ''];
+const TYPE_LABELS: Record<string, string> = {
+  lodging: '住宿',
+  restaurant: '餐廳',
+  cafe: '咖啡店',
+  bar: '酒吧',
+  bakery: '麵包店',
+  meal_takeaway: '外帶',
+  meal_delivery: '外送',
+  food: '餐廳',
+  tourist_attraction: '景點',
+  museum: '博物館',
+  park: '公園',
+  shopping_mall: '購物中心',
+  store: '商店',
+  convenience_store: '便利商店',
+  point_of_interest: '景點',
+};
 
-function pickGradient(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  const idx = Math.abs(hash) % GRADIENT_CLASSES.length;
-  return GRADIENT_CLASSES[idx]!;
+function translateType(types: string[]): string | null {
+  for (const t of types) {
+    if (TYPE_LABELS[t]) return TYPE_LABELS[t]!;
+  }
+  return null;
 }
 
 export default function SearchResultCard({ place, dayIndex }: { place: Place; dayIndex: number | null }) {
@@ -20,6 +36,7 @@ export default function SearchResultCard({ place, dayIndex }: { place: Place; da
 
   const fav = isFavorited(place.placeId);
   const photoUrl = place.photoUrls?.[0];
+  const typeLabel = translateType(place.types);
 
   function handleAdd(e: React.MouseEvent) {
     e.stopPropagation();
@@ -33,22 +50,22 @@ export default function SearchResultCard({ place, dayIndex }: { place: Place; da
   }
 
   return (
-    <div className="place-card" onClick={() => openDetail(place.placeId, 'search')}>
-      <div
-        className={`place-card-image ${pickGradient(place.name)}`}
-        style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
-      >
-        {!photoUrl && <span className="place-card-image-label">photograph</span>}
-      </div>
-      <div className="place-card-body">
-        <div className="place-card-name">{place.name}</div>
-        <div className="place-card-meta">
-          {place.rating !== undefined && <span className="place-card-star">★ {place.rating.toFixed(1)}</span>}
-          {place.rating !== undefined && place.address && '　·　'}
-          {place.address.split(/[縣市區]/).filter(Boolean).slice(-1)[0]?.slice(0, 6) ?? place.address.slice(0, 8)}
-          {place.reviewCount ? `　·　${place.reviewCount} 評` : ''}
+    <div className="place-card-row" onClick={() => openDetail(place.placeId, 'search')}>
+      <div className="place-card-row-body">
+        <div className="place-card-row-name">{place.name}</div>
+        <div className="place-card-row-meta">
+          {place.rating !== undefined && (
+            <span className="place-card-row-rating">★ {place.rating.toFixed(1)}</span>
+          )}
+          {place.reviewCount !== undefined && (
+            <span className="place-card-row-reviews">({place.reviewCount})</span>
+          )}
+          {typeLabel && <span className="place-card-row-type">{typeLabel}</span>}
         </div>
-        <div className="place-card-actions">
+        <div className="place-card-row-address" title={place.address}>
+          {place.address || '地址未提供'}
+        </div>
+        <div className="place-card-row-actions">
           <button
             className={`icon-btn${fav ? ' favorited' : ''}`}
             onClick={handleFav}
@@ -66,6 +83,12 @@ export default function SearchResultCard({ place, dayIndex }: { place: Place; da
           </button>
         </div>
       </div>
+      {photoUrl && (
+        <div
+          className="place-card-row-thumb"
+          style={{ backgroundImage: `url(${photoUrl})` }}
+        />
+      )}
     </div>
   );
 }
