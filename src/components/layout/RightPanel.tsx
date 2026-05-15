@@ -145,6 +145,7 @@ export default function RightPanel() {
                         item={item}
                         dayId={day.id}
                         markerLabel={markerLabel}
+                        isFirst={idx === 0}
                         isNextStop={false}
                       />
                     );

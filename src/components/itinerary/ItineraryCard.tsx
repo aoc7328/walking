@@ -19,12 +19,13 @@ interface Props {
   item: ItineraryItem;
   dayId: string;
   markerLabel: string;
+  isFirst?: boolean;
   isNextStop?: boolean;
 }
 
 type Row1Mode = 'arrival' | 'stay';
 
-export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: Props) {
+export default function ItineraryCard({ item, dayId, markerLabel, isFirst, isNextStop }: Props) {
   const openDetail = useUIStore((s) => s.openDetail);
   const updateItem = useTripStore((s) => s.updateItem);
   const copyItemToDay = useTripStore((s) => s.copyItemToDay);
@@ -96,6 +97,9 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
     >
       <div className={`item-marker${item.isHotel ? ' hotel' : ''}`}>{markerLabel}</div>
       <div className="item-body">
+        {!isFirst && (
+          <div className="item-big-time">{item.arrivalTime}</div>
+        )}
         <div className="item-head-row">
           <span className="item-name">{item.place.name}</span>
           <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
