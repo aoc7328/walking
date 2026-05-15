@@ -74,20 +74,42 @@ function withAutoFill(days: DayPlan[]): DayPlan[] {
   for (let i = 0; i < days.length; i++) {
     const d = days[i]!;
     const prev = next[i - 1];
-    if (d.items.length === 0 && prev && prev.items.length > 0) {
-      const last = prev.items[prev.items.length - 1]!;
+
+    if (!prev || prev.items.length === 0) {
+      next.push(d);
+      continue;
+    }
+
+    const prevLast = prev.items[prev.items.length - 1]!;
+
+    // 情況 1：空白天 → 填入前一天的最後一站，標記為 autoFilled
+    if (d.items.length === 0) {
       const seed: ItineraryItem = {
         id: uuid(),
-        place: last.place,
+        place: prevLast.place,
         arrivalTime: '09:00',
         stayMinutes: 30,
         isHotel: true,
-        notes: last.notes ? [...last.notes] : undefined,
+        autoFilled: true,
+        notes: prevLast.notes ? [...prevLast.notes] : undefined,
       };
       next.push({ ...d, items: [seed], legs: [] });
-    } else {
-      next.push(d);
+      continue;
     }
+
+    // 情況 2：天首是 autoFilled 但地點已經和前一天的最後一站對不上 → 同步更新
+    const firstItem = d.items[0]!;
+    if (firstItem.autoFilled && firstItem.place.placeId !== prevLast.place.placeId) {
+      const updated: ItineraryItem = {
+        ...firstItem,
+        place: prevLast.place,
+        notes: prevLast.notes ? [...prevLast.notes] : firstItem.notes,
+      };
+      next.push({ ...d, items: [updated, ...d.items.slice(1)] });
+      continue;
+    }
+
+    next.push(d);
   }
   return next;
 }
@@ -147,7 +169,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = recalcLegsArray(items, [...d.legs, { mode: 'driving' }]);
         return { ...d, items, legs };
       });
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: withAutoFill(days), updatedAt: Date.now() } };
     });
     return newId;
   },
@@ -189,7 +211,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = recalcLegsArray(items, d.legs);
         return { ...d, items, legs };
       });
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+      return { trip: { ...state.trip, days: withAutoFill(days), updatedAt: Date.now() } };
     }),
 
   setLegMode: (dayId, legIndex, mode) =>
@@ -241,7 +263,15 @@ export const useTripStore = create<TripStore>((set, get) => ({
         legs: [],
       };
       const newStart = addDays(state.trip.startDate, -1);
-      const days = withAutoFill(reindexDays([newDay, ...state.trip.days], newStart));
+      // 把原本 Day 1 的天首標記成 autoFilled，這樣使用者之後在新 Day 1 加東西時，
+      // Day 2 的第一站會自動同步成新 Day 1 的最後一站。
+      const tagged = state.trip.days.map((d, i) => {
+        if (i === 0 && d.items.length > 0 && !d.items[0]!.autoFilled) {
+          return { ...d, items: [{ ...d.items[0]!, autoFilled: true }, ...d.items.slice(1)] };
+        }
+        return d;
+      });
+      const days = withAutoFill(reindexDays([newDay, ...tagged], newStart));
       return { trip: { ...state.trip, startDate: newStart, days, updatedAt: Date.now() } };
     }),
 

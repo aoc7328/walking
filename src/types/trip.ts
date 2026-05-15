@@ -7,6 +7,12 @@ export interface ItineraryItem {
   stayMinutes: number;
   notes?: string[];
   isHotel: boolean;
+  /**
+   * true 代表這個項目是由 withAutoFill 自動產生的，
+   * 之後前一天的最後一站變動時，會自動同步成新值。
+   * 使用者手動加入的項目不會有這個旗標，因此不會被覆蓋。
+   */
+  autoFilled?: boolean;
 }
 
 export interface Leg {

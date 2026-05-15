@@ -11,6 +11,7 @@ export function useSearch() {
   const setResults = useSearchStore((s) => s.setResults);
   const setLoading = useSearchStore((s) => s.setLoading);
   const setError = useSearchStore((s) => s.setError);
+  const recordSearch = useSearchStore((s) => s.recordSearch);
 
   const runSearch = useCallback(
     async (query: string, biasCity?: string) => {
@@ -29,6 +30,7 @@ export function useSearch() {
         const link = detectGoogleMapsLink(query);
         const results = link ? await resolveGoogleMapsLink(link) : await textSearch(query, biasCity);
         setResults(results);
+        if (results.length > 0) recordSearch(query);
       } catch (err) {
         setError(err instanceof Error ? err.message : '搜尋失敗');
         setResults([]);
@@ -36,7 +38,7 @@ export function useSearch() {
         setLoading(false);
       }
     },
-    [setResults, setLoading, setError],
+    [setResults, setLoading, setError, recordSearch],
   );
 
   return { runSearch };

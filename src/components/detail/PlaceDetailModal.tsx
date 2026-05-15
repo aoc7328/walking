@@ -156,7 +156,13 @@ export default function PlaceDetailModal() {
             {detail.phoneNumber && (
               <div className="detail-row">
                 <span className="detail-row-label">電話</span>
-                <span>{detail.phoneNumber}</span>
+                <a
+                  className="detail-tel-link"
+                  href={`tel:${detail.phoneNumber.replace(/[^+\d]/g, '')}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {detail.phoneNumber}
+                </a>
               </div>
             )}
             {detail.website && (

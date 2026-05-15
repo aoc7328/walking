@@ -244,13 +244,19 @@
 }
 
 /* ========== 右欄 header 工具列 ========== */
+.right-panel-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
 .right-panel-header-tools {
-  position: absolute;
-  top: 14px;
-  right: 18px;
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .right-panel-delete-day {
@@ -414,6 +420,108 @@
 .search-clear:hover {
   background: var(--bg-soft);
   color: var(--ink-primary);
+}
+
+/* ========== 搜尋歷史下拉 ========== */
+.search-history-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  z-index: 60;
+  overflow: hidden;
+  animation: slideUp var(--t-fast);
+}
+
+.search-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 0.5px solid var(--border-soft);
+  font-size: 14px;
+  font-family: var(--font-display);
+  color: var(--ink-muted);
+  letter-spacing: 0.05em;
+  background: var(--bg-softer);
+}
+
+.search-history-clear {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--t-fast);
+}
+
+.search-history-clear:hover {
+  background: var(--bg-soft);
+  color: var(--accent-warm);
+}
+
+.search-history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+
+.search-history-item:hover {
+  background: var(--bg-soft);
+}
+
+.search-history-icon {
+  font-size: 13px;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.search-history-text {
+  flex: 1;
+  font-size: 15px;
+  color: var(--ink-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-history-remove {
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  transition: all var(--t-fast);
+  flex-shrink: 0;
+}
+
+.search-history-remove:hover {
+  background: var(--accent-warm-soft);
+  color: var(--accent-warm);
+}
+
+/* ========== 電話 tel: 連結 ========== */
+.detail-tel-link {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-feature-settings: 'tnum' 1;
+}
+
+.detail-tel-link:hover {
+  text-decoration: underline;
 }
 
 /* ========== Main 3-column ========== */
