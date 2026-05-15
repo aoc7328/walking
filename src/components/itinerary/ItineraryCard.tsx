@@ -10,6 +10,7 @@ import {
   hhmmToMinutes,
   timeDiffMinutes,
   formatWithWeekday,
+  normalizeTimeInput,
 } from '../../utils/date';
 import { formatDuration } from '../../utils/format';
 import NoteEditor from './NoteEditor';
@@ -59,8 +60,8 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
   }, [copyOpen]);
 
   function commitArrival(value: string) {
-    const v = value.trim();
-    if (!/^\d{2}:\d{2}$/.test(v)) return;
+    const v = normalizeTimeInput(value);
+    if (!v) return;
     updateItem(dayId, item.id, { arrivalTime: v, arrivalManual: true });
   }
 
@@ -71,8 +72,9 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
   }
 
   function commitLeave(value: string) {
-    if (!/^\d{2}:\d{2}$/.test(value)) return;
-    const minutes = timeDiffMinutes(item.arrivalTime, value);
+    const v = normalizeTimeInput(value);
+    if (!v) return;
+    const minutes = timeDiffMinutes(item.arrivalTime, v);
     updateItem(dayId, item.id, { stayMinutes: minutes });
   }
 
@@ -162,12 +164,17 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
           {row1Mode === 'arrival' ? (
             <input
               className="item-duration-input"
-              type="time"
+              type="text"
+              inputMode="numeric"
+              pattern="\d{2}:\d{2}"
               key={`${item.id}-arr-${item.arrivalTime}`}
               defaultValue={item.arrivalTime}
+              maxLength={5}
+              placeholder="09:00"
               onBlur={(e) => commitArrival(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
               onClick={(e) => e.stopPropagation()}
+              title="24 小時制 HH:MM（例：17:30）"
             />
           ) : (
             <input
@@ -203,13 +210,17 @@ export default function ItineraryCard({ item, dayId, markerLabel, isNextStop }: 
           <span className="item-leave-label">離開</span>
           <input
             className="item-duration-input"
-            type="time"
+            type="text"
+            inputMode="numeric"
+            pattern="\d{2}:\d{2}"
             key={`${item.id}-leave-${leaveTime}`}
             defaultValue={leaveTime}
+            maxLength={5}
+            placeholder="10:00"
             onBlur={(e) => commitLeave(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
             onClick={(e) => e.stopPropagation()}
-            title="設定離開時間，會回算成停留時間"
+            title="24 小時制 HH:MM，會回算成停留時間"
           />
           <span className="item-stay-hint">停留 {formatDuration(item.stayMinutes)}</span>
         </div>

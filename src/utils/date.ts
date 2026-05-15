@@ -95,6 +95,31 @@ export function hhmmToMinutes(hhmm: string): number | null {
   return h * 60 + min;
 }
 
+/**
+ * 把使用者輸入的時間正規化成 HH:MM（24 小時制）。
+ * 接受 "9", "9:0", "9:00", "09:00", "900", "0900", "1730" 等格式，
+ * 不接受 24 時或 60 分。無效回 null。
+ */
+export function normalizeTimeInput(input: string): string | null {
+  let s = input.trim();
+  if (!s) return null;
+  // 無冒號數字：900 → 09:00；1730 → 17:30
+  if (/^\d{3,4}$/.test(s)) {
+    s = s.length === 3 ? `0${s[0]}:${s.slice(1)}` : `${s.slice(0, 2)}:${s.slice(2)}`;
+  } else if (/^\d{1,2}$/.test(s)) {
+    s = `${s.padStart(2, '0')}:00`;
+  } else if (/^\d{1,2}:\d{1,2}$/.test(s)) {
+    const [h, m] = s.split(':');
+    s = `${h!.padStart(2, '0')}:${m!.padStart(2, '0')}`;
+  }
+  const m = s.match(/^(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const hh = parseInt(m[1]!, 10);
+  const mm = parseInt(m[2]!, 10);
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
 /** 計算兩個 HH:MM 時刻的分鐘差（end - start），可能為負（end 隔日早於 start 視為加一天） */
 export function timeDiffMinutes(start: string, end: string): number {
   const a = hhmmToMinutes(start);
