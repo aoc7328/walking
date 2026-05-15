@@ -564,13 +564,30 @@
 }
 
 .share-error {
-  font-size: 12px;
-  color: var(--accent-warm);
+  font-size: 13px;
+  color: var(--ink-primary);
   background: var(--accent-warm-soft);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 12px;
-  line-height: 1.5;
+  padding: 12px 14px;
+  border: 0.5px solid var(--accent-warm);
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+
+.share-error-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.share-error-list li {
+  font-size: 13px;
+  color: var(--ink-secondary);
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+
+.share-error-list strong {
+  color: var(--accent-primary);
 }
 
 .share-url-row {

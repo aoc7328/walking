@@ -4,6 +4,8 @@ import { useTripStore } from '../../stores/tripStore';
 import { buildShareUrl, generateQRDataUrl } from '../../services/share';
 import { exportTripAsHTML } from '../../services/exportImport';
 
+type QRState = 'pending' | 'ready' | 'tooBig' | 'failed';
+
 export default function ShareModal() {
   const open = useUIStore((s) => s.shareModalOpen);
   const close = useUIStore((s) => s.closeShareModal);
@@ -11,27 +13,37 @@ export default function ShareModal() {
 
   const [url, setUrl] = useState<string>('');
   const [qr, setQr] = useState<string>('');
+  const [qrState, setQrState] = useState<QRState>('pending');
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !trip) return;
-    setError(null);
     setCopyState('idle');
+    setQr('');
+    setQrState('pending');
     let cancelled = false;
     (async () => {
       try {
         const shareUrl = buildShareUrl(trip);
         if (cancelled) return;
         setUrl(shareUrl);
-        // URL 太長時 QR 會失敗
-        if (shareUrl.length > 2500) {
-          setError(`行程資料壓縮後仍有 ${shareUrl.length} 字元，可能超過 QR Code 可承載上限。建議改用「下載 HTML」分享。`);
+        try {
+          const qrDataUrl = await generateQRDataUrl(shareUrl);
+          if (!cancelled) {
+            setQr(qrDataUrl);
+            setQrState('ready');
+          }
+        } catch (qrErr) {
+          if (cancelled) return;
+          const msg = qrErr instanceof Error ? qrErr.message : String(qrErr);
+          if (/too big|big to be stored/i.test(msg)) {
+            setQrState('tooBig');
+          } else {
+            setQrState('failed');
+          }
         }
-        const qrDataUrl = await generateQRDataUrl(shareUrl);
-        if (!cancelled) setQr(qrDataUrl);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : '產生分享連結失敗');
+      } catch {
+        if (!cancelled) setQrState('failed');
       }
     })();
     return () => {
@@ -81,6 +93,7 @@ export default function ShareModal() {
   }
 
   const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
+  const urlKB = (url.length / 1024).toFixed(1);
 
   return (
     <div
@@ -93,18 +106,34 @@ export default function ShareModal() {
         <div className="share-modal-body">
           <h2 className="modal-title">分享行程</h2>
           <p className="modal-subtitle">
-            掃描下方 QR Code 或複製連結　·　朋友打開後會看到手機版的行程瀏覽頁
+            {qrState === 'tooBig'
+              ? '行程資料太大，無法塞進 QR Code。改用下方「複製連結」或「下載 HTML 檔」分享。'
+              : '掃描下方 QR Code 或複製連結　·　朋友打開後會看到手機版的行程瀏覽頁'}
           </p>
 
-          <div className="share-qr-wrap">
-            {qr ? (
-              <img className="share-qr-img" src={qr} alt="行程 QR Code" />
-            ) : (
-              <div className="share-qr-placeholder">產生中…</div>
-            )}
-          </div>
+          {qrState !== 'tooBig' && (
+            <div className="share-qr-wrap">
+              {qrState === 'ready' && qr ? (
+                <img className="share-qr-img" src={qr} alt="行程 QR Code" />
+              ) : qrState === 'failed' ? (
+                <div className="share-qr-placeholder">QR Code 產生失敗</div>
+              ) : (
+                <div className="share-qr-placeholder">產生中…</div>
+              )}
+            </div>
+          )}
 
-          {error && <div className="share-error">{error}</div>}
+          {qrState === 'tooBig' && (
+            <div className="share-error">
+              行程資料壓縮後約 {urlKB} KB，超過 QR Code 容量上限（約 2.9 KB）。
+              <br />
+              QR 分享需要先做後端儲存（Cloudflare KV）才能支援這麼大的行程，目前先用下面兩個方式：
+              <ul className="share-error-list">
+                <li><strong>複製連結</strong>：貼到 LINE / Email / 訊息給朋友，他點開就能看（網址很長但能用）</li>
+                <li><strong>下載 HTML 檔</strong>：產生獨立檔案，傳給朋友開瀏覽器就能離線看完整行程</li>
+              </ul>
+            </div>
+          )}
 
           <div className="share-url-row">
             <input className="share-url-input" type="text" value={url} readOnly onClick={(e) => (e.target as HTMLInputElement).select()} />
@@ -119,7 +148,7 @@ export default function ShareModal() {
                 分享到…
               </button>
             )}
-            <button className="btn" onClick={handleDownloadQR} disabled={!qr}>
+            <button className="btn" onClick={handleDownloadQR} disabled={qrState !== 'ready'}>
               下載 QR Code
             </button>
             <button className="btn" onClick={handleFallbackHTML}>

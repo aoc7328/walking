@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { decodeShareFromHash, type SharePayload, type ShareDay, type ShareItem, type ShareLeg } from '../../services/share';
+import { decodeShareFromHash, type ShareTrip, type ShareDay, type ShareItem, type ShareLeg } from '../../services/share';
 import { addDays, formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
 import { buildStaticMapUrl, hasApiKey } from '../../services/googleMaps';
@@ -115,7 +115,7 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
 }
 
 export default function TripViewer() {
-  const [payload, setPayload] = useState<SharePayload | null>(null);
+  const [payload, setPayload] = useState<ShareTrip | null>(null);
   const [activeDay, setActiveDay] = useState(0);
 
   useEffect(() => {
