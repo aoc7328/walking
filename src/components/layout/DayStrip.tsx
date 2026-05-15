@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import {
   DndContext,
   PointerSensor,
@@ -26,20 +26,28 @@ export default function DayStrip() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   // 滾輪垂直 → 橫向捲動（不影響 trackpad 原本就有的橫向 deltaX）
-  const listRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    function onWheel(e: WheelEvent) {
-      if (e.deltaY === 0) return;
-      // 只在元素內可橫向捲動時才接管，避免被卡死
-      if (el!.scrollWidth <= el!.clientWidth) return;
-      e.preventDefault();
-      el!.scrollLeft += e.deltaY;
+  // 用 callback ref：每次 list 元素 mount / unmount 都重新掛事件
+  const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
+  const listElRef = useRef<HTMLDivElement | null>(null);
+  function attachList(node: HTMLDivElement | null) {
+    // 先清掉舊的事件
+    if (listElRef.current && wheelHandlerRef.current) {
+      listElRef.current.removeEventListener('wheel', wheelHandlerRef.current);
     }
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+    listElRef.current = node;
+    if (!node) {
+      wheelHandlerRef.current = null;
+      return;
+    }
+    const handler = (e: WheelEvent) => {
+      if (e.deltaY === 0) return;
+      if (node.scrollWidth <= node.clientWidth) return;
+      e.preventDefault();
+      node.scrollLeft += e.deltaY;
+    };
+    wheelHandlerRef.current = handler;
+    node.addEventListener('wheel', handler, { passive: false });
+  }
 
   if (!trip) return <div className="day-strip-wrap" />;
 
@@ -72,7 +80,7 @@ export default function DayStrip() {
             </button>
           </div>
         </div>
-        <div className="day-strip-list thin-scroll" ref={listRef}>
+        <div className="day-strip-list thin-scroll" ref={attachList}>
           <div className="day-tab add" title="往前新增一天" onClick={addDayBefore}>
             <span>+</span>
             <span className="add-label">往前</span>
