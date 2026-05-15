@@ -7,6 +7,7 @@ import RightPanel from './RightPanel';
 import DayStrip from './DayStrip';
 import PlaceDetailModal from '../detail/PlaceDetailModal';
 import ChangeStartDateModal from '../day/ChangeStartDateModal';
+import NewTripModal from './NewTripModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
@@ -96,6 +97,7 @@ export default function AppShell() {
       <DayStrip />
       <PlaceDetailModal />
       <ChangeStartDateModal />
+      <NewTripModal />
     </div>
   );
 }

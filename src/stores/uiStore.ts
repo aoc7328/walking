@@ -35,6 +35,8 @@ interface UIStore {
   detailModalPlaceId: string | null;
   detailModalSource: 'search' | 'itinerary' | null;
   dateModalOpen: boolean;
+  newTripModalOpen: boolean;
+  tripSwitcherOpen: boolean;
   collapse: CollapseState;
   setCurrentDay: (dayId: string | null) => void;
   setSelectedItem: (itemId: string | null) => void;
@@ -42,6 +44,10 @@ interface UIStore {
   closeDetail: () => void;
   openDateModal: () => void;
   closeDateModal: () => void;
+  openNewTripModal: () => void;
+  closeNewTripModal: () => void;
+  toggleTripSwitcher: () => void;
+  closeTripSwitcher: () => void;
   toggleCollapse: (key: keyof CollapseState) => void;
 }
 
@@ -51,6 +57,8 @@ export const useUIStore = create<UIStore>((set) => ({
   detailModalPlaceId: null,
   detailModalSource: null,
   dateModalOpen: false,
+  newTripModalOpen: false,
+  tripSwitcherOpen: false,
   collapse: loadCollapse(),
   setCurrentDay: (dayId) => set({ currentDayId: dayId }),
   setSelectedItem: (itemId) => set({ selectedItemId: itemId }),
@@ -59,6 +67,10 @@ export const useUIStore = create<UIStore>((set) => ({
   closeDetail: () => set({ detailModalPlaceId: null, detailModalSource: null }),
   openDateModal: () => set({ dateModalOpen: true }),
   closeDateModal: () => set({ dateModalOpen: false }),
+  openNewTripModal: () => set({ newTripModalOpen: true, tripSwitcherOpen: false }),
+  closeNewTripModal: () => set({ newTripModalOpen: false }),
+  toggleTripSwitcher: () => set((state) => ({ tripSwitcherOpen: !state.tripSwitcherOpen })),
+  closeTripSwitcher: () => set({ tripSwitcherOpen: false }),
   toggleCollapse: (key) =>
     set((state) => {
       const next = { ...state.collapse, [key]: !state.collapse[key] };

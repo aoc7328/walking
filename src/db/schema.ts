@@ -24,4 +24,5 @@ export class WalkingDB extends Dexie {
 
 export const db = new WalkingDB();
 
-export const ACTIVE_TRIP_ID = 'demo-trip';
+export const ACTIVE_TRIP_ID_KEY = 'walking.activeTripId';
+export const DEFAULT_TRIP_ID = 'demo-trip';

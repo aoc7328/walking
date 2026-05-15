@@ -5,6 +5,13 @@ import { MOCK_TRIP } from '../db/mockData';
 import { uuid } from '../utils/format';
 import { addDays, addMinutesToTime } from '../utils/date';
 import { findBestInsertPosition } from '../services/routing';
+import {
+  setActiveTripId,
+  persistTripImmediate,
+  deleteTripFromDB,
+  listAllTrips,
+} from '../db/repository';
+import { db } from '../db/schema';
 
 interface TripStore {
   trip: Trip | null;
@@ -25,9 +32,15 @@ interface TripStore {
   reorderDays: (fromIndex: number, toIndex: number) => void;
   addDayBefore: () => void;
   addDayAfter: () => void;
+  removeDay: (dayId: string) => void;
 
   toggleFavorite: (place: Place) => void;
   isFavorited: (placeId: string) => boolean;
+
+  // 多 trip 管理
+  createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
+  switchToTrip: (id: string) => Promise<void>;
+  deleteTrip: (id: string) => Promise<void>;
 }
 
 function recalcLegsArray(items: ItineraryItem[], legs: Leg[]): Leg[] {
@@ -83,8 +96,12 @@ export const useTripStore = create<TripStore>((set, get) => ({
   trip: null,
   isLoading: false,
 
-  setTrip: (trip) => set({ trip: { ...trip, days: withAutoFill(trip.days) } }),
-  reset: () =>
+  setTrip: (trip) => {
+    setActiveTripId(trip.id);
+    set({ trip: { ...trip, days: withAutoFill(trip.days) } });
+  },
+  reset: () => {
+    setActiveTripId(MOCK_TRIP.id);
     set({
       trip: {
         ...MOCK_TRIP,
@@ -92,7 +109,8 @@ export const useTripStore = create<TripStore>((set, get) => ({
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
-    }),
+    });
+  },
 
   renameTrip: (name) =>
     set((state) => (state.trip ? { trip: { ...state.trip, name, updatedAt: Date.now() } } : {})),
@@ -241,6 +259,20 @@ export const useTripStore = create<TripStore>((set, get) => ({
       return { trip: { ...state.trip, days, updatedAt: Date.now() } };
     }),
 
+  removeDay: (dayId) =>
+    set((state) => {
+      if (!state.trip) return {};
+      if (state.trip.days.length <= 1) return {};
+      const days = state.trip.days.filter((d) => d.id !== dayId);
+      return {
+        trip: {
+          ...state.trip,
+          days: withAutoFill(reindexDays(days, state.trip.startDate)),
+          updatedAt: Date.now(),
+        },
+      };
+    }),
+
   toggleFavorite: (place) =>
     set((state) => {
       if (!state.trip) return {};
@@ -254,5 +286,67 @@ export const useTripStore = create<TripStore>((set, get) => ({
   isFavorited: (placeId) => {
     const trip = get().trip;
     return !!trip?.favorites.find((f) => f.placeId === placeId);
+  },
+
+  createNewTrip: async (name, startDate, dayCount) => {
+    const current = get().trip;
+    if (current) {
+      try {
+        await persistTripImmediate(current);
+      } catch {
+        // ignore
+      }
+    }
+    const id = uuid();
+    const newTrip: Trip = {
+      id,
+      name: name.trim() || '新行程',
+      startDate,
+      days: Array.from({ length: Math.max(1, dayCount) }, (_, i) => ({
+        id: uuid(),
+        dayIndex: i + 1,
+        date: addDays(startDate, i),
+        items: [],
+        legs: [],
+      })),
+      favorites: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await persistTripImmediate(newTrip);
+    setActiveTripId(id);
+    set({ trip: newTrip });
+    return id;
+  },
+
+  switchToTrip: async (id) => {
+    const current = get().trip;
+    if (current && current.id !== id) {
+      try {
+        await persistTripImmediate(current);
+      } catch {
+        // ignore
+      }
+    }
+    const target = await db.trips.get(id);
+    if (target) {
+      setActiveTripId(id);
+      set({ trip: { ...target, days: withAutoFill(target.days) } });
+    }
+  },
+
+  deleteTrip: async (id) => {
+    const current = get().trip;
+    await deleteTripFromDB(id);
+    if (current && current.id === id) {
+      // 刪的是當前 trip，自動切到剩餘最近的；都沒了就 reset 到 mock
+      const remaining = await listAllTrips();
+      if (remaining.length > 0) {
+        setActiveTripId(remaining[0]!.id);
+        set({ trip: { ...remaining[0]!, days: withAutoFill(remaining[0]!.days) } });
+      } else {
+        get().reset();
+      }
+    }
   },
 }));

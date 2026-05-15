@@ -18,11 +18,28 @@ export default function RightPanel() {
   const collapsed = useUIStore((s) => s.collapse.rightPanel);
   const toggle = useUIStore((s) => s.toggleCollapse);
   const currentDayId = useUIStore((s) => s.currentDayId);
+  const setCurrentDay = useUIStore((s) => s.setCurrentDay);
   const trip = useTripStore((s) => s.trip);
   const reorderItems = useTripStore((s) => s.reorderItems);
   const setLegMode = useTripStore((s) => s.setLegMode);
+  const removeDay = useTripStore((s) => s.removeDay);
 
   const day = trip?.days.find((d) => d.id === currentDayId) ?? null;
+
+  function handleDeleteDay() {
+    if (!day || !trip) return;
+    if (trip.days.length <= 1) {
+      window.alert('至少要保留一天，不能刪除');
+      return;
+    }
+    const msg = `確定刪除 Day ${day.dayIndex}（${day.city ?? day.date}）的所有行程嗎？\n此操作無法復原。`;
+    if (!window.confirm(msg)) return;
+    const idx = trip.days.findIndex((d) => d.id === day.id);
+    removeDay(day.id);
+    const remaining = trip.days.filter((d) => d.id !== day.id);
+    const next = remaining[idx] ?? remaining[idx - 1] ?? remaining[0];
+    if (next) setCurrentDay(next.id);
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -82,14 +99,24 @@ export default function RightPanel() {
               <div className="right-panel-day-meta">
                 {day.city ?? '尚未設定城市'}　·　{day.items.length} 個點　·　拖拉重排
               </div>
-              <button
-                className="collapse-toggle"
-                onClick={() => toggle('rightPanel')}
-                style={{ position: 'absolute', top: 14, right: 18, width: 18, height: 18, fontSize: 13 }}
-                title="收合右欄"
-              >
-                ▸
-              </button>
+              <div className="right-panel-header-tools">
+                <button
+                  className="right-panel-delete-day"
+                  onClick={handleDeleteDay}
+                  title="刪除本日"
+                  disabled={trip ? trip.days.length <= 1 : true}
+                >
+                  🗑　刪除本日
+                </button>
+                <button
+                  className="collapse-toggle"
+                  onClick={() => toggle('rightPanel')}
+                  style={{ width: 18, height: 18, fontSize: 13 }}
+                  title="收合右欄"
+                >
+                  ▸
+                </button>
+              </div>
             </div>
             <div className="right-panel-list thin-scroll">
               {day.items.length === 0 && <div className="empty-day">這天還沒安排　·　在上方搜尋並加入地點</div>}

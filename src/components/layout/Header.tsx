@@ -1,12 +1,62 @@
+import { useEffect, useRef, useState } from 'react';
 import { useTripStore } from '../../stores/tripStore';
-import { formatRange, diffDays } from '../../utils/date';
-import { addDays } from '../../utils/date';
+import { formatRange, diffDays, addDays } from '../../utils/date';
 import { exportTripAsJSON, exportTripAsHTML, importTripJSONFile } from '../../services/exportImport';
 import { exportTripAsPDF } from '../../services/pdfExport';
+import TripSwitcher from './TripSwitcher';
+
+function EditableTripName({ name, onSave }: { name: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) setDraft(name);
+  }, [name, editing]);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  function commit() {
+    const v = draft.trim();
+    if (v && v !== name) onSave(v);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className="trip-name-input"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          else if (e.key === 'Escape') {
+            setDraft(name);
+            setEditing(false);
+          }
+        }}
+      />
+    );
+  }
+  return (
+    <span className="trip-name trip-name-editable" onClick={() => setEditing(true)} title="點擊修改名稱">
+      {name}
+      <span className="trip-name-edit-hint">✎</span>
+    </span>
+  );
+}
 
 export default function Header() {
   const trip = useTripStore((s) => s.trip);
   const setTrip = useTripStore((s) => s.setTrip);
+  const renameTrip = useTripStore((s) => s.renameTrip);
 
   if (!trip) return <header className="header" />;
 
@@ -34,9 +84,10 @@ export default function Header() {
         </span>
         <span className="brand-divider" />
         <div className="trip-info">
-          <span className="trip-name">{trip.name}</span>
+          <EditableTripName name={trip.name} onSave={renameTrip} />
           <span className="trip-meta">{meta}</span>
         </div>
+        <TripSwitcher />
       </div>
       <div className="header-actions">
         <button className="btn" onClick={() => exportTripAsJSON(trip)} title="匯出 JSON">儲存</button>
