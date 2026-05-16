@@ -9,7 +9,6 @@ import PlaceDetailModal from '../detail/PlaceDetailModal';
 import ChangeStartDateModal from '../day/ChangeStartDateModal';
 import NewTripModal from './NewTripModal';
 import ShareModal from '../share/ShareModal';
-import UserIdModal from './UserIdModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
@@ -105,7 +104,6 @@ export default function AppShell() {
       <ChangeStartDateModal />
       <NewTripModal />
       <ShareModal />
-      <UserIdModal />
     </div>
   );
 }
