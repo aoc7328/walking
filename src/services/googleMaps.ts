@@ -292,3 +292,24 @@ export function buildStaticMapUrl(
   }
   return `${STATIC_MAP_BASE}?${params.toString()}`;
 }
+
+/** Static Maps with optional polyline path. 給 PDF 用。 */
+export function buildStaticMapWithPath(
+  markers: { lat: number; lng: number; label?: string; color?: string }[],
+  path?: { lat: number; lng: number }[],
+  size = '700x350',
+): string | null {
+  if (!hasApiKey()) return null;
+  if (markers.length === 0 && (!path || path.length === 0)) return null;
+  const params = new URLSearchParams({ size, scale: '2', maptype: 'roadmap', key: API_KEY! });
+  if (path && path.length >= 2) {
+    const pathStr = `color:0x2C4A3DCC|weight:3|` + path.map((p) => `${p.lat},${p.lng}`).join('|');
+    params.append('path', pathStr);
+  }
+  for (const m of markers) {
+    const label = m.label ? `|label:${m.label}` : '';
+    const color = m.color ? `color:${m.color}|` : '';
+    params.append('markers', `${color}${m.lat},${m.lng}${label}`);
+  }
+  return `${STATIC_MAP_BASE}?${params.toString()}`;
+}

@@ -1,10 +1,53 @@
-﻿import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
-import type { Trip } from '../../types/trip';
-import { formatWithWeekday, formatStayDuration } from '../../utils/date';
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Image,
+  Font,
+} from '@react-pdf/renderer';
+import type { Trip, DayPlan, ItineraryItem, Leg } from '../../types/trip';
+import {
+  formatWithWeekday,
+  formatStayDuration,
+  formatRange,
+  diffDays,
+  addDays,
+} from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
-import { buildStaticMapUrl, hasApiKey } from '../../services/googleMaps';
+import { buildStaticMapUrl, buildStaticMapWithPath, hasApiKey } from '../../services/googleMaps';
+import { computeDayMarkers } from '../map/TripOverviewMap';
 
-// 註冊繁中字型，否則 @react-pdf 預設 Helvetica 沒有 CJK 字元 → 亂碼
+// ========== Fonts ==========
+// Fraunces — 標題用顯示字型
+Font.register({
+  family: 'Fraunces',
+  fonts: [
+    {
+      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-Regular.ttf',
+      fontWeight: 400,
+      fontStyle: 'normal',
+    },
+    {
+      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-Italic.ttf',
+      fontWeight: 400,
+      fontStyle: 'italic',
+    },
+    {
+      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-Medium.ttf',
+      fontWeight: 500,
+      fontStyle: 'normal',
+    },
+    {
+      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-MediumItalic.ttf',
+      fontWeight: 500,
+      fontStyle: 'italic',
+    },
+  ],
+});
+
+// Noto Sans TC — 中文內文（這個之前已驗證可用）
 Font.register({
   family: 'NotoSansTC',
   fonts: [
@@ -23,156 +66,562 @@ Font.register({
   ],
 });
 
-const styles = StyleSheet.create({
+// 防止 Fraunces 把中文 fallback 到內建 Helvetica（會亂碼），給 hyphenation callback
+Font.registerHyphenationCallback((word) => [word]);
+
+// ========== Color tokens ==========
+const C = {
+  bgPage: '#FAF7F0',
+  bgCard: '#FFFFFF',
+  inkPrimary: '#2C2620',
+  inkSecondary: '#6B5F50',
+  inkMuted: '#A89C8B',
+  inkFaint: '#C9B894',
+  accentPrimary: '#2C4A3D',
+  accentWarm: '#D85A30',
+  accentPurple: '#5B4B7F',
+  borderSoft: '#E8DFD0',
+  borderMedium: '#D4C8B2',
+};
+
+// ========== 共用 styles ==========
+const base = StyleSheet.create({
   page: {
     fontFamily: 'NotoSansTC',
-    paddingTop: 36,
-    paddingBottom: 36,
-    paddingHorizontal: 40,
-    backgroundColor: '#FAF7F0',
+    backgroundColor: C.bgPage,
+    color: C.inkPrimary,
+    paddingTop: 40,
+    paddingBottom: 30,
+    paddingLeft: 50,
+    paddingRight: 50,
+    flexDirection: 'column',
   },
+  spacer: { flex: 1 },
+});
+
+// ========== Helpers ==========
+function getEndDate(trip: Trip): string {
+  return addDays(trip.startDate, trip.days.length - 1);
+}
+
+function nonHotelCountInDay(day: DayPlan): number {
+  return day.items.filter((it) => !it.isHotel).length;
+}
+
+interface OverviewMapData {
+  markers: { lat: number; lng: number; label?: string; color: string }[];
+  path: { lat: number; lng: number }[];
+}
+
+function buildOverviewMapData(trip: Trip): OverviewMapData {
+  const days = computeDayMarkers(trip);
+  // Sampling 規則：N > 25 → 只標 1, 5, 10, 15, 20, 25, 30 ...
+  const N = days.length;
+  const samplePoints =
+    N > 25 ? new Set([1, 5, 10, 15, 20, 25, 30, 35].filter((n) => n <= N)) : null;
+
+  const markers = days.map((d) => {
+    let showLabel = true;
+    if (samplePoints) showLabel = samplePoints.has(d.dayIndex);
+    return {
+      lat: d.lat,
+      lng: d.lng,
+      label: showLabel && d.dayIndex <= 9 ? String(d.dayIndex) : undefined,
+      color: '0x2C4A3D',
+    };
+  });
+  const path = days.map((d) => ({ lat: d.lat, lng: d.lng }));
+  return { markers, path };
+}
+
+function buildDayMapData(day: DayPlan): OverviewMapData {
+  const markers = day.items.map((it, i) => ({
+    lat: it.place.coordinates.lat,
+    lng: it.place.coordinates.lng,
+    label: i + 1 <= 9 ? String(i + 1) : undefined,
+    color: it.isHotel ? '0x5B4B7F' : '0x2C4A3D',
+  }));
+  const path = day.items.map((it) => it.place.coordinates);
+  return { markers, path };
+}
+
+// ========== Cover Page ==========
+const cover = StyleSheet.create({
   title: {
-    fontSize: 26,
-    color: '#2C4A3D',
-    marginBottom: 4,
+    fontFamily: 'Fraunces',
+    fontStyle: 'italic',
+    fontSize: 44,
+    color: C.inkPrimary,
+    lineHeight: 1.2,
+    letterSpacing: -1,
   },
-  meta: {
-    fontSize: 14,
-    color: '#A89C8B',
+  rule: {
+    width: 60,
+    height: 0.5,
+    backgroundColor: C.accentWarm,
+    marginTop: 16,
     marginBottom: 16,
   },
-  dayHeading: {
-    fontSize: 20,
-    color: '#2C4A3D',
-    marginBottom: 6,
-    borderBottom: '0.5pt solid #E8DFD0',
-    paddingBottom: 4,
+  range: {
+    fontFamily: 'Fraunces',
+    fontSize: 17,
+    color: C.inkSecondary,
+  },
+  days: {
+    fontFamily: 'NotoSansTC',
+    fontSize: 13,
+    color: C.inkMuted,
+    marginTop: 4,
+  },
+  mapLabel: {
+    fontFamily: 'Fraunces',
+    fontSize: 10,
+    color: C.inkMuted,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
   mapImage: {
     width: '100%',
-    height: 180,
-    marginBottom: 10,
+    height: 360,
+    objectFit: 'cover',
     borderRadius: 4,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    border: '0.5pt solid #E8DFD0',
-    borderRadius: 4,
-    padding: 8,
-    marginBottom: 4,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  marker: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#2C4A3D',
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 14,
-    paddingTop: 5,
-  },
-  markerHotel: {
-    backgroundColor: '#5B4B7F',
-  },
-  cardBody: {
-    flexDirection: 'column',
-    flex: 1,
-  },
-  timeName: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 2,
-  },
-  time: {
-    fontSize: 15,
-    color: '#2C4A3D',
-    fontWeight: 500,
-  },
-  name: {
-    fontSize: 15,
-    color: '#2C2620',
-    fontWeight: 500,
-  },
-  stay: {
-    fontSize: 13,
-    color: '#A89C8B',
-  },
-  addr: {
-    fontSize: 13,
-    color: '#A89C8B',
-    marginTop: 1,
-  },
-  note: {
-    fontSize: 13,
-    color: '#6B5F50',
-    marginTop: 2,
-  },
-  leg: {
-    fontSize: 13,
-    color: '#A89C8B',
-    paddingLeft: 32,
-    paddingVertical: 4,
   },
 });
 
-export function TripPDF({ trip }: { trip: Trip }) {
+function CoverPage({ trip }: { trip: Trip }) {
+  const end = getEndDate(trip);
+  const total = diffDays(trip.startDate, end) + 1;
+  const overview = buildOverviewMapData(trip);
+  const mapUrl = hasApiKey()
+    ? buildStaticMapWithPath(overview.markers, overview.path, '700x400')
+    : null;
   return (
-    <Document title={trip.name}>
-      {trip.days.map((day) => {
-        const markers = day.items.map((it, idx) => ({
-          lat: it.place.coordinates.lat,
-          lng: it.place.coordinates.lng,
-          label: it.isHotel ? 'H' : String(idx + 1),
-          color: it.isHotel ? 'purple' : 'green',
-        }));
-        const mapUrl = hasApiKey() && markers.length > 0 ? buildStaticMapUrl(markers, '700x350') : null;
+    <Page size="A4" style={base.page}>
+      <View style={base.spacer} />
+      <Text style={cover.title}>{trip.name}</Text>
+      <View style={cover.rule} />
+      <Text style={cover.range}>{formatRange(trip.startDate, end)}</Text>
+      <Text style={cover.days}>{total} 天</Text>
+      <View style={base.spacer} />
+      <Text style={cover.mapLabel}>行程總覽　ROUTE OVERVIEW</Text>
+      {mapUrl && <Image src={mapUrl} style={cover.mapImage} />}
+      <View style={base.spacer} />
+    </Page>
+  );
+}
 
-        return (
-          <Page key={day.id} size="A4" style={styles.page}>
-            <Text style={styles.title}>{trip.name}</Text>
-            <Text style={styles.meta}>
-              Day {day.dayIndex}　·　{formatWithWeekday(day.date)}
-              {day.city ? `　·　${day.city}` : ''}
-            </Text>
-            <Text style={styles.dayHeading}>當日行程</Text>
-            {mapUrl && <Image style={styles.mapImage} src={mapUrl} />}
-            {day.items.map((it, idx) => {
-              const leg = idx > 0 ? day.legs[idx - 1] : null;
-              const markerLabel = it.isHotel ? 'H' : String(idx + 1);
+// ========== Day Page ==========
+function computeScale(N: number): number {
+  if (N <= 4) return 1.05;
+  if (N <= 8) return 1.0;
+  if (N <= 12) return 1.0;
+  if (N <= 15) return 0.85;
+  return 0.75;
+}
+
+function computeColumnsCount(N: number): number {
+  return N <= 8 ? 2 : 3;
+}
+
+const dayHeaderStyle = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 8,
+  },
+  left: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  dayLabel: {
+    fontFamily: 'Fraunces',
+    fontSize: 28,
+    color: C.accentPrimary,
+    letterSpacing: -0.5,
+  },
+  dayNum: {
+    fontFamily: 'Fraunces',
+    fontStyle: 'italic',
+    fontSize: 28,
+    color: C.accentPrimary,
+    letterSpacing: -0.5,
+  },
+  progress: {
+    fontFamily: 'NotoSansTC',
+    fontSize: 12,
+    color: C.inkMuted,
+    marginLeft: 2,
+  },
+  right: { flexDirection: 'column', alignItems: 'flex-end' },
+  tripName: {
+    fontFamily: 'NotoSansTC',
+    fontSize: 13,
+    fontWeight: 500,
+    color: C.inkPrimary,
+  },
+  date: {
+    fontFamily: 'NotoSansTC',
+    fontSize: 12,
+    color: C.inkSecondary,
+    marginTop: 2,
+  },
+  divider: {
+    width: '100%',
+    height: 0.5,
+    backgroundColor: C.borderMedium,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+});
+
+function DayHeader({
+  trip,
+  day,
+  totalDays,
+}: {
+  trip: Trip;
+  day: DayPlan;
+  totalDays: number;
+}) {
+  return (
+    <View>
+      <View style={dayHeaderStyle.row}>
+        <View style={dayHeaderStyle.left}>
+          <Text style={dayHeaderStyle.dayLabel}>
+            Day <Text style={dayHeaderStyle.dayNum}>{day.dayIndex}</Text>
+          </Text>
+          <Text style={dayHeaderStyle.progress}>
+            / {totalDays}
+          </Text>
+        </View>
+        <View style={dayHeaderStyle.right}>
+          <Text style={dayHeaderStyle.tripName}>{trip.name}</Text>
+          <Text style={dayHeaderStyle.date}>{formatWithWeekday(day.date)}</Text>
+        </View>
+      </View>
+      <View style={dayHeaderStyle.divider} />
+    </View>
+  );
+}
+
+// 卡片 + leg 樣式（要 scale 動態縮放，所以用函式產生）
+function buildCardStyles(scale: number) {
+  const s = (n: number) => n * scale;
+  return StyleSheet.create({
+    card: {
+      backgroundColor: C.bgCard,
+      border: `0.5pt solid ${C.borderSoft}`,
+      borderRadius: s(4),
+      paddingTop: s(7),
+      paddingBottom: s(7),
+      paddingLeft: s(10),
+      paddingRight: s(10),
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: s(8),
+    },
+    marker: {
+      width: s(22),
+      height: s(22),
+      borderRadius: s(11),
+      backgroundColor: C.accentPrimary,
+      color: 'white',
+      textAlign: 'center',
+      fontFamily: 'Fraunces',
+      fontSize: s(11),
+      fontWeight: 500,
+      paddingTop: s(5),
+    },
+    markerHotel: {
+      backgroundColor: C.accentPurple,
+    },
+    body: {
+      flex: 1,
+      flexDirection: 'column',
+    },
+    timeNameRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: s(6),
+      flexWrap: 'wrap',
+    },
+    time: {
+      fontFamily: 'Fraunces',
+      fontSize: s(13),
+      fontWeight: 500,
+      color: C.accentPrimary,
+    },
+    name: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(12),
+      fontWeight: 500,
+      color: C.inkPrimary,
+      lineHeight: 1.3,
+      flex: 1,
+    },
+    stay: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(10),
+      color: C.inkMuted,
+      marginTop: s(1),
+    },
+    notes: {
+      marginTop: s(5),
+      paddingTop: s(4),
+      borderTop: `0.5pt dashed ${C.borderMedium}`,
+      flexDirection: 'column',
+      gap: s(2),
+    },
+    noteRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: s(4),
+    },
+    noteBullet: {
+      color: C.accentWarm,
+      fontSize: s(10),
+      lineHeight: 1.4,
+    },
+    noteText: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(10),
+      color: C.inkSecondary,
+      lineHeight: 1.4,
+      flex: 1,
+    },
+    emoji: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(17),
+      lineHeight: 1,
+    },
+    leg: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingLeft: s(34),
+      paddingTop: s(4),
+      paddingBottom: s(4),
+      gap: s(4),
+    },
+    legMode: {
+      fontFamily: 'Fraunces',
+      fontSize: s(10),
+      fontWeight: 500,
+      color: C.accentPrimary,
+    },
+    legDot: {
+      fontSize: s(10),
+      color: C.inkFaint,
+    },
+    legTime: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(10),
+      color: C.inkMuted,
+    },
+    crossLeg: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(9),
+      fontStyle: 'italic',
+      color: C.inkMuted,
+      paddingLeft: s(30),
+      paddingTop: s(4),
+      marginTop: s(2),
+    },
+  });
+}
+
+function Card({
+  item,
+  index,
+  styles,
+}: {
+  item: ItineraryItem;
+  index: number;
+  styles: ReturnType<typeof buildCardStyles>;
+}) {
+  const markerLabel = String(index + 1);
+  return (
+    <View style={styles.card}>
+      <Text style={[styles.marker, item.isHotel ? styles.markerHotel : {}]}>
+        {markerLabel}
+      </Text>
+      <View style={styles.body}>
+        <View style={styles.timeNameRow}>
+          <Text style={styles.time}>{item.arrivalTime}</Text>
+          <Text style={styles.name}>{item.place.name}</Text>
+        </View>
+        <Text style={styles.stay}>{formatStayDuration(item.stayMinutes)}</Text>
+        {item.notes && item.notes.length > 0 && (
+          <View style={styles.notes}>
+            {item.notes.map((n, i) => (
+              <View key={i} style={styles.noteRow}>
+                <Text style={styles.noteBullet}>·</Text>
+                <Text style={styles.noteText}>{n}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+      {item.place.iconEmoji && <Text style={styles.emoji}>{item.place.iconEmoji}</Text>}
+    </View>
+  );
+}
+
+function LegRow({
+  leg,
+  styles,
+}: {
+  leg: Leg;
+  styles: ReturnType<typeof buildCardStyles>;
+}) {
+  return (
+    <View style={styles.leg}>
+      <Text style={styles.legMode}>{TRANSPORT_LABEL[leg.mode] ?? leg.mode}</Text>
+      <Text style={styles.legDot}>·</Text>
+      <Text style={styles.legTime}>{formatDuration(leg.durationMinutes)}</Text>
+    </View>
+  );
+}
+
+function CrossLeg({
+  styles,
+}: {
+  styles: ReturnType<typeof buildCardStyles>;
+}) {
+  return <Text style={styles.crossLeg}>↳ 接續下一欄</Text>;
+}
+
+const dayMapStyle = StyleSheet.create({
+  wrap: {
+    flexShrink: 0,
+    marginTop: 14,
+  },
+  label: {
+    fontFamily: 'Fraunces',
+    fontSize: 10,
+    color: C.inkMuted,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  image: {
+    width: '100%',
+    height: 150,
+    objectFit: 'cover',
+    borderRadius: 3,
+  },
+  imageSmall: {
+    width: '100%',
+    height: 120,
+    objectFit: 'cover',
+    borderRadius: 3,
+  },
+});
+
+const footerStyle = StyleSheet.create({
+  row: {
+    flexShrink: 0,
+    paddingTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  text: {
+    fontFamily: 'NotoSansTC',
+    fontSize: 10,
+    color: C.inkMuted,
+  },
+});
+
+function DayPage({
+  trip,
+  day,
+  totalDays,
+}: {
+  trip: Trip;
+  day: DayPlan;
+  totalDays: number;
+}) {
+  const N = day.items.length;
+  const scale = computeScale(N);
+  const styles = buildCardStyles(scale);
+  const cols = computeColumnsCount(N);
+  const cardsPerCol = Math.max(1, Math.ceil(N / cols));
+
+  // 分欄
+  const columns: ItineraryItem[][] = [];
+  const itemIndices: number[][] = [];
+  for (let c = 0; c < cols; c++) {
+    const start = c * cardsPerCol;
+    const end = Math.min(N, start + cardsPerCol);
+    columns.push(day.items.slice(start, end));
+    itemIndices.push(
+      Array.from({ length: end - start }, (_, i) => start + i),
+    );
+  }
+
+  const dayMap = buildDayMapData(day);
+  const dayMapUrl = hasApiKey()
+    ? buildStaticMapWithPath(dayMap.markers, dayMap.path, '700x300')
+    : null;
+
+  return (
+    <Page size="A4" style={base.page}>
+      <DayHeader trip={trip} day={day} totalDays={totalDays} />
+
+      {/* Grid 區：flex 1 吃中間剩餘空間 */}
+      <View style={{ flex: 1, flexDirection: 'row', gap: 14 }}>
+        {columns.map((colItems, ci) => (
+          <View key={ci} style={{ flex: 1, flexDirection: 'column', gap: 0 }}>
+            {colItems.map((item, idx) => {
+              const globalIdx = itemIndices[ci]![idx]!;
+              const showLegBefore = idx > 0;
+              const prevGlobalIdx = globalIdx - 1;
+              const leg = showLegBefore ? day.legs[prevGlobalIdx] : null;
               return (
-                <View key={it.id}>
-                  {leg && (
-                    <Text style={styles.leg}>
-                      {TRANSPORT_LABEL[leg.mode] ?? leg.mode}　·　{formatDuration(leg.durationMinutes)}
-                    </Text>
-                  )}
-                  <View style={styles.card}>
-                    <Text style={[styles.marker, ...(it.isHotel ? [styles.markerHotel] : [])]}>
-                      {markerLabel}
-                    </Text>
-                    <View style={styles.cardBody}>
-                      <View style={styles.timeName}>
-                        <Text style={styles.time}>{it.arrivalTime}</Text>
-                        <Text style={styles.name}>{it.place.name}</Text>
-                      </View>
-                      <Text style={styles.stay}>{formatStayDuration(it.stayMinutes)}</Text>
-                      <Text style={styles.addr}>{it.place.address}</Text>
-                      {it.notes &&
-                        it.notes.map((n, i) => (
-                          <Text key={i} style={styles.note}>
-                            • {n}
-                          </Text>
-                        ))}
-                    </View>
-                  </View>
+                <View key={item.id}>
+                  {leg && <LegRow leg={leg} styles={styles} />}
+                  <Card item={item} index={globalIdx} styles={styles} />
                 </View>
               );
             })}
-          </Page>
-        );
-      })}
+            {ci < cols - 1 && colItems.length > 0 && <CrossLeg styles={styles} />}
+          </View>
+        ))}
+      </View>
+
+      {/* 當日路線地圖 */}
+      <View style={dayMapStyle.wrap}>
+        <Text style={dayMapStyle.label}>當日路線　TODAY&apos;S ROUTE</Text>
+        {dayMapUrl && (
+          <Image
+            src={dayMapUrl}
+            style={scale < 1 ? dayMapStyle.imageSmall : dayMapStyle.image}
+          />
+        )}
+      </View>
+
+      {/* 頁尾 */}
+      <View style={footerStyle.row}>
+        <Text style={footerStyle.text}>
+          {formatWithWeekday(day.date)}　·　Day {day.dayIndex} / {totalDays}
+        </Text>
+      </View>
+    </Page>
+  );
+}
+
+// ========== Document ==========
+export function TripPDF({ trip }: { trip: Trip }) {
+  const end = getEndDate(trip);
+  const totalDays = diffDays(trip.startDate, end) + 1;
+  const daysWithItems = trip.days.filter((d) => d.items.length > 0);
+  // 用 daysWithItems 不會印空白天的頁面；要全印就用 trip.days
+  void nonHotelCountInDay; // 給未來 layout 用，先消除未用警告
+  void buildStaticMapUrl;
+  return (
+    <Document title={trip.name}>
+      <CoverPage trip={trip} />
+      {daysWithItems.map((day) => (
+        <DayPage key={day.id} trip={trip} day={day} totalDays={totalDays} />
+      ))}
     </Document>
   );
 }

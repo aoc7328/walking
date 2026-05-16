@@ -59,6 +59,7 @@ export default function Header() {
   const setTrip = useTripStore((s) => s.setTrip);
   const renameTrip = useTripStore((s) => s.renameTrip);
   const openShareModal = useUIStore((s) => s.openShareModal);
+  const openOverviewModal = useUIStore((s) => s.openOverviewModal);
 
   if (!trip) return <header className="header" />;
 
@@ -90,6 +91,7 @@ export default function Header() {
         </div>
       </div>
       <div className="header-actions">
+        <button className="btn" onClick={openOverviewModal} title="打開整段行程的總覽地圖">總覽</button>
         <TripSwitcher />
         <button className="btn" onClick={handleImport} title="從 JSON 行程檔匯入（會覆蓋目前的）">匯入</button>
         <button className="btn" onClick={() => exportTripAsPDF(trip)} title="下載 PDF 旅遊小冊">下載</button>
