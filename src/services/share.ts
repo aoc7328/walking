@@ -119,15 +119,22 @@ function buildSharePayloadV2(trip: Trip): SharePayloadV2 {
   const placeIndex = new Map<string, number>();
   const places: SharePlace[] = [];
 
-  function getOrAddPlaceIdx(place: ItineraryItem['place']): number {
-    const key = place.placeId || `${place.name}|${place.coordinates.lat.toFixed(5)}|${place.coordinates.lng.toFixed(5)}`;
+  function getOrAddPlaceIdx(place: ItineraryItem['place']): number | null {
+    // 防呆：座標必須是有限數，否則回 null 讓 caller 跳過這個 item
+    const lat = place.coordinates?.lat;
+    const lng = place.coordinates?.lng;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      console.warn('[share] 跳過無效座標的地點：', place);
+      return null;
+    }
+    const key = place.placeId || `${place.name}|${lat.toFixed(5)}|${lng.toFixed(5)}`;
     const existing = placeIndex.get(key);
     if (existing !== undefined) return existing;
     const entry: SharePlace = {
       n: place.name,
       a: place.address,
-      la: Number(place.coordinates.lat.toFixed(6)),
-      lo: Number(place.coordinates.lng.toFixed(6)),
+      la: Number(lat.toFixed(6)),
+      lo: Number(lng.toFixed(6)),
     };
     if (place.placeId) entry.p = place.placeId;
     if (place.iconEmoji) entry.e = place.iconEmoji;
@@ -139,16 +146,15 @@ function buildSharePayloadV2(trip: Trip): SharePayloadV2 {
   }
 
   const days: ShareDayV2[] = trip.days.map((d: DayPlan) => {
-    const items: ShareItemV2[] = d.items.map((it) => {
-      const out: ShareItemV2 = {
-        x: getOrAddPlaceIdx(it.place),
-        t: it.arrivalTime,
-        s: it.stayMinutes,
-      };
+    const items: ShareItemV2[] = [];
+    for (const it of d.items) {
+      const x = getOrAddPlaceIdx(it.place);
+      if (x === null) continue; // 無效座標 → 跳過這個 item，不要產生爛資料
+      const out: ShareItemV2 = { x, t: it.arrivalTime, s: it.stayMinutes };
       if (it.isHotel) out.h = 1;
       if (it.notes && it.notes.length > 0) out.no = it.notes;
-      return out;
-    });
+      items.push(out);
+    }
     const out: ShareDayV2 = {
       i: items,
       l: d.legs.map(shrinkLeg),

@@ -85,9 +85,13 @@ function OverviewModal({
     const points: { lat: number; lng: number; dayIndex: number }[] = [];
     for (let i = 0; i < payload.d.length; i++) {
       const day = payload.d[i]!;
-      const candidate = day.i.find((it) => !it.h) ?? day.i[0];
-      if (!candidate) continue;
-      points.push({ lat: candidate.la, lng: candidate.lo, dayIndex: i + 1 });
+      // 寬鬆挑：先試非飯店有合法座標的，不行再從整天所有 item 找第一個有合法座標的。
+      // 避免某些 item 缺座標時整段 fallback 到「day.i[0]」拿到 undefined。
+      const pick =
+        day.i.find((it) => !it.h && Number.isFinite(it.la) && Number.isFinite(it.lo)) ??
+        day.i.find((it) => Number.isFinite(it.la) && Number.isFinite(it.lo));
+      if (!pick) continue; // 整天都沒有合法座標 → 跳過該天
+      points.push({ lat: pick.la, lng: pick.lo, dayIndex: i + 1 });
     }
     return points;
   }, [payload]);
@@ -178,15 +182,18 @@ function DayBlock({
   const staticMapUrl = useMemo(() => {
     if (!hasApiKey() || day.i.length === 0) return null;
     return buildStaticMapUrl(
-      day.i.map((it, idx) => {
-        const n = idx + 1;
-        return {
-          lat: it.la,
-          lng: it.lo,
-          // 1–9 顯示數字、10+ 無 label（Static Maps 單字元限制，廢除 H 字母）
-          label: n <= 9 ? String(n) : undefined,
-        };
-      }),
+      day.i
+        .map((it, idx) => {
+          const n = idx + 1;
+          return {
+            lat: it.la,
+            lng: it.lo,
+            // 1–9 顯示數字、10+ 無 label（Static Maps 單字元限制，廢除 H 字母）
+            label: n <= 9 ? String(n) : undefined,
+          };
+        })
+        // 過濾掉沒有合法座標的 item，避免 Google geocode 出隨機點
+        .filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng)),
       '600x320',
     );
   }, [day]);

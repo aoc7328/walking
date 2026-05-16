@@ -294,6 +294,12 @@ function appendMarker(
   params: URLSearchParams,
   m: { lat: number; lng: number; label?: string },
 ): void {
+  // 防呆：座標非有限數 → 不丟給 Google，否則他會把字面 "undefined,undefined"
+  // 拿去 geocode 然後爆出 x-staticmap-api-warning + 把點放到隨機地方（瑞典 bug）
+  if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) {
+    console.warn('[googleMaps] 跳過無效座標 marker：', m);
+    return;
+  }
   const usableLabel = m.label && /^[A-Z0-9]$/i.test(m.label) ? `|label:${m.label}` : '';
   params.append('markers', `color:${MARKER_COLOR}|${m.lat},${m.lng}${usableLabel}`);
 }
