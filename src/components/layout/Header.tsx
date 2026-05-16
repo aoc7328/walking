@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import { formatRange, diffDays, addDays } from '../../utils/date';
-import { importTripJSONFile } from '../../services/exportImport';
 import { exportTripAsPDF } from '../../services/pdfExport';
 import TripSwitcher from './TripSwitcher';
 import { useUIStore } from '../../stores/uiStore';
@@ -56,7 +55,6 @@ function EditableTripName({ name, onSave }: { name: string; onSave: (v: string) 
 
 export default function Header() {
   const trip = useTripStore((s) => s.trip);
-  const setTrip = useTripStore((s) => s.setTrip);
   const renameTrip = useTripStore((s) => s.renameTrip);
   const openShareModal = useUIStore((s) => s.openShareModal);
   const openOverviewModal = useUIStore((s) => s.openOverviewModal);
@@ -66,17 +64,6 @@ export default function Header() {
   const endDate = addDays(trip.startDate, trip.days.length - 1);
   const totalDays = diffDays(trip.startDate, endDate) + 1;
   const meta = `${formatRange(trip.startDate, endDate)}　·　${totalDays} 天`;
-
-  async function handleImport() {
-    const ok = window.confirm('匯入會覆蓋目前的行程，確定要繼續嗎？');
-    if (!ok) return;
-    try {
-      const imported = await importTripJSONFile();
-      if (imported) setTrip(imported);
-    } catch (err) {
-      window.alert('匯入失敗：' + (err instanceof Error ? err.message : '未知錯誤'));
-    }
-  }
 
   return (
     <header className="header">
@@ -93,7 +80,6 @@ export default function Header() {
       <div className="header-actions">
         <button className="btn" onClick={openOverviewModal} title="打開整段行程的總覽地圖">總覽</button>
         <TripSwitcher />
-        <button className="btn" onClick={handleImport} title="從 JSON 行程檔匯入（會覆蓋目前的）">匯入</button>
         <button className="btn" onClick={() => exportTripAsPDF(trip)} title="下載 PDF 旅遊小冊">下載</button>
         <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結，讓朋友掃描看手機版行程">分享</button>
       </div>

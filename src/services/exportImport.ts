@@ -21,32 +21,6 @@ export function exportTripAsJSON(trip: Trip): void {
   download(`${safeName}.json`, data, 'application/json');
 }
 
-export function importTripJSONFile(): Promise<Trip | null> {
-  return new Promise((resolve, reject) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json,.json';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) {
-        resolve(null);
-        return;
-      }
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== 'object' || !parsed.id || !Array.isArray(parsed.days)) {
-          throw new Error('JSON 結構不正確');
-        }
-        resolve(parsed as Trip);
-      } catch (err) {
-        reject(err);
-      }
-    };
-    input.click();
-  });
-}
-
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
