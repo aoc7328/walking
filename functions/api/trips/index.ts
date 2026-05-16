@@ -19,7 +19,7 @@ type PagesContext = {
   env: Env;
 };
 
-const USER_ID_RE = /^[a-f0-9]{16,40}$/i;
+const USER_ID_RE = /^[a-f0-9]{16,64}$/i;
 
 function parseUserId(url: URL): string | null {
   const u = url.searchParams.get('u');

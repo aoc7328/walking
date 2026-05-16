@@ -16,7 +16,7 @@ type PagesContext = {
   params: { id?: string | string[] };
 };
 
-const USER_ID_RE = /^[a-f0-9]{16,40}$/i;
+const USER_ID_RE = /^[a-f0-9]{16,64}$/i;
 const TRIP_ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 const MAX_SIZE = 500 * 1024; // 一個 trip 上限 500KB
 
