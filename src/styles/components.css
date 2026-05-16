@@ -1804,6 +1804,7 @@
   border: 1px dashed var(--border-medium);
   background: transparent;
   transition: box-shadow var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+  overflow: hidden;
 }
 
 .place-icon-badge.selected {
@@ -1818,7 +1819,7 @@
 
 .place-icon-badge-content {
   font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif;
-  font-size: 16px;
+  font-size: 26px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -1948,7 +1949,7 @@
 
 .icon-picker-emoji {
   font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif;
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
