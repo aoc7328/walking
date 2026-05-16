@@ -279,8 +279,11 @@ export function getGoogleMapsReviewsUrl(placeId: string): string {
 
 const STATIC_MAP_BASE = 'https://maps.googleapis.com/maps/api/staticmap';
 
-// Static Maps marker：統一深湖綠（與品牌 --accent-primary 對齊）
-const MARKER_COLOR = '0x2C4A3D';
+// Static Maps marker + 路線顏色：品牌橘 (--accent-warm, #D85A30)。
+// 用橘色不用墨綠是因為：Static Maps 底圖是綠色系（公園、街景），墨綠點擠在一起會
+// 完全融入背景失去識別。橘色高對比、即使疊一團也看得出形狀。
+// （互動式地圖那邊 marker 可點可放大、視覺已經夠清楚，仍用品牌主色墨綠。）
+const MARKER_COLOR = '0xD85A30';
 
 /**
  * 把一個 marker 加進 URLSearchParams。全部統一墨綠色實心 marker。

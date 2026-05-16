@@ -474,13 +474,13 @@ const dayMapStyle = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 150,
+    height: 280,
     objectFit: 'cover',
     borderRadius: 3,
   },
   imageSmall: {
     width: '100%',
-    height: 120,
+    height: 220,
     objectFit: 'cover',
     borderRadius: 3,
   },
@@ -528,8 +528,10 @@ function DayPage({
   }
 
   const dayMap = buildDayMapData(day);
+  // 改用接近 1.75:1 的 aspect，跟 PDF 顯示區（A4 內容寬 ~495pt / 高 280pt）對齊，
+  // 避免 objectFit:cover 切掉邊緣。
   const dayMapUrl = hasApiKey()
-    ? buildStaticMapWithPath(dayMap.markers, dayMap.path, '700x300')
+    ? buildStaticMapWithPath(dayMap.markers, dayMap.path, '700x400')
     : null;
 
   return (
