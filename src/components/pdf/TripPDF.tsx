@@ -44,8 +44,14 @@ Font.register({
   ],
 });
 
-// 防止 NotoSansTC 在斷詞時把整段拆碎
-Font.registerHyphenationCallback((word) => [word]);
+// react-pdf 預設的斷詞會把 CJK 字串當成一整個「詞」不拆，導致長中文地名硬撐
+// 把卡片撐爆。這裡客製：CJK 字串拆成單字元（讓任意字之間都能換行）；
+// ASCII 字串保持原樣（不要在英文 word 中間斷字）。
+const CJK_RE = /[　-〿぀-ゟ゠-ヿ㐀-䶿一-鿿＀-￯]/;
+Font.registerHyphenationCallback((word) => {
+  if (CJK_RE.test(word)) return [...word];
+  return [word];
+});
 
 // ========== Color tokens ==========
 const C = {
@@ -190,13 +196,26 @@ function CoverPage({ trip }: { trip: Trip }) {
 function computeScale(N: number): number {
   if (N <= 4) return 1.05;
   if (N <= 8) return 1.0;
-  if (N <= 12) return 1.0;
-  if (N <= 15) return 0.85;
-  return 0.75;
+  if (N <= 10) return 0.95;
+  if (N <= 12) return 0.9;
+  if (N <= 15) return 0.82;
+  return 0.72;
 }
 
 function computeColumnsCount(N: number): number {
   return N <= 8 ? 2 : 3;
+}
+
+/**
+ * 當日地圖高度（pt）。項目越多 → 地圖越矮，把空間讓給卡片，
+ * 避免內容溢出到下一頁產生空白頁。
+ */
+function computeMapHeight(N: number): number {
+  if (N <= 4) return 320;
+  if (N <= 8) return 280;
+  if (N <= 10) return 230;
+  if (N <= 12) return 190;
+  return 160;
 }
 
 const dayHeaderStyle = StyleSheet.create({
@@ -501,13 +520,6 @@ const dayMapStyle = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 280,
-    objectFit: 'cover',
-    borderRadius: 3,
-  },
-  imageSmall: {
-    width: '100%',
-    height: 220,
     objectFit: 'cover',
     borderRadius: 3,
   },
@@ -543,6 +555,7 @@ function DayPage({
   const cardsPerCol = Math.max(1, Math.ceil(N / cols));
   // 地點名字基準大小（隨 scale 動態縮放）。各 Card 再依字數啟發式微調。
   const baseNameSize = 12 * scale;
+  const mapHeight = computeMapHeight(N);
 
   // 分欄
   const columns: ItineraryItem[][] = [];
@@ -564,7 +577,7 @@ function DayPage({
     : null;
 
   return (
-    <Page size="A4" style={base.page}>
+    <Page size="A4" style={base.page} wrap={false}>
       <DayHeader trip={trip} day={day} totalDays={totalDays} />
 
       {/* Grid 區：flex 1 吃中間剩餘空間 */}
@@ -599,7 +612,7 @@ function DayPage({
         {dayMapUrl && (
           <Image
             src={dayMapUrl}
-            style={scale < 1 ? dayMapStyle.imageSmall : dayMapStyle.image}
+            style={[dayMapStyle.image, { height: mapHeight }]}
           />
         )}
       </View>
