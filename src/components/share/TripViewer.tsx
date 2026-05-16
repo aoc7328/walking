@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { readShareHash, fetchTripById, type ShareTrip, type ShareDay, type ShareItem, type ShareLeg } from '../../services/share';
-import { addDays, formatWithWeekday, formatStayDuration } from '../../utils/date';
+import { addDays, formatRange, formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
-import { buildStaticMapUrl, hasApiKey } from '../../services/googleMaps';
+import { buildStaticMapUrl, buildStaticMapWithPath, hasApiKey } from '../../services/googleMaps';
 
 /** 嘗試把字串塞進剪貼簿。失敗回 false（給 caller 顯示 fallback）。 */
 async function copyToClipboard(text: string): Promise<boolean> {
@@ -65,6 +65,101 @@ function directionsUrl(
   });
   if (dest.p) params.set('destination_place_id', dest.p);
   return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+/**
+ * 整段行程總覽 Modal。
+ * 取每天「第一個非飯店點」當代表 → 用 Static Maps 畫所有代表點 + 連線。
+ * Static Maps 的 label 只能顯示單字元，所以 Day 10+ 不放 label（節點還是會在）。
+ */
+function OverviewModal({
+  payload,
+  onClose,
+}: {
+  payload: ShareTrip;
+  onClose: () => void;
+}) {
+  const endDate = addDays(payload.s, payload.d.length - 1);
+
+  const data = useMemo(() => {
+    const points: { lat: number; lng: number; dayIndex: number }[] = [];
+    for (let i = 0; i < payload.d.length; i++) {
+      const day = payload.d[i]!;
+      const candidate = day.i.find((it) => !it.h) ?? day.i[0];
+      if (!candidate) continue;
+      points.push({ lat: candidate.la, lng: candidate.lo, dayIndex: i + 1 });
+    }
+    return points;
+  }, [payload]);
+
+  const mapUrl = useMemo(() => {
+    if (!hasApiKey() || data.length === 0) return null;
+    return buildStaticMapWithPath(
+      data.map((p) => ({
+        lat: p.lat,
+        lng: p.lng,
+        label: p.dayIndex <= 9 ? String(p.dayIndex) : undefined,
+        color: 'green',
+      })),
+      data.map((p) => ({ lat: p.lat, lng: p.lng })),
+      '800x500',
+    );
+  }, [data]);
+
+  return (
+    <div
+      className="modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="tv-overview-modal">
+        <header className="tv-overview-head">
+          <div>
+            <div className="tv-overview-title">{payload.n}</div>
+            <div className="tv-overview-sub">
+              {formatRange(payload.s, endDate)}　·　共 {payload.d.length} 天
+            </div>
+          </div>
+          <button className="tv-overview-close" onClick={onClose} aria-label="關閉">
+            ×
+          </button>
+        </header>
+
+        <div className="tv-overview-body">
+          {mapUrl ? (
+            <img
+              className="tv-overview-map"
+              src={mapUrl}
+              alt="整段行程地圖"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          ) : (
+            <div className="tv-overview-empty">沒有可顯示的地點座標</div>
+          )}
+
+          <ul className="tv-overview-daylist">
+            {payload.d.map((d, i) => {
+              const dDate = addDays(payload.s, i);
+              const visible = d.i.filter((it) => !it.h);
+              const first = visible[0]?.n ?? '（飯店日）';
+              return (
+                <li key={i} className="tv-overview-dayitem">
+                  <span className="tv-overview-daynum">{i + 1}</span>
+                  <div className="tv-overview-dayinfo">
+                    <div className="tv-overview-dayline">{first}</div>
+                    <div className="tv-overview-dayline-sub">
+                      {formatWithWeekday(dDate)}　·　{visible.length} 點
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function DayBlock({
@@ -198,6 +293,7 @@ export default function TripViewer() {
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [activeDay, setActiveDay] = useState(0);
   const [toastMsg, setToastMsg] = useState<string>('');
+  const [overviewOpen, setOverviewOpen] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -205,6 +301,26 @@ export default function TripViewer() {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     toastTimerRef.current = window.setTimeout(() => setToastMsg(''), 1600);
   }, []);
+
+  const handleReshare = useCallback(async () => {
+    if (!payload) return;
+    const shareUrl = window.location.href;
+    // 優先用系統原生分享面板（手機通常都支援、桌機 Safari/Edge 也部分支援）
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: payload.n,
+          text: `${payload.n}　·　行程分享`,
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        // 使用者按取消 / 系統拒絕 → 退到複製連結
+      }
+    }
+    const ok = await copyToClipboard(shareUrl);
+    showToast(ok ? '連結已複製，貼給朋友吧' : '複製失敗，請手動長按網址複製');
+  }, [payload, showToast]);
 
   useEffect(() => {
     return () => {
@@ -279,13 +395,36 @@ export default function TripViewer() {
   }
 
   const day = payload.d[activeDay];
+  const endDate = addDays(payload.s, payload.d.length - 1);
 
   return (
     <div className="tv-root">
       <header className="tv-header">
-        <h1 className="tv-trip-name">{payload.n}</h1>
-        <div className="tv-trip-meta">
-          {payload.s}　·　{payload.d.length} 天
+        <div className="tv-header-text">
+          <h1 className="tv-trip-name">{payload.n}</h1>
+          <div className="tv-trip-meta">
+            {formatRange(payload.s, endDate)}　·　{payload.d.length} 天
+          </div>
+        </div>
+        <div className="tv-header-actions">
+          <button
+            type="button"
+            className="tv-header-btn"
+            onClick={() => setOverviewOpen(true)}
+            title="整段行程總覽地圖"
+            aria-label="整段行程總覽"
+          >
+            <span aria-hidden>🗺</span>
+          </button>
+          <button
+            type="button"
+            className="tv-header-btn"
+            onClick={handleReshare}
+            title="再分享給其他人"
+            aria-label="再分享"
+          >
+            <span aria-hidden>📤</span>
+          </button>
         </div>
       </header>
 
@@ -320,6 +459,8 @@ export default function TripViewer() {
       <footer className="tv-footer">
         由「胖齊肥柔去走走」分享 · 點地點名可看 Google Maps 介紹
       </footer>
+
+      {overviewOpen && <OverviewModal payload={payload} onClose={() => setOverviewOpen(false)} />}
 
       {toastMsg && <div className="tv-toast" role="status">{toastMsg}</div>}
     </div>
