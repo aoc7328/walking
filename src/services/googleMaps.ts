@@ -295,13 +295,18 @@ function appendMarker(
   m: { lat: number; lng: number; label?: string },
 ): void {
   // 防呆：座標非有限數 → 不丟給 Google，否則他會把字面 "undefined,undefined"
-  // 拿去 geocode 然後爆出 x-staticmap-api-warning + 把點放到隨機地方（瑞典 bug）
+  // 拿去 geocode 然後爆出 x-staticmap-api-warning + 把點放到隨機地方
   if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) {
     console.warn('[googleMaps] 跳過無效座標 marker：', m);
     return;
   }
-  const usableLabel = m.label && /^[A-Z0-9]$/i.test(m.label) ? `|label:${m.label}` : '';
-  params.append('markers', `color:${MARKER_COLOR}|${m.lat},${m.lng}${usableLabel}`);
+  // ⚠️ 關鍵：Google Static Maps 的 markers 參數格式是「樣式|樣式|...|位置|位置|...」，
+  // 樣式（color:、label:、size:）必須全部寫在位置之前。
+  // 之前寫成 `color:X|<lat>,<lng>|label:N` 會讓 Google 把 `label:1` 當第二個
+  // 位置去 geocode，結果 geocode 出隨機點（瑞典）或拋 warning。
+  // 文件範例：markers=color:blue|label:S|11211
+  const labelPart = m.label && /^[A-Z0-9]$/i.test(m.label) ? `|label:${m.label}` : '';
+  params.append('markers', `color:${MARKER_COLOR}${labelPart}|${m.lat},${m.lng}`);
 }
 
 export function buildStaticMapUrl(

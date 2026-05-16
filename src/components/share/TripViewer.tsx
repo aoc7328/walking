@@ -82,30 +82,21 @@ function OverviewModal({
   const endDate = addDays(payload.s, payload.d.length - 1);
 
   const data = useMemo(() => {
-    const points: { lat: number; lng: number; dayIndex: number; name: string }[] = [];
+    const points: { lat: number; lng: number; dayIndex: number }[] = [];
     for (let i = 0; i < payload.d.length; i++) {
       const day = payload.d[i]!;
       const pick =
         day.i.find((it) => !it.h && Number.isFinite(it.la) && Number.isFinite(it.lo)) ??
         day.i.find((it) => Number.isFinite(it.la) && Number.isFinite(it.lo));
       if (!pick) continue;
-      points.push({ lat: pick.la, lng: pick.lo, dayIndex: i + 1, name: pick.n });
-    }
-    // 列出每天的代表點座標，方便對照「跑去瑞典」的是哪一天
-    // 紐西蘭合法範圍：lat ∈ [-47, -34]、lng ∈ [166, 179]
-    console.log('[overview] day markers:', points);
-    const suspicious = points.filter(
-      (p) => p.lat > 0 || p.lat < -90 || p.lng < 0 || p.lng > 180,
-    );
-    if (suspicious.length > 0) {
-      console.warn('[overview] 可疑座標（非南半球/異常經度）：', suspicious);
+      points.push({ lat: pick.la, lng: pick.lo, dayIndex: i + 1 });
     }
     return points;
   }, [payload]);
 
   const mapUrl = useMemo(() => {
     if (!hasApiKey() || data.length === 0) return null;
-    const url = buildStaticMapWithPath(
+    return buildStaticMapWithPath(
       data.map((p) => ({
         lat: p.lat,
         lng: p.lng,
@@ -115,8 +106,6 @@ function OverviewModal({
       data.map((p) => ({ lat: p.lat, lng: p.lng })),
       '800x500',
     );
-    console.log('[overview] static map URL:', url);
-    return url;
   }, [data]);
 
   return (
