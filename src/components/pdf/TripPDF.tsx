@@ -293,6 +293,11 @@ function buildCardStyles(scale: number) {
       alignItems: 'flex-start',
       gap: s(8),
     },
+    markerStack: {
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: s(4),
+    },
     marker: {
       width: s(22),
       height: s(22),
@@ -307,28 +312,28 @@ function buildCardStyles(scale: number) {
     markerHotel: {
       backgroundColor: C.accentPurple,
     },
+    emojiBadge: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(16),
+      lineHeight: 1,
+      textAlign: 'center',
+      width: s(22),
+    },
     body: {
       flex: 1,
       flexDirection: 'column',
     },
-    timeNameRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: s(6),
-      flexWrap: 'wrap',
-    },
     time: {
       fontFamily: 'Times-Bold',
-      fontSize: s(13),
+      fontSize: s(15),
       color: C.accentPrimary,
+      marginBottom: s(2),
     },
     name: {
       fontFamily: 'NotoSansTC',
-      fontSize: s(12),
       fontWeight: 500,
       color: C.inkPrimary,
-      lineHeight: 1.3,
-      flex: 1,
+      lineHeight: 1.25,
     },
     stay: {
       fontFamily: 'NotoSansTC',
@@ -359,11 +364,6 @@ function buildCardStyles(scale: number) {
       color: C.inkSecondary,
       lineHeight: 1.4,
       flex: 1,
-    },
-    emoji: {
-      fontFamily: 'NotoSansTC',
-      fontSize: s(17),
-      lineHeight: 1,
     },
     leg: {
       flexDirection: 'row',
@@ -399,26 +399,54 @@ function buildCardStyles(scale: number) {
   });
 }
 
+/**
+ * 估算地點名字應該用多大字級。
+ * react-pdf 沒辦法像瀏覽器那樣量測 DOM，只能用啟發式：
+ * - 計算「視覺重量」：CJK 字佔 2 單位、ASCII 佔 1 單位
+ * - 依重量決定字級。一張卡片寬度大概能放 ~24 weight 一行；兩行可容 ~48。
+ * - 超過 48 開始縮字，最多縮到 base 的 65%。
+ *
+ * 跟 in-app 的 useAutoFitText 同樣精神：先換行、塞不下才縮字。
+ */
+function computeNameFontSize(name: string, baseSize: number): number {
+  let weight = 0;
+  for (const ch of name) {
+    weight += /[　-鿿＀-￯]/.test(ch) ? 2 : 1;
+  }
+  if (weight <= 48) return baseSize;
+  if (weight <= 60) return baseSize * 0.88;
+  if (weight <= 78) return baseSize * 0.78;
+  return baseSize * 0.68;
+}
+
 function Card({
   item,
   index,
   styles,
+  baseNameSize,
 }: {
   item: ItineraryItem;
   index: number;
   styles: ReturnType<typeof buildCardStyles>;
+  baseNameSize: number;
 }) {
   const markerLabel = String(index + 1);
+  const nameFontSize = computeNameFontSize(item.place.name, baseNameSize);
   return (
     <View style={styles.card}>
-      <Text style={[styles.marker, item.isHotel ? styles.markerHotel : {}]}>
-        {markerLabel}
-      </Text>
+      <View style={styles.markerStack}>
+        <Text style={[styles.marker, item.isHotel ? styles.markerHotel : {}]}>
+          {markerLabel}
+        </Text>
+        {item.place.iconEmoji && (
+          <Text style={styles.emojiBadge}>{item.place.iconEmoji}</Text>
+        )}
+      </View>
       <View style={styles.body}>
-        <View style={styles.timeNameRow}>
-          <Text style={styles.time}>{item.arrivalTime}</Text>
-          <Text style={styles.name}>{item.place.name}</Text>
-        </View>
+        <Text style={styles.time}>{item.arrivalTime}</Text>
+        <Text style={[styles.name, { fontSize: nameFontSize }]}>
+          {item.place.name}
+        </Text>
         <Text style={styles.stay}>{formatStayDuration(item.stayMinutes)}</Text>
         {item.notes && item.notes.length > 0 && (
           <View style={styles.notes}>
@@ -431,7 +459,6 @@ function Card({
           </View>
         )}
       </View>
-      {item.place.iconEmoji && <Text style={styles.emoji}>{item.place.iconEmoji}</Text>}
     </View>
   );
 }
@@ -514,6 +541,8 @@ function DayPage({
   const styles = buildCardStyles(scale);
   const cols = computeColumnsCount(N);
   const cardsPerCol = Math.max(1, Math.ceil(N / cols));
+  // 地點名字基準大小（隨 scale 動態縮放）。各 Card 再依字數啟發式微調。
+  const baseNameSize = 12 * scale;
 
   // 分欄
   const columns: ItineraryItem[][] = [];
@@ -550,7 +579,12 @@ function DayPage({
               return (
                 <View key={item.id}>
                   {leg && <LegRow leg={leg} styles={styles} />}
-                  <Card item={item} index={globalIdx} styles={styles} />
+                  <Card
+                    item={item}
+                    index={globalIdx}
+                    styles={styles}
+                    baseNameSize={baseNameSize}
+                  />
                 </View>
               );
             })}
