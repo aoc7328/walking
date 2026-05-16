@@ -1791,30 +1791,22 @@
   flex-shrink: 0;
 }
 
-/* ========== 地點圖示徽章 (emoji badge) ========== */
+/* ========== 地點圖示徽章 (emoji 直接顯示，無圓圈) ========== */
 .place-icon-badge {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  cursor: pointer;
-  border: 1px dashed var(--border-medium);
-  background: transparent;
-  transition: box-shadow var(--t-fast), border-color var(--t-fast), background var(--t-fast);
-  overflow: hidden;
-}
-
-.place-icon-badge.selected {
-  background: var(--bg-soft);
   border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: transform var(--t-fast);
 }
 
 .place-icon-badge:hover {
-  box-shadow: 0 1px 4px rgba(60, 45, 20, 0.18);
-  border-color: var(--ink-faint);
+  transform: translateY(-1px);
 }
 
 .place-icon-badge-content {
@@ -1829,8 +1821,13 @@
 .place-icon-badge:not(.selected) .place-icon-badge-content {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 14px;
+  font-size: 24px;
   color: var(--ink-faint);
+  transition: color var(--t-fast);
+}
+
+.place-icon-badge:not(.selected):hover .place-icon-badge-content {
+  color: var(--ink-secondary);
 }
 
 /* ========== Icon Picker (emoji 選擇器) ========== */
@@ -1932,19 +1929,14 @@
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   padding: 0;
   cursor: pointer;
-  transition: background var(--t-fast), transform var(--t-fast);
+  transition: background var(--t-fast);
 }
 
 .icon-picker-cell:hover {
   background: var(--bg-softer);
-  transform: scale(1.08);
-}
-
-.icon-picker-cell:active {
-  transform: scale(0.96);
 }
 
 .icon-picker-emoji {
