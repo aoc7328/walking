@@ -10,8 +10,8 @@ import {
   persistTripImmediate,
   deleteTripFromDB,
   listAllTrips,
+  loadTripById,
 } from '../db/repository';
-import { db } from '../db/schema';
 import { fetchLegDuration } from './../services/directions';
 
 interface TripStore {
@@ -478,7 +478,8 @@ export const useTripStore = create<TripStore>((set, get) => ({
         // ignore
       }
     }
-    const target = await db.trips.get(id);
+    // 行程資料現在存 KV，不是本地 IndexedDB。從 KV 拿目標 trip。
+    const target = await loadTripById(id);
     if (target) {
       setActiveTripId(id);
       set({ trip: { ...target, days: withAutoFill(target.days) } });

@@ -72,6 +72,15 @@ export async function listAllTrips(): Promise<Trip[]> {
   }
 }
 
+/** 從 KV 取單一 trip，失敗回 null。給 trip 切換用。 */
+export async function loadTripById(id: string): Promise<Trip | null> {
+  try {
+    return await apiFetch<Trip>(`/${encodeURIComponent(id)}`);
+  } catch {
+    return null;
+  }
+}
+
 export async function deleteTripFromDB(id: string): Promise<void> {
   await apiFetch(`/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
