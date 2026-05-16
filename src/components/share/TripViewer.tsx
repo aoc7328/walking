@@ -82,16 +82,23 @@ function OverviewModal({
   const endDate = addDays(payload.s, payload.d.length - 1);
 
   const data = useMemo(() => {
-    const points: { lat: number; lng: number; dayIndex: number }[] = [];
+    const points: { lat: number; lng: number; dayIndex: number; name: string }[] = [];
     for (let i = 0; i < payload.d.length; i++) {
       const day = payload.d[i]!;
-      // 寬鬆挑：先試非飯店有合法座標的，不行再從整天所有 item 找第一個有合法座標的。
-      // 避免某些 item 缺座標時整段 fallback 到「day.i[0]」拿到 undefined。
       const pick =
         day.i.find((it) => !it.h && Number.isFinite(it.la) && Number.isFinite(it.lo)) ??
         day.i.find((it) => Number.isFinite(it.la) && Number.isFinite(it.lo));
-      if (!pick) continue; // 整天都沒有合法座標 → 跳過該天
-      points.push({ lat: pick.la, lng: pick.lo, dayIndex: i + 1 });
+      if (!pick) continue;
+      points.push({ lat: pick.la, lng: pick.lo, dayIndex: i + 1, name: pick.n });
+    }
+    // 列出每天的代表點座標，方便對照「跑去瑞典」的是哪一天
+    // 紐西蘭合法範圍：lat ∈ [-47, -34]、lng ∈ [166, 179]
+    console.log('[overview] day markers:', points);
+    const suspicious = points.filter(
+      (p) => p.lat > 0 || p.lat < -90 || p.lng < 0 || p.lng > 180,
+    );
+    if (suspicious.length > 0) {
+      console.warn('[overview] 可疑座標（非南半球/異常經度）：', suspicious);
     }
     return points;
   }, [payload]);
