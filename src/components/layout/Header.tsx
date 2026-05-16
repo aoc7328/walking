@@ -68,6 +68,7 @@ export default function Header() {
   return (
     <header className="header">
       <div className="brand">
+        <img className="brand-logo" src="/logo.png" alt="logo" />
         <span className="brand-mark">
           <em>胖齊肥柔去走走</em>
         </span>

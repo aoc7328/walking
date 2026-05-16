@@ -17,7 +17,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['favicon.ico', 'logo.png'],
       manifest: {
         name: '胖齊肥柔去走走',
         short_name: '胖齊肥柔去走走',
@@ -27,18 +27,15 @@ export default defineConfig({
         display: 'standalone',
         lang: 'zh-Hant-TW',
         icons: [
+          // 一張 logo.png 涵蓋所有尺寸需求（瀏覽器會自動縮放）。
+          // 想最佳化的話，未來再另外做 192/512 兩個版本。
           {
-            src: 'icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'icon-512.png',
+            src: 'logo.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: 'icon-512.png',
+            src: 'logo.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
