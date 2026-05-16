@@ -6,7 +6,7 @@ import { useSearchStore } from '../../stores/searchStore';
 import { hasApiKey } from '../../services/googleMaps';
 import ItineraryMarker from './ItineraryMarker';
 import SearchMarker from './SearchMarker';
-import RouteLine from './RouteLine';
+import RouteSegments from './RouteSegments';
 import type { LatLng } from '../../utils/geo';
 
 const DEFAULT_CENTER = { lat: 23.97, lng: 120.97 };
@@ -114,7 +114,7 @@ export default function MapView() {
         {searchResults.map((p) => (
           <SearchMarker key={p.id} position={p.coordinates} placeId={p.placeId} />
         ))}
-        {itineraryPath.length >= 2 && <RouteLine path={itineraryPath} />}
+        {day && day.items.length >= 2 && <RouteSegments day={day} />}
       </Map>
     </APIProvider>
   );

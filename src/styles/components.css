@@ -2551,6 +2551,51 @@
   color: var(--ink-faint);
 }
 
+/* 預覽實際路線按鈕：放在交通方式和時間之後 */
+.leg-preview {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px dashed var(--border-medium);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+
+.leg-preview:hover {
+  background: var(--bg-soft);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  border-style: solid;
+}
+
+.leg-preview.is-loading {
+  color: var(--ink-muted);
+  border-style: solid;
+  cursor: wait;
+}
+
+.leg-preview.is-ready {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+  border-style: solid;
+}
+
+.leg-preview.is-error {
+  color: var(--accent-warm);
+  border-color: var(--accent-warm);
+  border-style: solid;
+}
+
 /* ========== Day Strip ========== */
 .day-strip-wrap {
   border-top: 0.5px solid var(--border-soft);

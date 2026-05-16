@@ -122,11 +122,21 @@ export default function RightPanel() {
                       />
                     );
                     const leg = day.legs[idx];
-                    const showLeg = idx < day.items.length - 1 && leg;
+                    const nextItem = day.items[idx + 1];
+                    const showLeg = idx < day.items.length - 1 && leg && nextItem;
                     return (
                       <div key={item.id}>
                         {card}
-                        {showLeg && <LegConnector leg={leg} onModeChange={(m) => handleLegMode(idx, m)} />}
+                        {showLeg && (
+                          <LegConnector
+                            leg={leg}
+                            fromItemId={item.id}
+                            toItemId={nextItem.id}
+                            fromCoord={item.place.coordinates}
+                            toCoord={nextItem.place.coordinates}
+                            onModeChange={(m) => handleLegMode(idx, m)}
+                          />
+                        )}
                       </div>
                     );
                   })}

@@ -1,14 +1,10 @@
 import type { TransportMode } from '../types/place';
 import { loadGoogleMaps, hasApiKey } from './googleMaps';
+import type { LatLng } from '../utils/geo';
 
 interface LegResult {
   durationMinutes: number;
   distanceMeters: number;
-}
-
-interface LatLng {
-  lat: number;
-  lng: number;
 }
 
 const cache = new Map<string, LegResult>();
@@ -74,4 +70,44 @@ export async function fetchLegDuration(
   })();
   inflight.set(key, promise);
   return promise;
+}
+
+/**
+ * 取得「實際路線幾何」用來在地圖上畫真實的路徑（不是直線）。
+ * 給「預覽路線」按鈕用。
+ *
+ * 用 overview_path（每條 route 都有，已抽稀），畫起來夠用且輕量。
+ * fallback 才走 step.path。
+ */
+export async function fetchDirectionsPath(
+  origin: LatLng,
+  destination: LatLng,
+  mode: TransportMode,
+): Promise<LatLng[]> {
+  if (!hasApiKey()) throw new Error('未設定 Google Maps API Key');
+  await loadGoogleMaps();
+  const svc = getService();
+
+  const result = await svc.route({
+    origin,
+    destination,
+    travelMode: getTravelMode(mode),
+  });
+  const route = result.routes[0];
+  if (!route) throw new Error('找不到路線');
+
+  if (route.overview_path && route.overview_path.length > 0) {
+    return route.overview_path.map((p) => ({ lat: p.lat(), lng: p.lng() }));
+  }
+  // Fallback
+  const path: LatLng[] = [];
+  for (const leg of route.legs ?? []) {
+    for (const step of leg.steps ?? []) {
+      for (const p of step.path ?? []) {
+        path.push({ lat: p.lat(), lng: p.lng() });
+      }
+    }
+  }
+  if (path.length === 0) throw new Error('路線資料為空');
+  return path;
 }
