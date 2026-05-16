@@ -30,12 +30,24 @@ async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+/**
+ * 開到 Google Maps 的地點頁面。
+ *
+ * Google 把舊格式 `?q=place_id:xxx` 廢了，現在會被當字面字串去搜，結果是「找不到結果，
+ * 改用 Google 搜尋」。改用官方文件的格式：
+ *
+ *   https://www.google.com/maps/search/?api=1&query=<name>&query_place_id=<id>
+ *
+ * `query` 給名字當顯示與 fallback，`query_place_id` 才是真正的 place 對應依據。
+ */
 function placeUrl(placeId?: string, name?: string, lat?: number, lng?: number): string | null {
-  if (placeId) {
-    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(placeId)}`;
+  if (name) {
+    const params = new URLSearchParams({ api: '1', query: name });
+    if (placeId) params.set('query_place_id', placeId);
+    return `https://www.google.com/maps/search/?${params.toString()}`;
   }
-  if (name && lat !== undefined && lng !== undefined) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=&z=16&center=${lat},${lng}`;
+  if (lat !== undefined && lng !== undefined) {
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   }
   return null;
 }
@@ -132,6 +144,7 @@ function DayBlock({
                 <div className="tv-card-body">
                   {idx > 0 && <div className="tv-time">{it.t}</div>}
                   <div className="tv-name-row">
+                    {it.e && <span className="tv-icon" aria-hidden>{it.e}</span>}
                     {pUrl ? (
                       <a href={pUrl} target="_blank" rel="noreferrer" className="tv-name">
                         {it.n} <span className="tv-arrow">↗</span>

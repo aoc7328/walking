@@ -1123,7 +1123,17 @@
 }
 
 .tv-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
   margin-bottom: 4px;
+}
+
+.tv-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .tv-name {
