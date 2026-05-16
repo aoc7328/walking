@@ -201,10 +201,110 @@ function OverviewMapHalf({ trip }: { trip: Trip }) {
   );
 }
 
-// ============ 空白 half ============
+// ============ 空白 half（封面背面用，純空白）============
 
 function BlankHalf() {
   return <View style={half.base} />;
+}
+
+// ============ 過場 half（大地圖後一頁，簡短啟程文字）============
+
+const interludeStyle = StyleSheet.create({
+  center: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 18,
+  },
+  big: {
+    fontFamily: 'NotoSerifTC',
+    fontWeight: 700,
+    fontSize: 52,
+    color: C.accentPrimary,
+    letterSpacing: 18,
+    paddingLeft: 18, // letterSpacing 補償
+  },
+  rule: {
+    width: 40,
+    height: 0.5,
+    backgroundColor: C.accentWarm,
+  },
+  sub: {
+    fontFamily: 'Times-Italic',
+    fontSize: 12,
+    color: C.inkMuted,
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+});
+
+function InterludeHalf() {
+  return (
+    <View style={half.base}>
+      <View style={interludeStyle.center}>
+        <Text style={interludeStyle.big}>啟程</Text>
+        <View style={interludeStyle.rule} />
+        <Text style={interludeStyle.sub}>The journey begins.</Text>
+      </View>
+    </View>
+  );
+}
+
+// ============ 封底 half（最後一頁，祝福語）============
+
+const backCoverStyle = StyleSheet.create({
+  spacer: { flex: 1 },
+  centerBlock: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 14,
+  },
+  rule: {
+    width: 50,
+    height: 0.5,
+    backgroundColor: C.accentWarm,
+  },
+  blessing: {
+    fontFamily: 'NotoSerifTC',
+    fontWeight: 500,
+    fontSize: 22,
+    color: C.inkPrimary,
+    textAlign: 'center',
+    lineHeight: 1.7,
+    letterSpacing: 6,
+    paddingLeft: 6,
+  },
+  blessingEn: {
+    fontFamily: 'Times-Italic',
+    fontSize: 11,
+    color: C.inkMuted,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  brand: {
+    fontFamily: 'NotoSansTC',
+    fontSize: 8,
+    color: C.inkMuted,
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+});
+
+function BackCoverHalf() {
+  return (
+    <View style={half.base}>
+      <View style={backCoverStyle.spacer} />
+      <View style={backCoverStyle.centerBlock}>
+        <View style={backCoverStyle.rule} />
+        <Text style={backCoverStyle.blessing}>{'願這趟旅程\n都成為好回憶'}</Text>
+        <Text style={backCoverStyle.blessingEn}>May this journey be remembered.</Text>
+        <View style={backCoverStyle.rule} />
+      </View>
+      <View style={backCoverStyle.spacer} />
+      <Text style={backCoverStyle.brand}>胖齊肥柔去走走　·　TRIP BOOKLET</Text>
+    </View>
+  );
 }
 
 // ============ 當日 half ============
@@ -551,19 +651,22 @@ export function TripBookletPDF({ trip }: { trip: Trip }) {
   }
 
   // 2. 補空白頁到 4 的倍數
-  //    優先順序：
-  //    (a) 封面的背面（位置 1）—— 1 張
-  //    (b) 最後（位置末尾）—— 剩下的
-  //    例：缺 1 頁 → 全部塞封面背面
-  //        缺 2 頁 → 封面背面 1 + 最後 1
-  //        缺 3 頁 → 封面背面 1 + 最後 2
+  //    三種 blank 依優先順序填入：
+  //    缺 1 頁 → 封面背面（純空白）
+  //    缺 2 頁 → 封面背面 + 封底（祝福語）
+  //    缺 3 頁 → 封面背面 + 大地圖後過場頁（啟程） + 封底
   const remainder = logicalPages.length % 4;
   const blanksNeeded = remainder === 0 ? 0 : 4 - remainder;
   if (blanksNeeded >= 1) {
     logicalPages.splice(1, 0, <BlankHalf key="blank-inside-front" />);
   }
-  for (let i = 1; i < blanksNeeded; i++) {
-    logicalPages.push(<BlankHalf key={`blank-end-${i}`} />);
+  if (blanksNeeded >= 3) {
+    // 此時 pages 已變成 [cover, blank, overview, ...]，
+    // 在 overview 後（index 3）插入過場頁
+    logicalPages.splice(3, 0, <InterludeHalf key="interlude" />);
+  }
+  if (blanksNeeded >= 2) {
+    logicalPages.push(<BackCoverHalf key="back-cover" />);
   }
 
   // 3. Imposition
