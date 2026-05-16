@@ -74,14 +74,12 @@ export default defineConfig({
               },
             },
           },
-          {
-            urlPattern: /^https:\/\/maps\.googleapis\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'google-maps-cache',
-              networkTimeoutSeconds: 8,
-            },
-          },
+          // ⚠️ 不要快取 maps.googleapis.com。
+          // 原因：Workbox 的 SW 攔截後會自己發 fetch()，這個 fetch 從 SW context 送出
+          // 去的 Referer header 跟原本 <img>/script 標籤送的不一樣（通常會變空字串或
+          // sw.js 的 URL），對不上 Google API Key 的 HTTP referrer 白名單 → 整批 403。
+          // Static Maps、Maps JS、Directions、Places 全部都會掛。
+          // Google 自己的 CDN + 瀏覽器 HTTP cache 已經夠用，SW 介入沒好處。
         ],
       },
     }),
