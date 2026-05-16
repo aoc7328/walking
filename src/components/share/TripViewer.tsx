@@ -105,7 +105,7 @@ function OverviewModal({
 
   const mapUrl = useMemo(() => {
     if (!hasApiKey() || data.length === 0) return null;
-    return buildStaticMapWithPath(
+    const url = buildStaticMapWithPath(
       data.map((p) => ({
         lat: p.lat,
         lng: p.lng,
@@ -115,6 +115,8 @@ function OverviewModal({
       data.map((p) => ({ lat: p.lat, lng: p.lng })),
       '800x500',
     );
+    console.log('[overview] static map URL:', url);
+    return url;
   }, [data]);
 
   return (
