@@ -25,7 +25,7 @@ import { computeDayMarkers } from '../map/TripOverviewMap';
 // - Times-Italic : 斜體（封面標題）
 // - Times-Bold   : 粗體
 
-// Noto Sans TC — 中文內文
+// Noto Sans TC — 中文黑體（內文、標籤、備註等次要文字）
 Font.register({
   family: 'NotoSansTC',
   fonts: [
@@ -39,6 +39,25 @@ Font.register({
     },
     {
       src: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/TC/NotoSansTC-Bold.otf',
+      fontWeight: 700,
+    },
+  ],
+});
+
+// Noto Serif TC — 中文明體（用在標題、地點名稱等需要質感的文字）
+Font.register({
+  family: 'NotoSerifTC',
+  fonts: [
+    {
+      src: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Serif/SubsetOTF/TC/NotoSerifTC-Regular.otf',
+      fontWeight: 400,
+    },
+    {
+      src: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Serif/SubsetOTF/TC/NotoSerifTC-Medium.otf',
+      fontWeight: 500,
+    },
+    {
+      src: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Serif/SubsetOTF/TC/NotoSerifTC-Bold.otf',
       fontWeight: 700,
     },
   ],
@@ -130,7 +149,7 @@ function buildDayMapData(day: DayPlan): OverviewMapData {
 // ========== Cover Page ==========
 const cover = StyleSheet.create({
   title: {
-    fontFamily: 'NotoSansTC',
+    fontFamily: 'NotoSerifTC',
     fontWeight: 700,
     fontSize: 44,
     color: C.inkPrimary,
@@ -150,7 +169,7 @@ const cover = StyleSheet.create({
     color: C.inkSecondary,
   },
   days: {
-    fontFamily: 'NotoSansTC',
+    fontFamily: 'NotoSerifTC',
     fontSize: 13,
     color: C.inkMuted,
     marginTop: 4,
@@ -246,13 +265,13 @@ const dayHeaderStyle = StyleSheet.create({
   },
   right: { flexDirection: 'column', alignItems: 'flex-end' },
   tripName: {
-    fontFamily: 'NotoSansTC',
+    fontFamily: 'NotoSerifTC',
     fontSize: 13,
     fontWeight: 500,
     color: C.inkPrimary,
   },
   date: {
-    fontFamily: 'NotoSansTC',
+    fontFamily: 'NotoSerifTC',
     fontSize: 12,
     color: C.inkSecondary,
     marginTop: 2,
@@ -349,7 +368,7 @@ function buildCardStyles(scale: number) {
       marginBottom: s(2),
     },
     name: {
-      fontFamily: 'NotoSansTC',
+      fontFamily: 'NotoSerifTC',
       fontWeight: 500,
       color: C.inkPrimary,
       lineHeight: 1.25,
