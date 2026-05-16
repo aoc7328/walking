@@ -17,6 +17,7 @@ interface SharePlace {
   lo: number; // lng
   p?: string; // placeId
   e?: string; // iconEmoji
+  ph?: string; // phoneNumber（給分享頁面長按複製 / 點擊撥號用）
 }
 
 interface ShareItemV2 {
@@ -87,6 +88,7 @@ export interface ShareItem {
   lo: number;
   p?: string;
   e?: string;
+  ph?: string;
   t: string;
   s: number;
   h?: 1;
@@ -129,6 +131,7 @@ function buildSharePayloadV2(trip: Trip): SharePayloadV2 {
     };
     if (place.placeId) entry.p = place.placeId;
     if (place.iconEmoji) entry.e = place.iconEmoji;
+    if (place.phoneNumber) entry.ph = place.phoneNumber;
     const idx = places.length;
     places.push(entry);
     placeIndex.set(key, idx);
@@ -267,6 +270,7 @@ function flatten(payload: SharePayload): ShareTrip {
             lo: p.lo,
             p: p.p,
             e: p.e,
+            ph: p.ph,
             t: it.t,
             s: it.s,
             h: it.h,

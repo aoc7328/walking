@@ -1,8 +1,34 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { readShareHash, fetchTripById, type ShareTrip, type ShareDay, type ShareItem, type ShareLeg } from '../../services/share';
 import { addDays, formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
 import { buildStaticMapUrl, hasApiKey } from '../../services/googleMaps';
+
+/** 嘗試把字串塞進剪貼簿。失敗回 false（給 caller 顯示 fallback）。 */
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fall through
+    }
+  }
+  // Fallback：用 textarea + execCommand
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 function placeUrl(placeId?: string, name?: string, lat?: number, lng?: number): string | null {
   if (placeId) {
@@ -29,7 +55,17 @@ function directionsUrl(
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
-function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: number; startDate: string }) {
+function DayBlock({
+  day,
+  dayIndex,
+  startDate,
+  onToast,
+}: {
+  day: ShareDay;
+  dayIndex: number;
+  startDate: string;
+  onToast: (msg: string) => void;
+}) {
   const date = addDays(startDate, dayIndex - 1);
 
   const staticMapUrl = useMemo(() => {
@@ -45,6 +81,12 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
     );
   }, [day]);
 
+  async function handleCopyAddress(addr: string) {
+    if (!addr) return;
+    const ok = await copyToClipboard(addr);
+    onToast(ok ? '地址已複製' : '複製失敗，請手動長按選取');
+  }
+
   return (
     <section className="tv-day">
       <header className="tv-day-head">
@@ -57,7 +99,14 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
         </div>
       </header>
 
-      {staticMapUrl && <img className="tv-static-map" src={staticMapUrl} alt={`Day ${dayIndex} 地圖`} />}
+      {staticMapUrl && (
+        <img
+          className="tv-static-map"
+          src={staticMapUrl}
+          alt={`Day ${dayIndex} 地圖`}
+          referrerPolicy="origin"
+        />
+      )}
 
       <div className="tv-items">
         {day.i.map((it: ShareItem, idx) => {
@@ -67,6 +116,7 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
           const pUrl = placeUrl(it.p, it.n, it.la, it.lo);
           const navUrl = prev ? directionsUrl({ la: prev.la, lo: prev.lo }, { la: it.la, lo: it.lo, p: it.p }, legMode) : null;
           const label = String(idx + 1);
+          const telHref = it.ph ? `tel:${it.ph.replace(/[^+\d]/g, '')}` : null;
           return (
             <div key={idx}>
               {leg && (
@@ -91,7 +141,23 @@ function DayBlock({ day, dayIndex, startDate }: { day: ShareDay; dayIndex: numbe
                     )}
                   </div>
                   <div className="tv-stay">{formatStayDuration(it.s)}</div>
-                  <div className="tv-addr">{it.a}</div>
+                  {it.a && (
+                    <button
+                      type="button"
+                      className="tv-addr"
+                      onClick={() => handleCopyAddress(it.a)}
+                      title="點擊複製地址"
+                    >
+                      <span className="tv-addr-text">{it.a}</span>
+                      <span className="tv-addr-copy" aria-hidden>📋</span>
+                    </button>
+                  )}
+                  {telHref && (
+                    <a className="tv-phone" href={telHref}>
+                      <span aria-hidden>📞</span>
+                      <span>{it.ph}</span>
+                    </a>
+                  )}
                   {it.no && it.no.length > 0 && (
                     <ul className="tv-notes">
                       {it.no.map((n, i) => (
@@ -119,6 +185,20 @@ export default function TripViewer() {
   const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [activeDay, setActiveDay] = useState(0);
+  const [toastMsg, setToastMsg] = useState<string>('');
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMsg(''), 1600);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,11 +296,20 @@ export default function TripViewer() {
         })}
       </nav>
 
-      {day && <DayBlock day={day} dayIndex={activeDay + 1} startDate={payload.s} />}
+      {day && (
+        <DayBlock
+          day={day}
+          dayIndex={activeDay + 1}
+          startDate={payload.s}
+          onToast={showToast}
+        />
+      )}
 
       <footer className="tv-footer">
         由「胖齊肥柔去走走」分享 · 點地點名可看 Google Maps 介紹
       </footer>
+
+      {toastMsg && <div className="tv-toast" role="status">{toastMsg}</div>}
     </div>
   );
 }
