@@ -17,7 +17,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.png'],
+      includeAssets: ['logo.png'],
       manifest: {
         name: '胖齊肥柔去走走',
         short_name: '胖齊肥柔去走走',
