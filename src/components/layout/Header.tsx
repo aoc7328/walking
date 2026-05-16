@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import { formatRange, diffDays, addDays } from '../../utils/date';
-import { exportTripAsPDF } from '../../services/pdfExport';
 import TripSwitcher from './TripSwitcher';
 import { useUIStore } from '../../stores/uiStore';
 
@@ -58,6 +57,7 @@ export default function Header() {
   const renameTrip = useTripStore((s) => s.renameTrip);
   const openShareModal = useUIStore((s) => s.openShareModal);
   const openOverviewModal = useUIStore((s) => s.openOverviewModal);
+  const openDownloadModal = useUIStore((s) => s.openDownloadModal);
 
   if (!trip) return <header className="header" />;
 
@@ -80,7 +80,7 @@ export default function Header() {
       <div className="header-actions">
         <button className="btn" onClick={openOverviewModal} title="打開整段行程的總覽地圖">總覽</button>
         <TripSwitcher />
-        <button className="btn" onClick={() => exportTripAsPDF(trip)} title="下載 PDF 旅遊小冊">下載</button>
+        <button className="btn" onClick={openDownloadModal} title="下載 PDF（普通版 / 騎馬釘小冊子）">下載</button>
         <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結，讓朋友掃描看手機版行程">分享</button>
       </div>
     </header>

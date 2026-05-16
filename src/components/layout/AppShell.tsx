@@ -10,6 +10,7 @@ import ChangeStartDateModal from '../day/ChangeStartDateModal';
 import NewTripModal from './NewTripModal';
 import ShareModal from '../share/ShareModal';
 import TripOverviewModal from '../overview/TripOverviewModal';
+import DownloadModal from '../download/DownloadModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
@@ -106,6 +107,7 @@ export default function AppShell() {
       <NewTripModal />
       <ShareModal />
       <TripOverviewModal />
+      <DownloadModal />
     </div>
   );
 }
