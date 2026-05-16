@@ -279,47 +279,27 @@ export function getGoogleMapsReviewsUrl(placeId: string): string {
 
 const STATIC_MAP_BASE = 'https://maps.googleapis.com/maps/api/staticmap';
 
-/**
- * 把 marker color 判斷是飯店還是一般景點，回傳對應的自訂 icon URL。
- *
- * Static Maps API 是 Google server 端去抓 icon URL（不是瀏覽器），所以 URL 必須是
- * 公開可達的 HTTPS。本機 dev (http://localhost:...) Google 抓不到 → 自動回 null
- * → caller fallback 到 Google 預設 marker。
- */
-function getMarkerIconUrl(color?: string): string | null {
-  if (typeof window === 'undefined') return null;
-  const origin = window.location.origin;
-  if (!origin.startsWith('https://')) return null;
-  const isHotel = color === 'purple' || color === '0x5B4B7F' || color === '0x5b4b7f';
-  return `${origin}/${isHotel ? 'marker-hotel.png' : 'marker-day.png'}`;
-}
+// Static Maps marker：統一深湖綠（與品牌 --accent-primary 對齊）
+const MARKER_COLOR = '0x2C4A3D';
 
+/**
+ * 把一個 marker 加進 URLSearchParams。全部統一墨綠色實心 marker。
+ *
+ * Static Maps API 的 label 限制：只能放單一 ASCII 字元（A-Z / 0-9）。
+ * - 1–9 直接顯示
+ * - 10+ 沒辦法顯示完整數字 → 不放 label，只剩有顏色的 marker，
+ *   完整順序看 itinerary list / day list
+ */
 function appendMarker(
   params: URLSearchParams,
-  m: { lat: number; lng: number; label?: string; color?: string },
+  m: { lat: number; lng: number; label?: string },
 ): void {
-  const iconUrl = getMarkerIconUrl(m.color);
-  if (iconUrl) {
-    // 用我們自家的圓形 PNG（icon URL 不支援 label，數字得從 itinerary list 看）。
-    //
-    // ⚠️ 注意：icon URL 必須先用 encodeURIComponent 編碼一次再丟給 URLSearchParams。
-    // 原因：Google Static Maps 對 markers 參數值只做「一次」URL decode 之後，
-    // 它的 parser 期望 icon URL 內的 `:` `/` 仍然是 encoded 狀態（%3A、%2F），
-    // 然後它會再對 URL 部分做第二次 decode 才拿去 fetch。
-    // 如果我們不預先 encode，URLSearchParams 編一次後 Google 解一次，URL 直接
-    // 露出原始 `:` `/`，parser 就會跟後面的 `|分隔符` 一起搞混 → marker 就壞掉
-    // 變預設 icon、座標可能跑掉。
-    params.append('markers', `icon:${encodeURIComponent(iconUrl)}|${m.lat},${m.lng}`);
-    return;
-  }
-  // Fallback：Google 預設 marker + color + label（dev 用、PDF export 用）
-  const label = m.label ? `|label:${m.label}` : '';
-  const color = m.color ? `color:${m.color}|` : '';
-  params.append('markers', `${color}${m.lat},${m.lng}${label}`);
+  const usableLabel = m.label && /^[A-Z0-9]$/i.test(m.label) ? `|label:${m.label}` : '';
+  params.append('markers', `color:${MARKER_COLOR}|${m.lat},${m.lng}${usableLabel}`);
 }
 
 export function buildStaticMapUrl(
-  markers: { lat: number; lng: number; label?: string; color?: string }[],
+  markers: { lat: number; lng: number; label?: string }[],
   size = '600x300',
 ): string | null {
   if (!hasApiKey() || markers.length === 0) return null;
@@ -328,9 +308,9 @@ export function buildStaticMapUrl(
   return `${STATIC_MAP_BASE}?${params.toString()}`;
 }
 
-/** Static Maps with optional polyline path. 給 PDF 用。 */
+/** Static Maps with optional polyline path. 給 PDF / 分享總覽用。 */
 export function buildStaticMapWithPath(
-  markers: { lat: number; lng: number; label?: string; color?: string }[],
+  markers: { lat: number; lng: number; label?: string }[],
   path?: { lat: number; lng: number }[],
   size = '700x350',
 ): string | null {
@@ -338,7 +318,7 @@ export function buildStaticMapWithPath(
   if (markers.length === 0 && (!path || path.length === 0)) return null;
   const params = new URLSearchParams({ size, scale: '2', maptype: 'roadmap', key: API_KEY! });
   if (path && path.length >= 2) {
-    const pathStr = `color:0x2C4A3DCC|weight:3|` + path.map((p) => `${p.lat},${p.lng}`).join('|');
+    const pathStr = `color:${MARKER_COLOR}CC|weight:3|` + path.map((p) => `${p.lat},${p.lng}`).join('|');
     params.append('path', pathStr);
   }
   for (const m of markers) appendMarker(params, m);

@@ -87,7 +87,7 @@ function nonHotelCountInDay(day: DayPlan): number {
 }
 
 interface OverviewMapData {
-  markers: { lat: number; lng: number; label?: string; color: string }[];
+  markers: { lat: number; lng: number; label?: string }[];
   path: { lat: number; lng: number }[];
 }
 
@@ -105,7 +105,6 @@ function buildOverviewMapData(trip: Trip): OverviewMapData {
       lat: d.lat,
       lng: d.lng,
       label: showLabel && d.dayIndex <= 9 ? String(d.dayIndex) : undefined,
-      color: '0x2C4A3D',
     };
   });
   const path = days.map((d) => ({ lat: d.lat, lng: d.lng }));
@@ -117,7 +116,6 @@ function buildDayMapData(day: DayPlan): OverviewMapData {
     lat: it.place.coordinates.lat,
     lng: it.place.coordinates.lng,
     label: i + 1 <= 9 ? String(i + 1) : undefined,
-    color: it.isHotel ? '0x5B4B7F' : '0x2C4A3D',
   }));
   const path = day.items.map((it) => it.place.coordinates);
   return { markers, path };

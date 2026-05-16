@@ -85,12 +85,15 @@ function generateShareHTML(trip: Trip): string {
   const showStatic = hasApiKey();
   const daysHtml = trip.days
     .map((day) => {
-      const markers = day.items.map((it, idx) => ({
-        lat: it.place.coordinates.lat,
-        lng: it.place.coordinates.lng,
-        label: it.isHotel ? 'H' : String(idx + 1),
-        color: it.isHotel ? 'purple' : 'green',
-      }));
+      const markers = day.items.map((it, idx) => {
+        const n = idx + 1;
+        return {
+          lat: it.place.coordinates.lat,
+          lng: it.place.coordinates.lng,
+          // 1–9 顯示數字、10+ 無 label（Static Maps 單字元限制），統一深湖綠
+          label: n <= 9 ? String(n) : undefined,
+        };
+      });
       const staticUrl = showStatic ? buildStaticMapUrl(markers) : null;
 
       const itemsHtml = day.items
@@ -102,7 +105,7 @@ function generateShareHTML(trip: Trip): string {
           const notesHtml = it.notes && it.notes.length > 0
             ? `<ul class="notes">${it.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
             : '';
-          const markerLabel = it.isHotel ? 'H' : String(idx + 1);
+          const markerLabel = String(idx + 1);
           const placeUrl = gmapsPlaceUrl(it.place.placeId);
           const prev = idx > 0 ? day.items[idx - 1] : null;
           const navUrl =
@@ -115,7 +118,7 @@ function generateShareHTML(trip: Trip): string {
           return `
             ${legHtml}
             <div class="card">
-              <div class="marker ${it.isHotel ? 'hotel' : ''}">${markerLabel}</div>
+              <div class="marker">${markerLabel}</div>
               <div class="body">
                 <div class="time-name">
                   <span class="time">${escapeHtml(it.arrivalTime)}</span>
@@ -167,8 +170,7 @@ function generateShareHTML(trip: Trip): string {
   .day h2 { font-family: 'Fraunces', serif; font-size: 24px; color: var(--accent-primary); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 0.5px solid var(--border-soft); }
   .static-map { width: 100%; border-radius: 8px; margin-bottom: 14px; }
   .card { background: var(--bg-card); border: 0.5px solid var(--border-soft); border-radius: 6px; padding: 10px 14px; display: grid; grid-template-columns: 30px 1fr; gap: 12px; margin-bottom: 4px; }
-  .marker { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-primary); color: white; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-size: 17px; }
-  .marker.hotel { background: var(--accent-purple); }
+  .marker { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-primary); color: white; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-size: 17px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
   .time-name { display: flex; gap: 10px; align-items: baseline; margin-bottom: 2px; flex-wrap: wrap; }
   .time { font-family: 'Fraunces', serif; color: var(--accent-primary); font-weight: 500; }
   .name { font-weight: 500; color: var(--ink-primary); text-decoration: none; border-bottom: 0.5px dotted var(--ink-faint); transition: color 0.15s, border-color 0.15s; }

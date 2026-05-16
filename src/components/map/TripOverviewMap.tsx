@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 import type { Trip } from '../../types/trip';
 import { hasApiKey } from '../../services/googleMaps';
+import { useMapZoom, markerSizeFromZoom } from '../../hooks/useMapZoom';
 
 export interface DayMarkerData {
   dayId: string;
@@ -28,6 +29,31 @@ export function computeDayMarkers(trip: Trip): DayMarkerData[] {
     });
   }
   return out;
+}
+
+function OverviewDayMarker({
+  lat,
+  lng,
+  dayIndex,
+  onClick,
+}: {
+  lat: number;
+  lng: number;
+  dayIndex: number;
+  onClick: () => void;
+}) {
+  const zoom = useMapZoom();
+  const label = String(dayIndex);
+  const { size, fontSize } = markerSizeFromZoom(zoom, label.length >= 2);
+  return (
+    <AdvancedMarker position={{ lat, lng }} onClick={onClick}>
+      <div className="map-marker" style={{ width: size, height: size }}>
+        <span className="map-marker-num" style={{ fontSize }}>
+          {label}
+        </span>
+      </div>
+    </AdvancedMarker>
+  );
 }
 
 function FitBoundsAndRoute({ points }: { points: { lat: number; lng: number }[] }) {
@@ -111,15 +137,13 @@ export default function TripOverviewMap({ trip, onDayClick }: Props) {
       >
         <FitBoundsAndRoute points={points} />
         {markers.map((m) => (
-          <AdvancedMarker
+          <OverviewDayMarker
             key={m.dayId}
-            position={{ lat: m.lat, lng: m.lng }}
+            lat={m.lat}
+            lng={m.lng}
+            dayIndex={m.dayIndex}
             onClick={() => onDayClick?.(m.dayId, m.dayIndex)}
-          >
-            <div className="overview-day-pill">
-              {m.dayIndex}
-            </div>
-          </AdvancedMarker>
+          />
         ))}
       </Map>
     </APIProvider>

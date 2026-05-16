@@ -778,28 +778,33 @@
   height: 100%;
 }
 
-/* day marker pill 樣式 */
-.overview-day-pill {
+/* 統一地圖 marker：深湖綠圓 + 白邊 + 白色數字。
+   主地圖（ItineraryMarker）與總覽地圖（TripOverviewMap）共用。
+   大小由 React 端依 zoom level 動態設 inline style，這裡只定義不變的視覺。 */
+.map-marker {
+  border-radius: 50%;
   background: var(--accent-primary);
-  color: white;
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0;
-  border: 2px solid white;
-  border-radius: 999px;
-  padding: 2px 7px;
-  min-width: 22px;
-  text-align: center;
-  white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   cursor: pointer;
-  transition: transform var(--t-fast);
+  transition: transform 150ms ease-out;
 }
 
-.overview-day-pill:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+.map-marker:hover {
+  transform: scale(1.12);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.map-marker-num {
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1;
+  font-feature-settings: 'tnum' 1;
+  user-select: none;
 }
 
 /* ========== 分享 Modal ========== */

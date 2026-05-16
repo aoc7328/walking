@@ -98,8 +98,8 @@ function OverviewModal({
       data.map((p) => ({
         lat: p.lat,
         lng: p.lng,
+        // Static Maps 只認單 ASCII char。1–9 有 label，10+ 只剩圓點。
         label: p.dayIndex <= 9 ? String(p.dayIndex) : undefined,
-        color: 'green',
       })),
       data.map((p) => ({ lat: p.lat, lng: p.lng })),
       '800x500',
@@ -178,12 +178,15 @@ function DayBlock({
   const staticMapUrl = useMemo(() => {
     if (!hasApiKey() || day.i.length === 0) return null;
     return buildStaticMapUrl(
-      day.i.map((it, idx) => ({
-        lat: it.la,
-        lng: it.lo,
-        label: it.h ? 'H' : String(idx + 1),
-        color: it.h ? 'purple' : 'green',
-      })),
+      day.i.map((it, idx) => {
+        const n = idx + 1;
+        return {
+          lat: it.la,
+          lng: it.lo,
+          // 1–9 顯示數字、10+ 無 label（Static Maps 單字元限制，廢除 H 字母）
+          label: n <= 9 ? String(n) : undefined,
+        };
+      }),
       '600x320',
     );
   }, [day]);
