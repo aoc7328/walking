@@ -294,19 +294,18 @@ function appendMarker(
   params: URLSearchParams,
   m: { lat: number; lng: number; label?: string },
 ): void {
-  // 防呆：座標非有限數 → 不丟給 Google，否則他會把字面 "undefined,undefined"
-  // 拿去 geocode 然後爆出 x-staticmap-api-warning + 把點放到隨機地方
+  // 防呆：座標非有限數 → 不丟給 Google
   if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) {
     console.warn('[googleMaps] 跳過無效座標 marker：', m);
     return;
   }
-  // ⚠️ 關鍵：Google Static Maps 的 markers 參數格式是「樣式|樣式|...|位置|位置|...」，
-  // 樣式（color:、label:、size:）必須全部寫在位置之前。
-  // 之前寫成 `color:X|<lat>,<lng>|label:N` 會讓 Google 把 `label:1` 當第二個
-  // 位置去 geocode，結果 geocode 出隨機點（瑞典）或拋 warning。
-  // 文件範例：markers=color:blue|label:S|11211
-  const labelPart = m.label && /^[A-Z0-9]$/i.test(m.label) ? `|label:${m.label}` : '';
-  params.append('markers', `color:${MARKER_COLOR}${labelPart}|${m.lat},${m.lng}`);
+  // ⚠️ 故意不送 label，即使有也忽略。
+  // 原因：Static Maps 的 markers 樣式解析有 edge case，碰到 `label:N` 可能會被
+  // 當成額外位置去 geocode，結果亂跑到瑞典之類的地方（已驗證）。
+  // 為了讓 PDF / HTML export 永遠不會冒出鬼點，直接放棄 label 功能。
+  // 想看編號 → 用分享頁面的互動式地圖（那邊用 React marker，沒這個限制）。
+  void m.label;
+  params.append('markers', `color:${MARKER_COLOR}|${m.lat},${m.lng}`);
 }
 
 export function buildStaticMapUrl(

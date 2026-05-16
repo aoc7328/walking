@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import { readShareHash, fetchTripById, type ShareTrip, type ShareDay, type ShareItem, type ShareLeg } from '../../services/share';
 import { addDays, formatRange, formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
-import { buildStaticMapUrl, buildStaticMapWithPath, hasApiKey } from '../../services/googleMaps';
+import { hasApiKey } from '../../services/googleMaps';
+import ShareDayMap from './ShareDayMap';
+import ShareOverviewMap from './ShareOverviewMap';
 
 /** 嘗試把字串塞進剪貼簿。失敗回 false（給 caller 顯示 fallback）。 */
 async function copyToClipboard(text: string): Promise<boolean> {
@@ -81,33 +84,6 @@ function OverviewModal({
 }) {
   const endDate = addDays(payload.s, payload.d.length - 1);
 
-  const data = useMemo(() => {
-    const points: { lat: number; lng: number; dayIndex: number }[] = [];
-    for (let i = 0; i < payload.d.length; i++) {
-      const day = payload.d[i]!;
-      const pick =
-        day.i.find((it) => !it.h && Number.isFinite(it.la) && Number.isFinite(it.lo)) ??
-        day.i.find((it) => Number.isFinite(it.la) && Number.isFinite(it.lo));
-      if (!pick) continue;
-      points.push({ lat: pick.la, lng: pick.lo, dayIndex: i + 1 });
-    }
-    return points;
-  }, [payload]);
-
-  const mapUrl = useMemo(() => {
-    if (!hasApiKey() || data.length === 0) return null;
-    return buildStaticMapWithPath(
-      data.map((p) => ({
-        lat: p.lat,
-        lng: p.lng,
-        // Static Maps 只認單 ASCII char。1–9 有 label，10+ 只剩圓點。
-        label: p.dayIndex <= 9 ? String(p.dayIndex) : undefined,
-      })),
-      data.map((p) => ({ lat: p.lat, lng: p.lng })),
-      '800x500',
-    );
-  }, [data]);
-
   return (
     <div
       className="modal-backdrop"
@@ -129,15 +105,10 @@ function OverviewModal({
         </header>
 
         <div className="tv-overview-body">
-          {mapUrl ? (
-            <img
-              className="tv-overview-map"
-              src={mapUrl}
-              alt="整段行程地圖"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+          {hasApiKey() ? (
+            <ShareOverviewMap payload={payload} />
           ) : (
-            <div className="tv-overview-empty">沒有可顯示的地點座標</div>
+            <div className="tv-overview-empty">未設定 API Key</div>
           )}
 
           <ul className="tv-overview-daylist">
@@ -177,25 +148,6 @@ function DayBlock({
 }) {
   const date = addDays(startDate, dayIndex - 1);
 
-  const staticMapUrl = useMemo(() => {
-    if (!hasApiKey() || day.i.length === 0) return null;
-    return buildStaticMapUrl(
-      day.i
-        .map((it, idx) => {
-          const n = idx + 1;
-          return {
-            lat: it.la,
-            lng: it.lo,
-            // 1–9 顯示數字、10+ 無 label（Static Maps 單字元限制，廢除 H 字母）
-            label: n <= 9 ? String(n) : undefined,
-          };
-        })
-        // 過濾掉沒有合法座標的 item，避免 Google geocode 出隨機點
-        .filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng)),
-      '600x320',
-    );
-  }, [day]);
-
   async function handleCopyAddress(addr: string) {
     if (!addr) return;
     const ok = await copyToClipboard(addr);
@@ -214,14 +166,7 @@ function DayBlock({
         </div>
       </header>
 
-      {staticMapUrl && (
-        <img
-          className="tv-static-map"
-          src={staticMapUrl}
-          alt={`Day ${dayIndex} 地圖`}
-          referrerPolicy="no-referrer-when-downgrade"
-        />
-      )}
+      {hasApiKey() && <ShareDayMap day={day} />}
 
       <div className="tv-items">
         {day.i.map((it: ShareItem, idx) => {
@@ -404,8 +349,9 @@ export default function TripViewer() {
 
   const day = payload.d[activeDay];
   const endDate = addDays(payload.s, payload.d.length - 1);
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
 
-  return (
+  const content = (
     <div className="tv-root">
       <header className="tv-header">
         <div className="tv-header-text">
@@ -472,5 +418,12 @@ export default function TripViewer() {
 
       {toastMsg && <div className="tv-toast" role="status">{toastMsg}</div>}
     </div>
+  );
+
+  if (!apiKey) return content;
+  return (
+    <APIProvider apiKey={apiKey} language="zh-TW" region="TW" libraries={['marker']}>
+      {content}
+    </APIProvider>
   );
 }
