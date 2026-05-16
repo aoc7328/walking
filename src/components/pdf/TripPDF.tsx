@@ -20,34 +20,12 @@ import { buildStaticMapUrl, buildStaticMapWithPath, hasApiKey } from '../../serv
 import { computeDayMarkers } from '../map/TripOverviewMap';
 
 // ========== Fonts ==========
-// Fraunces — 標題用顯示字型
-Font.register({
-  family: 'Fraunces',
-  fonts: [
-    {
-      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-Regular.ttf',
-      fontWeight: 400,
-      fontStyle: 'normal',
-    },
-    {
-      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-Italic.ttf',
-      fontWeight: 400,
-      fontStyle: 'italic',
-    },
-    {
-      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-Medium.ttf',
-      fontWeight: 500,
-      fontStyle: 'normal',
-    },
-    {
-      src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/fraunces/static/Fraunces_14pt-MediumItalic.ttf',
-      fontWeight: 500,
-      fontStyle: 'italic',
-    },
-  ],
-});
+// 西文顯示字型用 react-pdf 內建 Times（不需要網路、零失敗風險）
+// - Times-Roman  : 一般
+// - Times-Italic : 斜體（封面標題）
+// - Times-Bold   : 粗體
 
-// Noto Sans TC — 中文內文（這個之前已驗證可用）
+// Noto Sans TC — 中文內文
 Font.register({
   family: 'NotoSansTC',
   fonts: [
@@ -66,7 +44,7 @@ Font.register({
   ],
 });
 
-// 防止 Fraunces 把中文 fallback 到內建 Helvetica（會亂碼），給 hyphenation callback
+// 防止 NotoSansTC 在斷詞時把整段拆碎
 Font.registerHyphenationCallback((word) => [word]);
 
 // ========== Color tokens ==========
@@ -148,8 +126,8 @@ function buildDayMapData(day: DayPlan): OverviewMapData {
 // ========== Cover Page ==========
 const cover = StyleSheet.create({
   title: {
-    fontFamily: 'Fraunces',
-    fontStyle: 'italic',
+    fontFamily: 'NotoSansTC',
+    fontWeight: 700,
     fontSize: 44,
     color: C.inkPrimary,
     lineHeight: 1.2,
@@ -163,7 +141,7 @@ const cover = StyleSheet.create({
     marginBottom: 16,
   },
   range: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'Times-Italic',
     fontSize: 17,
     color: C.inkSecondary,
   },
@@ -174,11 +152,10 @@ const cover = StyleSheet.create({
     marginTop: 4,
   },
   mapLabel: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'NotoSansTC',
     fontSize: 10,
     color: C.inkMuted,
     letterSpacing: 1.8,
-    textTransform: 'uppercase',
     marginBottom: 10,
   },
   mapImage: {
@@ -233,14 +210,13 @@ const dayHeaderStyle = StyleSheet.create({
   },
   left: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   dayLabel: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'Times-Roman',
     fontSize: 28,
     color: C.accentPrimary,
     letterSpacing: -0.5,
   },
   dayNum: {
-    fontFamily: 'Fraunces',
-    fontStyle: 'italic',
+    fontFamily: 'Times-Italic',
     fontSize: 28,
     color: C.accentPrimary,
     letterSpacing: -0.5,
@@ -326,9 +302,8 @@ function buildCardStyles(scale: number) {
       backgroundColor: C.accentPrimary,
       color: 'white',
       textAlign: 'center',
-      fontFamily: 'Fraunces',
+      fontFamily: 'Times-Bold',
       fontSize: s(11),
-      fontWeight: 500,
       paddingTop: s(5),
     },
     markerHotel: {
@@ -345,9 +320,8 @@ function buildCardStyles(scale: number) {
       flexWrap: 'wrap',
     },
     time: {
-      fontFamily: 'Fraunces',
+      fontFamily: 'Times-Bold',
       fontSize: s(13),
-      fontWeight: 500,
       color: C.accentPrimary,
     },
     name: {
@@ -402,7 +376,7 @@ function buildCardStyles(scale: number) {
       gap: s(4),
     },
     legMode: {
-      fontFamily: 'Fraunces',
+      fontFamily: 'NotoSansTC',
       fontSize: s(10),
       fontWeight: 500,
       color: C.accentPrimary,
@@ -419,7 +393,6 @@ function buildCardStyles(scale: number) {
     crossLeg: {
       fontFamily: 'NotoSansTC',
       fontSize: s(9),
-      fontStyle: 'italic',
       color: C.inkMuted,
       paddingLeft: s(30),
       paddingTop: s(4),
@@ -495,11 +468,10 @@ const dayMapStyle = StyleSheet.create({
     marginTop: 14,
   },
   label: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'NotoSansTC',
     fontSize: 10,
     color: C.inkMuted,
     letterSpacing: 1.8,
-    textTransform: 'uppercase',
     marginBottom: 6,
   },
   image: {
