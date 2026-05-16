@@ -279,17 +279,44 @@ export function getGoogleMapsReviewsUrl(placeId: string): string {
 
 const STATIC_MAP_BASE = 'https://maps.googleapis.com/maps/api/staticmap';
 
+/**
+ * 把 marker color 判斷是飯店還是一般景點，回傳對應的自訂 icon URL。
+ *
+ * Static Maps API 是 Google server 端去抓 icon URL（不是瀏覽器），所以 URL 必須是
+ * 公開可達的 HTTPS。本機 dev (http://localhost:...) Google 抓不到 → 自動回 null
+ * → caller fallback 到 Google 預設 marker。
+ */
+function getMarkerIconUrl(color?: string): string | null {
+  if (typeof window === 'undefined') return null;
+  const origin = window.location.origin;
+  if (!origin.startsWith('https://')) return null;
+  const isHotel = color === 'purple' || color === '0x5B4B7F' || color === '0x5b4b7f';
+  return `${origin}/${isHotel ? 'marker-hotel.png' : 'marker-day.png'}`;
+}
+
+function appendMarker(
+  params: URLSearchParams,
+  m: { lat: number; lng: number; label?: string; color?: string },
+): void {
+  const iconUrl = getMarkerIconUrl(m.color);
+  if (iconUrl) {
+    // 用我們自家的圓形 PNG（icon URL 不支援 label，數字得從 itinerary list 看）
+    params.append('markers', `icon:${iconUrl}|${m.lat},${m.lng}`);
+    return;
+  }
+  // Fallback：Google 預設 marker + color + label（dev 用、PDF export 用）
+  const label = m.label ? `|label:${m.label}` : '';
+  const color = m.color ? `color:${m.color}|` : '';
+  params.append('markers', `${color}${m.lat},${m.lng}${label}`);
+}
+
 export function buildStaticMapUrl(
   markers: { lat: number; lng: number; label?: string; color?: string }[],
   size = '600x300',
 ): string | null {
   if (!hasApiKey() || markers.length === 0) return null;
   const params = new URLSearchParams({ size, scale: '2', maptype: 'roadmap', key: API_KEY! });
-  for (const m of markers) {
-    const label = m.label ? `|label:${m.label}` : '';
-    const color = m.color ? `color:${m.color}|` : '';
-    params.append('markers', `${color}${m.lat},${m.lng}${label}`);
-  }
+  for (const m of markers) appendMarker(params, m);
   return `${STATIC_MAP_BASE}?${params.toString()}`;
 }
 
@@ -306,10 +333,6 @@ export function buildStaticMapWithPath(
     const pathStr = `color:0x2C4A3DCC|weight:3|` + path.map((p) => `${p.lat},${p.lng}`).join('|');
     params.append('path', pathStr);
   }
-  for (const m of markers) {
-    const label = m.label ? `|label:${m.label}` : '';
-    const color = m.color ? `color:${m.color}|` : '';
-    params.append('markers', `${color}${m.lat},${m.lng}${label}`);
-  }
+  for (const m of markers) appendMarker(params, m);
   return `${STATIC_MAP_BASE}?${params.toString()}`;
 }
