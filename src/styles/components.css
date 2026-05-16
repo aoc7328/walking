@@ -1165,21 +1165,20 @@
 }
 
 .tv-addr {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  display: block;
   width: 100%;
   background: transparent;
   border: 0.5px solid var(--border-soft);
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: 6px 10px;
   font-size: 13px;
   color: var(--ink-secondary);
   line-height: 1.5;
   margin-bottom: 6px;
   text-align: left;
+  word-break: break-all;
   cursor: pointer;
-  -webkit-tap-highlight-color: rgba(44, 74, 61, 0.1);
+  -webkit-tap-highlight-color: rgba(44, 74, 61, 0.15);
   transition: background var(--t-fast), border-color var(--t-fast);
 }
 
@@ -1187,18 +1186,6 @@
 .tv-addr:active {
   background: var(--bg-soft);
   border-color: var(--accent-primary);
-}
-
-.tv-addr-text {
-  flex: 1;
-  word-break: break-all;
-}
-
-.tv-addr-copy {
-  flex-shrink: 0;
-  font-size: 12px;
-  opacity: 0.55;
-  margin-top: 1px;
 }
 
 .tv-phone {

@@ -116,7 +116,7 @@ function DayBlock({
           className="tv-static-map"
           src={staticMapUrl}
           alt={`Day ${dayIndex} 地圖`}
-          referrerPolicy="origin"
+          referrerPolicy="no-referrer-when-downgrade"
         />
       )}
 
@@ -161,8 +161,7 @@ function DayBlock({
                       onClick={() => handleCopyAddress(it.a)}
                       title="點擊複製地址"
                     >
-                      <span className="tv-addr-text">{it.a}</span>
-                      <span className="tv-addr-copy" aria-hidden>📋</span>
+                      {it.a}
                     </button>
                   )}
                   {telHref && (

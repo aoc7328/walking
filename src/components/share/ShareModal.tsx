@@ -3,17 +3,20 @@ import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { buildShareUrlInline, buildShareUrlWithId, generateQRDataUrl } from '../../services/share';
 import { exportTripAsHTML } from '../../services/exportImport';
+import { enrichTripPhones } from '../../services/enrich';
 
-type LoadState = 'uploading' | 'ready' | 'tooBig' | 'uploadFailed';
+type LoadState = 'enriching' | 'uploading' | 'ready' | 'tooBig' | 'uploadFailed';
 
 export default function ShareModal() {
   const open = useUIStore((s) => s.shareModalOpen);
   const close = useUIStore((s) => s.closeShareModal);
   const trip = useTripStore((s) => s.trip);
 
+  const setTrip = useTripStore((s) => s.setTrip);
+
   const [url, setUrl] = useState<string>('');
   const [qr, setQr] = useState<string>('');
-  const [state, setState] = useState<LoadState>('uploading');
+  const [state, setState] = useState<LoadState>('enriching');
   const [errorDetail, setErrorDetail] = useState<string>('');
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
 
@@ -23,14 +26,29 @@ export default function ShareModal() {
     setQr('');
     setUrl('');
     setErrorDetail('');
-    setState('uploading');
+    setState('enriching');
 
     const controller = new AbortController();
 
     (async () => {
-      // 先試新方案：上傳到 KV 拿短 ID
+      // 先補抓缺的電話（從搜尋結果加進來的地點通常沒帶 phone）
+      let workingTrip = trip;
       try {
-        const shortUrl = await buildShareUrlWithId(trip, controller.signal);
+        const { trip: enriched, fetched } = await enrichTripPhones(trip);
+        if (controller.signal.aborted) return;
+        if (fetched > 0) {
+          workingTrip = enriched;
+          setTrip(enriched); // 寫回主 store，順便會 debounce 同步到 KV
+        }
+      } catch {
+        // enrichment 失敗不擋分享；用原本的 trip 繼續
+      }
+      if (controller.signal.aborted) return;
+      setState('uploading');
+
+      // 上傳到 KV 拿短 ID
+      try {
+        const shortUrl = await buildShareUrlWithId(workingTrip, controller.signal);
         if (controller.signal.aborted) return;
         setUrl(shortUrl);
         try {
@@ -47,7 +65,7 @@ export default function ShareModal() {
       } catch (err) {
         if (controller.signal.aborted) return;
         // 後端失敗 → fallback 到舊的 inline URL
-        const inlineUrl = buildShareUrlInline(trip);
+        const inlineUrl = buildShareUrlInline(workingTrip);
         setUrl(inlineUrl);
         try {
           const qrDataUrl = await generateQRDataUrl(inlineUrl);
@@ -132,7 +150,9 @@ export default function ShareModal() {
               ) : state === 'uploadFailed' ? (
                 <div className="share-qr-placeholder">{errorDetail || 'QR Code 產生失敗'}</div>
               ) : (
-                <div className="share-qr-placeholder">上傳行程中…</div>
+                <div className="share-qr-placeholder">
+                  {state === 'enriching' ? '補抓地點電話中…' : '上傳行程中…'}
+                </div>
               )}
             </div>
           )}
