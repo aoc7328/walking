@@ -16,6 +16,7 @@ import {
 import NoteEditor from './NoteEditor';
 import PlaceIconBadge from '../common/PlaceIconBadge';
 import IconPicker from '../common/IconPicker';
+import { useAutoFitText } from '../../hooks/useAutoFitText';
 
 interface Props {
   item: ItineraryItem;
@@ -46,14 +47,13 @@ export default function ItineraryCard({
   // 預設一律收折；要設時間就點底部「設定到達時間 ⌄」展開
   const [timeExpanded, setTimeExpanded] = useState(false);
 
-  // 地點名稱動態縮字：超過 8 字後每多 1 字字級縮 4%，下限為基準字級的 1/1.5
+  // 地點名稱自適應：先試 2 行（基準 17px），裝不下才一階一階縮，下限 17/1.5 ≈ 11.33px
   const NAME_BASE_PX = 17;
   const NAME_MIN_PX = NAME_BASE_PX / 1.5;
-  const nameLen = Array.from(item.place.name).length; // 正確處理 emoji / 補助字元
-  const charsOver = Math.max(0, nameLen - 8);
-  const dynamicNameSize = Math.max(
+  const { ref: nameRef, size: dynamicNameSize } = useAutoFitText(
+    item.place.name,
+    NAME_BASE_PX,
     NAME_MIN_PX,
-    NAME_BASE_PX * (1 - charsOver * 0.04),
   );
   const copyRef = useRef<HTMLDivElement>(null);
 
@@ -141,7 +141,11 @@ export default function ItineraryCard({
           <div className="item-big-time">{item.arrivalTime}</div>
         )}
         <div className="item-head-row">
-          <span className="item-name" style={{ fontSize: `${dynamicNameSize.toFixed(2)}px` }}>
+          <span
+            ref={nameRef as React.RefObject<HTMLSpanElement>}
+            className="item-name"
+            style={{ fontSize: `${dynamicNameSize.toFixed(2)}px` }}
+          >
             {item.place.name}
           </span>
           <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
