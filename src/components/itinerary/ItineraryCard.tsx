@@ -45,6 +45,16 @@ export default function ItineraryCard({
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   // 預設一律收折；要設時間就點底部「設定到達時間 ⌄」展開
   const [timeExpanded, setTimeExpanded] = useState(false);
+
+  // 地點名稱動態縮字：超過 8 字後每多 1 字字級縮 4%，下限為基準字級的 1/1.5
+  const NAME_BASE_PX = 17;
+  const NAME_MIN_PX = NAME_BASE_PX / 1.5;
+  const nameLen = Array.from(item.place.name).length; // 正確處理 emoji / 補助字元
+  const charsOver = Math.max(0, nameLen - 8);
+  const dynamicNameSize = Math.max(
+    NAME_MIN_PX,
+    NAME_BASE_PX * (1 - charsOver * 0.04),
+  );
   const copyRef = useRef<HTMLDivElement>(null);
 
   function handleBadgeClick() {
@@ -131,7 +141,9 @@ export default function ItineraryCard({
           <div className="item-big-time">{item.arrivalTime}</div>
         )}
         <div className="item-head-row">
-          <span className="item-name">{item.place.name}</span>
+          <span className="item-name" style={{ fontSize: `${dynamicNameSize.toFixed(2)}px` }}>
+            {item.place.name}
+          </span>
           <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
             <div className="item-copy-wrap" ref={copyRef}>
               <button

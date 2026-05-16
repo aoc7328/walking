@@ -2019,13 +2019,24 @@
 }
 
 .item-name {
-  font-size: 17px;
+  /* 字級「目前值」與「下限」用變數定義便於微調 */
+  --item-name-size: 17px;
+  --item-name-size-min: calc(var(--item-name-size) / 1.5);
+
+  font-size: var(--item-name-size); /* JS 會用 inline style 覆蓋 */
   font-weight: 500;
   color: var(--ink-primary);
   line-height: 1.3;
+  /* 自適應：最多 2 行，超過則 ... 省略 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 長英文單字也能斷行 */
+  word-break: break-word;
+  /* flex 父層下能正確縮窄 */
+  flex: 1;
+  min-width: 0;
 }
 
 .item-stay {
