@@ -2999,9 +2999,11 @@
 }
 
 .day-tab-date {
-  font-size: 14px;
+  font-size: 11px;
   color: var(--ink-muted);
   font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
 }
 
 .day-tab-num {
