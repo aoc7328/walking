@@ -43,8 +43,8 @@ export default function ItineraryCard({
   const [row1Mode, setRow1Mode] = useState<Row1Mode>('arrival');
   const [copyOpen, setCopyOpen] = useState(false);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
-  // 預設展開 = 已手動鎖定抵達時間的卡片，否則收折
-  const [timeExpanded, setTimeExpanded] = useState(Boolean(item.arrivalManual));
+  // 預設一律收折；要設時間就點底部「設定到達時間 ⌄」展開
+  const [timeExpanded, setTimeExpanded] = useState(false);
   const copyRef = useRef<HTMLDivElement>(null);
 
   function handleBadgeClick() {
