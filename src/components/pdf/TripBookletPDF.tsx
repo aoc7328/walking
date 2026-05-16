@@ -550,9 +550,20 @@ export function TripBookletPDF({ trip }: { trip: Trip }) {
     );
   }
 
-  // 2. 補空白頁到 4 的倍數（補在最後 = 內封底）
-  while (logicalPages.length % 4 !== 0) {
-    logicalPages.push(<BlankHalf key={`blank-${logicalPages.length}`} />);
+  // 2. 補空白頁到 4 的倍數
+  //    優先順序：
+  //    (a) 封面的背面（位置 1）—— 1 張
+  //    (b) 最後（位置末尾）—— 剩下的
+  //    例：缺 1 頁 → 全部塞封面背面
+  //        缺 2 頁 → 封面背面 1 + 最後 1
+  //        缺 3 頁 → 封面背面 1 + 最後 2
+  const remainder = logicalPages.length % 4;
+  const blanksNeeded = remainder === 0 ? 0 : 4 - remainder;
+  if (blanksNeeded >= 1) {
+    logicalPages.splice(1, 0, <BlankHalf key="blank-inside-front" />);
+  }
+  for (let i = 1; i < blanksNeeded; i++) {
+    logicalPages.push(<BlankHalf key={`blank-end-${i}`} />);
   }
 
   // 3. Imposition
