@@ -300,8 +300,16 @@ function appendMarker(
 ): void {
   const iconUrl = getMarkerIconUrl(m.color);
   if (iconUrl) {
-    // 用我們自家的圓形 PNG（icon URL 不支援 label，數字得從 itinerary list 看）
-    params.append('markers', `icon:${iconUrl}|${m.lat},${m.lng}`);
+    // 用我們自家的圓形 PNG（icon URL 不支援 label，數字得從 itinerary list 看）。
+    //
+    // ⚠️ 注意：icon URL 必須先用 encodeURIComponent 編碼一次再丟給 URLSearchParams。
+    // 原因：Google Static Maps 對 markers 參數值只做「一次」URL decode 之後，
+    // 它的 parser 期望 icon URL 內的 `:` `/` 仍然是 encoded 狀態（%3A、%2F），
+    // 然後它會再對 URL 部分做第二次 decode 才拿去 fetch。
+    // 如果我們不預先 encode，URLSearchParams 編一次後 Google 解一次，URL 直接
+    // 露出原始 `:` `/`，parser 就會跟後面的 `|分隔符` 一起搞混 → marker 就壞掉
+    // 變預設 icon、座標可能跑掉。
+    params.append('markers', `icon:${encodeURIComponent(iconUrl)}|${m.lat},${m.lng}`);
     return;
   }
   // Fallback：Google 預設 marker + color + label（dev 用、PDF export 用）
