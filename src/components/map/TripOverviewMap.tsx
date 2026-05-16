@@ -117,7 +117,7 @@ export default function TripOverviewMap({ trip, onDayClick }: Props) {
             onClick={() => onDayClick?.(m.dayId, m.dayIndex)}
           >
             <div className="overview-day-pill">
-              Day {m.dayIndex}
+              {m.dayIndex}
             </div>
           </AdvancedMarker>
         ))}
