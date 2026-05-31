@@ -8,12 +8,12 @@ import {
   addMinutesToTime,
   minutesToHHMM,
   hhmmToMinutes,
-  timeDiffMinutes,
   formatWithWeekday,
   formatStayDuration,
   normalizeTimeInput,
 } from '../../utils/date';
 import NoteEditor from './NoteEditor';
+import TimeField from './TimeField';
 import PlaceIconBadge from '../common/PlaceIconBadge';
 import IconPicker from '../common/IconPicker';
 import { useAutoFitText } from '../../hooks/useAutoFitText';
@@ -96,23 +96,32 @@ export default function ItineraryCard({
     return () => window.removeEventListener('mousedown', onDown);
   }, [copyOpen]);
 
-  function commitArrival(value: string) {
-    const v = normalizeTimeInput(value);
-    if (!v) return;
+  // 以下三個 commit 收使用者輸入的純數字，回傳 null=成功、字串=錯誤訊息（給 TimeField 顯示）。
+  function commitArrival(digits: string): string | null {
+    const v = normalizeTimeInput(digits);
+    if (!v) return '時間格式不對';
     updateItem(dayId, item.id, { arrivalTime: v, arrivalManual: true });
+    return null;
   }
 
-  function commitStayHHMM(value: string) {
-    const minutes = hhmmToMinutes(value);
-    if (minutes === null) return;
+  function commitStay(digits: string): string | null {
+    const v = normalizeTimeInput(digits);
+    const minutes = v ? hhmmToMinutes(v) : null;
+    if (minutes === null) return '格式不對（時:分）';
     updateItem(dayId, item.id, { stayMinutes: minutes });
+    return null;
   }
 
-  function commitLeave(value: string) {
-    const v = normalizeTimeInput(value);
-    if (!v) return;
-    const minutes = timeDiffMinutes(item.arrivalTime, v);
-    updateItem(dayId, item.id, { stayMinutes: minutes });
+  function commitLeave(digits: string): string | null {
+    const v = normalizeTimeInput(digits);
+    if (!v) return '時間格式不對';
+    const arr = hhmmToMinutes(item.arrivalTime);
+    const lv = hhmmToMinutes(v);
+    if (arr === null || lv === null) return '時間格式不對';
+    // 防呆：離開不能早於抵達
+    if (lv < arr) return '離開不能早於抵達';
+    updateItem(dayId, item.id, { stayMinutes: lv - arr });
+    return null;
   }
 
   function resetArrivalToSystem() {
@@ -244,34 +253,22 @@ export default function ItineraryCard({
                 <option value="stay">停留</option>
               </select>
               {row1Mode === 'arrival' ? (
-                <input
-                  className="item-duration-input"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d{2}:\d{2}"
-                  key={`${item.id}-arr-${item.arrivalTime}`}
-                  defaultValue={item.arrivalTime}
-                  maxLength={5}
-                  placeholder="09:00"
-                  onBlur={(e) => commitArrival(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  onClick={(e) => e.stopPropagation()}
-                  title="24 小時制 HH:MM（例：17:30）"
+                <TimeField
+                  value={item.arrivalTime}
+                  onCommit={commitArrival}
+                  onEnterApplied={() => setTimeExpanded(false)}
+                  placeholder="0900"
+                  title="免打冒號，直接輸入四碼（例：1730）；Enter 套用"
+                  ariaLabel="抵達時間"
                 />
               ) : (
-                <input
-                  className="item-duration-input"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d{2}:\d{2}"
-                  key={`${item.id}-stay-${stayHHMM}`}
-                  defaultValue={stayHHMM}
-                  maxLength={5}
-                  placeholder="01:00"
-                  onBlur={(e) => commitStayHHMM(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  onClick={(e) => e.stopPropagation()}
-                  title="格式 HH:MM，例如 01:00 表示停留 1 小時"
+                <TimeField
+                  value={stayHHMM}
+                  onCommit={commitStay}
+                  onEnterApplied={() => setTimeExpanded(false)}
+                  placeholder="0100"
+                  title="停留時長 時:分，直接輸入四碼（例：0100 = 1 小時）；Enter 套用"
+                  ariaLabel="停留時長"
                 />
               )}
               {item.arrivalManual && (
@@ -290,19 +287,13 @@ export default function ItineraryCard({
 
             <div className="item-time-row" onClick={(e) => e.stopPropagation()}>
               <span className="item-leave-label">離開</span>
-              <input
-                className="item-duration-input"
-                type="text"
-                inputMode="numeric"
-                pattern="\d{2}:\d{2}"
-                key={`${item.id}-leave-${leaveTime}`}
-                defaultValue={leaveTime}
-                maxLength={5}
-                placeholder="10:00"
-                onBlur={(e) => commitLeave(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                onClick={(e) => e.stopPropagation()}
-                title="24 小時制 HH:MM，會回算成停留時間"
+              <TimeField
+                value={leaveTime}
+                onCommit={commitLeave}
+                onEnterApplied={() => setTimeExpanded(false)}
+                placeholder="1000"
+                title="免打冒號，直接輸入四碼；會回算成停留時間。Enter 套用"
+                ariaLabel="離開時間"
               />
             </div>
           </div>
