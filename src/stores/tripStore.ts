@@ -145,19 +145,43 @@ function withAutoFill(days: DayPlan[]): DayPlan[] {
       continue;
     }
 
-    // 情況 2：天首是 autoFilled 但地點已經和前一天的最後一站對不上 → 同步更新
     const firstItem = d.items[0]!;
-    if (firstItem.autoFilled && firstItem.place.placeId !== prevLast.place.placeId) {
+
+    // 核心判斷：當天第一站 === 前一天最後一站？（用 placeId 比對）
+    // 相同 → 已經銜接好，什麼都不做。
+    if (firstItem.place.placeId === prevLast.place.placeId) {
+      next.push(d);
+      continue;
+    }
+
+    // 不同 → 要把前一天最後一站接上來：
+    if (firstItem.autoFilled) {
+      // (a) 天首是先前自動補的銜接站，但前一天最後站已變 → 直接更新它（不增加地點）
       const updated: ItineraryItem = {
         ...firstItem,
         place: prevLast.place,
         notes: prevLast.notes ? [...prevLast.notes] : firstItem.notes,
       };
       next.push({ ...d, items: [updated, ...d.items.slice(1)] });
-      continue;
+    } else {
+      // (b) 天首是使用者自排的真實地點，且不等於前一天最後站
+      //     → 在最前面插入一個 autoFilled 銜接站（原行程整段保留往後移）
+      const seed: ItineraryItem = {
+        id: uuid(),
+        place: prevLast.place,
+        arrivalTime: '09:00',
+        stayMinutes: 30,
+        isHotel: false,
+        autoFilled: true,
+        notes: prevLast.notes ? [...prevLast.notes] : undefined,
+      };
+      // 新插入的 seed → 原第一站 之間補一段 leg，原本的 legs 往後接
+      next.push({
+        ...d,
+        items: [seed, ...d.items],
+        legs: [{ mode: 'driving' as const }, ...d.legs],
+      });
     }
-
-    next.push(d);
   }
   return next;
 }
