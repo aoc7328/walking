@@ -107,9 +107,14 @@ function reindexDays(days: DayPlan[], startDate: string): DayPlan[] {
 
 /**
  * 把每個空白的日子（items.length === 0）自動填入前一天的最後一站，
- * 並標記為飯店（isHotel），預設 09:00 抵達、停留 30 分。Day 1 不處理。
+ * 並標記為 autoFilled，預設 09:00 抵達、停留 30 分。Day 1 不處理。
  *
- * 純函數，可重複套用（idempotent）：填好的日子下一次跑就會跳過。
+ * 連續空白天會「逐天接續」：Day N 接 Day N-1 的最後一站。因為前一天填好後
+ * next[i-1] 就帶有那個 item，下一輪自然接得上，一路傳遞下去
+ * （例如連續住同一間飯店好幾天，每天開頭都會是那間飯店）。
+ *
+ * 純函數，可重複套用（idempotent）：autoFilled 的天若已對上前一天最後一站，
+ * 下一次跑就跳過，不會重複增加地點。
  */
 function withAutoFill(days: DayPlan[]): DayPlan[] {
   if (days.length <= 1) return days;
@@ -125,27 +130,18 @@ function withAutoFill(days: DayPlan[]): DayPlan[] {
 
     const prevLast = prev.items[prev.items.length - 1]!;
 
-    // 防止連鎖：若前一天本身就是自動填出來的單一 item（autoFilled），
-    // 表示前面已經是一連串空白天，這一天就不再自動填了。
-    const prevIsAutoFilledOnly = prev.items.length === 1 && prev.items[0]!.autoFilled === true;
-
-    // 情況 1：空白天
+    // 情況 1：空白天 → 填入前一天最後一站當銜接點（標 autoFilled）
     if (d.items.length === 0) {
-      if (prevIsAutoFilledOnly) {
-        // 不連鎖，保持真正空白
-        next.push(d);
-      } else {
-        const seed: ItineraryItem = {
-          id: uuid(),
-          place: prevLast.place,
-          arrivalTime: '09:00',
-          stayMinutes: 30,
-          isHotel: false,
-          autoFilled: true,
-          notes: prevLast.notes ? [...prevLast.notes] : undefined,
-        };
-        next.push({ ...d, items: [seed], legs: [] });
-      }
+      const seed: ItineraryItem = {
+        id: uuid(),
+        place: prevLast.place,
+        arrivalTime: '09:00',
+        stayMinutes: 30,
+        isHotel: false,
+        autoFilled: true,
+        notes: prevLast.notes ? [...prevLast.notes] : undefined,
+      };
+      next.push({ ...d, items: [seed], legs: [] });
       continue;
     }
 
