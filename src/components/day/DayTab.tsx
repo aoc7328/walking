@@ -30,14 +30,12 @@ export default function DayTab({ day, active, onSelect }: Props) {
       {...attributes}
       {...listeners}
     >
-      <div className="day-tab-top">
-        <span className="day-tab-date">{formatWithWeekday(day.date)}</span>
-        <DayMarkButton dayId={day.id} dayIndex={day.dayIndex} marks={marks} />
-      </div>
+      <span className="day-tab-date">{formatWithWeekday(day.date)}</span>
       <span className="day-tab-num">
         Day <em>{day.dayIndex}</em>
       </span>
       <span className="day-tab-meta">{nonHotelCount} 點</span>
+      <DayMarkButton dayId={day.id} dayIndex={day.dayIndex} marks={marks} />
     </div>
   );
 }
