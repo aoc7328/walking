@@ -136,7 +136,6 @@ export default function ItineraryCard({
       ref={setNodeRef}
       style={style}
       className={`itinerary-card${isNextStop ? ' next-stop' : ''}${isDragging ? ' dragging' : ''}`}
-      onClick={() => openDetail(item.place.placeId, 'itinerary')}
     >
       <button
         type="button"
@@ -170,8 +169,10 @@ export default function ItineraryCard({
         <div className="item-head-row">
           <span
             ref={nameRef as React.RefObject<HTMLSpanElement>}
-            className="item-name"
+            className="item-name item-name-clickable"
             style={{ fontSize: `${dynamicNameSize.toFixed(2)}px` }}
+            onClick={() => openDetail(item.place.placeId, 'itinerary')}
+            title="點擊查看地點詳細資訊"
           >
             {item.place.name}
           </span>

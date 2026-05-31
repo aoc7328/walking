@@ -2457,6 +2457,18 @@
   min-width: 0;
 }
 
+/* 只有地點名稱可點開詳細頁（避免整張卡片誤觸） */
+.item-name-clickable {
+  cursor: pointer;
+}
+
+.item-name-clickable:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
 .item-stay {
   font-size: 14px;
   color: var(--ink-muted);
