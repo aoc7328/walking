@@ -17,8 +17,18 @@ import { fetchLegDuration } from './../services/directions';
 interface TripStore {
   trip: Trip | null;
   isLoading: boolean;
+  /** 有未儲存到 KV 的編輯（由 subscribe 自動偵測，按儲存後歸 false） */
+  dirty: boolean;
+  /** 目前這筆 trip 是否已是 KV 既有行程（從下拉選單／啟動載入／新建進來 = true；
+   *  mock 預設範例 = false）。決定按儲存是「覆蓋」還是「另存新行程」。 */
+  persisted: boolean;
   setTrip: (trip: Trip) => void;
   reset: () => void;
+
+  /** 把目前 trip 覆蓋寫回 KV（給「儲存」按鈕用，persisted 時） */
+  saveTrip: () => Promise<void>;
+  /** 用目前 trip 的內容另存成一筆新行程（新 id + 指定名稱），寫入 KV 並切成 current */
+  saveAsNewTrip: (name: string) => Promise<string>;
 
   renameTrip: (name: string) => void;
   changeStartDate: (newStartDate: string) => void;
@@ -159,10 +169,16 @@ function withAutoFill(days: DayPlan[]): DayPlan[] {
 export const useTripStore = create<TripStore>((set, get) => ({
   trip: null,
   isLoading: false,
+  dirty: false,
+  persisted: false,
 
   setTrip: (trip) => {
     setActiveTripId(trip.id);
-    set({ trip: { ...trip, days: chainAll(withAutoFill(trip.days)) } });
+    set({
+      trip: { ...trip, days: chainAll(withAutoFill(trip.days)) },
+      persisted: true,
+      dirty: false,
+    });
   },
   reset: () => {
     setActiveTripId(MOCK_TRIP.id);
@@ -173,7 +189,33 @@ export const useTripStore = create<TripStore>((set, get) => ({
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
+      persisted: false,
+      dirty: false,
     });
+  },
+
+  saveTrip: async () => {
+    const trip = get().trip;
+    if (!trip) return;
+    await persistTripImmediate(trip);
+    set({ dirty: false, persisted: true });
+  },
+
+  saveAsNewTrip: async (name) => {
+    const current = get().trip;
+    if (!current) throw new Error('沒有可儲存的行程');
+    const id = uuid();
+    const newTrip: Trip = {
+      ...current,
+      id,
+      name: name.trim() || current.name,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await persistTripImmediate(newTrip);
+    setActiveTripId(id);
+    set({ trip: newTrip, persisted: true, dirty: false });
+    return id;
   },
 
   renameTrip: (name) =>
@@ -465,24 +507,21 @@ export const useTripStore = create<TripStore>((set, get) => ({
     };
     await persistTripImmediate(newTrip);
     setActiveTripId(id);
-    set({ trip: newTrip });
+    set({ trip: newTrip, persisted: true, dirty: false });
     return id;
   },
 
   switchToTrip: async (id) => {
-    const current = get().trip;
-    if (current && current.id !== id) {
-      try {
-        await persistTripImmediate(current);
-      } catch {
-        // ignore
-      }
-    }
-    // 行程資料現在存 KV，不是本地 IndexedDB。從 KV 拿目標 trip。
+    // 切換前「不」自動存——改成手動儲存制，避免每次切換都寫 KV。
+    // 未儲存變動的提醒由 UI 層（TripSwitcher）負責。
     const target = await loadTripById(id);
     if (target) {
       setActiveTripId(id);
-      set({ trip: { ...target, days: withAutoFill(target.days) } });
+      set({
+        trip: { ...target, days: withAutoFill(target.days) },
+        persisted: true,
+        dirty: false,
+      });
     }
   },
 
@@ -494,10 +533,28 @@ export const useTripStore = create<TripStore>((set, get) => ({
       const remaining = await listAllTrips();
       if (remaining.length > 0) {
         setActiveTripId(remaining[0]!.id);
-        set({ trip: { ...remaining[0]!, days: withAutoFill(remaining[0]!.days) } });
+        set({
+          trip: { ...remaining[0]!, days: withAutoFill(remaining[0]!.days) },
+          persisted: true,
+          dirty: false,
+        });
       } else {
         get().reset();
       }
     }
   },
 }));
+
+/**
+ * 自動把「使用者編輯」標成 dirty。
+ * 判斷規則：trip.id 不變、但 trip 物件 reference 變了 → 是同一筆行程的內容被改動。
+ * （載入 / 切換 / 新建 / 刪除都會換 id 或從 null 起始，不會誤判成 dirty。）
+ * 編輯型 action 因此完全不用各自設 dirty。
+ */
+useTripStore.subscribe((state, prev) => {
+  const cur = state.trip;
+  const old = prev.trip;
+  if (cur && old && cur.id === old.id && cur !== old && !state.dirty) {
+    useTripStore.setState({ dirty: true });
+  }
+});

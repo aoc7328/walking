@@ -14,7 +14,7 @@ import DownloadModal from '../download/DownloadModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
-import { loadActiveTrip, persistTripDebounced, recordDailyBackup, migrateAccountData } from '../../db/repository';
+import { loadActiveTrip, recordDailyBackup, migrateAccountData } from '../../db/repository';
 
 export default function AppShell() {
   const trip = useTripStore((s) => s.trip);
@@ -57,10 +57,10 @@ export default function AppShell() {
     }
   }, [trip, currentDayId, setCurrentDay]);
 
-  // 每次變動：debounced 寫入 + 每日備份
+  // 每次變動：只做本地每日備份（Dexie，不耗 KV 次數）。
+  // KV 寫入改成手動——使用者按 Header 的「儲存」鍵才寫，避免每動一下就燒 KV。
   useEffect(() => {
     if (!trip) return;
-    persistTripDebounced(trip);
     recordDailyBackup(trip);
   }, [trip]);
 
