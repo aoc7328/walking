@@ -255,7 +255,9 @@ export const useTripStore = create<TripStore>((set, get) => ({
       if (!state.trip) return {};
       const days = state.trip.days.map((d) => {
         if (d.id !== dayId) return d;
-        const insertIndex = findBestInsertPosition(place, d, 'driving');
+        // 一律加在當天「最後一站」之後，不再用地理位置自動插中間
+        //（那會打亂使用者原本排好的順序與時間）。
+        const insertIndex = d.items.length;
         const previous = d.items[insertIndex - 1];
         const arrivalTime = previous
           ? addMinutesToTime(previous.arrivalTime, previous.stayMinutes + 30)
