@@ -79,6 +79,51 @@ function recalcLegsArray(items: ItineraryItem[], legs: Leg[]): Leg[] {
   return legs.slice(0, targetLen);
 }
 
+interface LegTravel {
+  durationMinutes: number;
+  distanceMeters?: number;
+}
+
+/** 用座標當鍵（一定有，且與 directions 服務的快取同語意）。 */
+function legPairKey(from: ItineraryItem, to: ItineraryItem, mode: TransportMode): string {
+  const f = from.place.coordinates;
+  const t = to.place.coordinates;
+  return `${f.lat.toFixed(5)},${f.lng.toFixed(5)}|${t.lat.toFixed(5)},${t.lng.toFixed(5)}|${mode}`;
+}
+
+/** 把目前已知的交通時間，以「地點對 + 交通方式」建成快取。 */
+function buildLegTravelCache(items: ItineraryItem[], legs: Leg[]): Map<string, LegTravel> {
+  const cache = new Map<string, LegTravel>();
+  for (let i = 0; i < legs.length && i + 1 < items.length; i++) {
+    const leg = legs[i];
+    if (!leg || leg.durationMinutes === undefined) continue;
+    cache.set(legPairKey(items[i]!, items[i + 1]!, leg.mode), {
+      durationMinutes: leg.durationMinutes,
+      distanceMeters: leg.distanceMeters,
+    });
+  }
+  return cache;
+}
+
+/**
+ * 行程順序變動後，依「新順序」重接每段 leg：
+ * - 交通方式沿用該位置原本的 mode（維持舊版的 positional 行為）
+ * - 交通時間用「新的地點對 + mode」回查 cache；查不到就清空（undefined），
+ *   交給 refreshLegsForDay 重新跟 Google 拿。
+ *
+ * 修正：拖動 / 刪除 / 中插 之後，舊的兩點時間不會再錯留在新的兩點上
+ * （這正是「拖動後預估時間沒更新、甚至算錯」的根因）。
+ */
+function relinkLegs(items: ItineraryItem[], positionalLegs: Leg[], cache: Map<string, LegTravel>): Leg[] {
+  const out: Leg[] = [];
+  for (let i = 0; i + 1 < items.length; i++) {
+    const mode = positionalLegs[i]?.mode ?? 'driving';
+    const hit = cache.get(legPairKey(items[i]!, items[i + 1]!, mode));
+    out.push(hit ? { mode, durationMinutes: hit.durationMinutes, distanceMeters: hit.distanceMeters } : { mode });
+  }
+  return out;
+}
+
 /**
  * 重算當日時間鏈：非手動鎖定（arrivalManual !== true）的項目，
  * 抵達時間 = 前一站抵達 + 前一站停留 + 對應 leg 的 durationMinutes。
@@ -294,8 +339,11 @@ export const useTripStore = create<TripStore>((set, get) => ({
         if (d.id !== dayId) return d;
         const idx = d.items.findIndex((it) => it.id === itemId);
         if (idx < 0) return d;
+        const cache = buildLegTravelCache(d.items, d.legs);
         const items = d.items.filter((it) => it.id !== itemId);
-        const legs = recalcLegsArray(items, d.legs.filter((_, i) => i !== Math.min(idx, d.legs.length - 1)));
+        // 刪除中間站會讓前一段接到新的下一站，需重接 legs 才不會留下舊時間
+        const positional = recalcLegsArray(items, d.legs.filter((_, i) => i !== Math.min(idx, d.legs.length - 1)));
+        const legs = relinkLegs(items, positional, cache);
         return { ...d, items, legs };
       });
       return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };
@@ -317,11 +365,13 @@ export const useTripStore = create<TripStore>((set, get) => ({
       if (!state.trip) return {};
       const days = state.trip.days.map((d) => {
         if (d.id !== dayId) return d;
+        const cache = buildLegTravelCache(d.items, d.legs);
         const items = [...d.items];
         const [moved] = items.splice(fromIndex, 1);
         if (!moved) return d;
         items.splice(toIndex, 0, moved);
-        const legs = recalcLegsArray(items, d.legs);
+        // 依新順序重接 legs：同一地點對(+mode)的時間沿用，新的兩點清空待重抓
+        const legs = relinkLegs(items, recalcLegsArray(items, d.legs), cache);
         return { ...d, items, legs };
       });
       return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };
@@ -335,6 +385,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
       if (!srcItem) return {};
       const days = state.trip.days.map((d) => {
         if (d.id !== destDayId) return d;
+        const cache = buildLegTravelCache(d.items, d.legs);
         const insertIndex = findBestInsertPosition(srcItem.place, d, 'driving');
         const newItem: ItineraryItem = {
           ...srcItem,
@@ -345,7 +396,9 @@ export const useTripStore = create<TripStore>((set, get) => ({
         };
         const items = [...d.items];
         items.splice(insertIndex, 0, newItem);
-        const legs = recalcLegsArray(items, [...d.legs, { mode: 'driving' }]);
+        // 中插會把原本一段拆成兩段，重接 legs：未變動的沿用、被拆的兩段清空待重抓
+        const positional = recalcLegsArray(items, [...d.legs, { mode: 'driving' }]);
+        const legs = relinkLegs(items, positional, cache);
         return { ...d, items, legs };
       });
       return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };

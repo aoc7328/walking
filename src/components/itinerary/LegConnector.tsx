@@ -35,13 +35,6 @@ export default function LegConnector({
   const setReady = useRoutePreviewStore((s) => s.setReady);
   const setError = useRoutePreviewStore((s) => s.setError);
 
-  function cycle() {
-    if (!onModeChange) return;
-    const idx = MODES.indexOf(leg.mode);
-    const next = MODES[(idx + 1) % MODES.length]!;
-    onModeChange(next);
-  }
-
   const handlePreview = useCallback(async () => {
     // loading 中不重複觸發
     if (entry?.status === 'loading') return;
@@ -79,9 +72,21 @@ export default function LegConnector({
   return (
     <div className="leg">
       <span className="leg-line" />
-      <button className="leg-mode" onClick={cycle} title="點擊切換交通方式">
-        {TRANSPORT_LABEL[leg.mode] ?? leg.mode}
-      </button>
+      <select
+        className="leg-mode"
+        value={leg.mode}
+        onChange={(e) => onModeChange?.(e.target.value as TransportMode)}
+        onClick={(e) => e.stopPropagation()}
+        disabled={!onModeChange}
+        title="選擇交通方式"
+        aria-label="交通方式"
+      >
+        {MODES.map((m) => (
+          <option key={m} value={m}>
+            {TRANSPORT_LABEL[m] ?? m}
+          </option>
+        ))}
+      </select>
       <span className="leg-divider">·</span>
       <span>{formatDuration(leg.durationMinutes)}</span>
       <button
