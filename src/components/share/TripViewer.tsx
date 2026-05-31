@@ -297,6 +297,7 @@ export default function TripViewer() {
       if (r.type === 'inline') {
         if (!cancelled) {
           setPayload(r.trip);
+          setActiveDay(0); // 換了一份行程，回到第 1 天，避免 activeDay 超出新行程天數而留白
           setLoadState('idle');
         }
         return;
@@ -307,6 +308,7 @@ export default function TripViewer() {
       if (cancelled) return;
       if (trip) {
         setPayload(trip);
+        setActiveDay(0); // 換了一份行程，回到第 1 天，避免 activeDay 超出新行程天數而留白
         setLoadState('idle');
       } else {
         setLoadState('error');

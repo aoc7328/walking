@@ -1,4 +1,5 @@
 ﻿import type { Trip } from '../types/trip';
+import type { Place } from '../types/place';
 import { TRANSPORT_LABEL, formatDuration } from '../utils/format';
 import { formatWithWeekday, formatStayDuration } from '../utils/date';
 import { buildStaticMapUrl, hasApiKey } from './googleMaps';
@@ -36,8 +37,20 @@ export function exportTripAsHTML(trip: Trip): void {
   download(`${safeName}.html`, html, 'text/html');
 }
 
-function gmapsPlaceUrl(placeId: string): string {
-  return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(placeId)}`;
+function isRealPlaceId(placeId?: string): boolean {
+  // 手動座標點的 placeId 是 manual- 前綴，不是真的 Google placeId
+  return !!placeId && !placeId.startsWith('manual-');
+}
+
+function gmapsPlaceUrl(place: Place): string {
+  // Google 已廢 ?q=place_id: 格式（會被當字面字串去搜，找不到）。改用官方 search API 格式。
+  if (isRealPlaceId(place.placeId)) {
+    const params = new URLSearchParams({ api: '1', query: place.name, query_place_id: place.placeId });
+    return `https://www.google.com/maps/search/?${params.toString()}`;
+  }
+  // 手動點：沒有真 placeId，用座標查詢
+  const { lat, lng } = place.coordinates;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
 function gmapsDirectionsUrl(
@@ -49,9 +62,12 @@ function gmapsDirectionsUrl(
     api: '1',
     origin: `${origin.lat},${origin.lng}`,
     destination: `${destination.lat},${destination.lng}`,
-    destination_place_id: destination.placeId,
     travelmode: mode,
   });
+  // 只有真 placeId 才帶；manual- 的帶了會被 Google 拒絕／忽略
+  if (isRealPlaceId(destination.placeId)) {
+    params.set('destination_place_id', destination.placeId);
+  }
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
@@ -80,7 +96,7 @@ function generateShareHTML(trip: Trip): string {
             ? `<ul class="notes">${it.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
             : '';
           const markerLabel = String(idx + 1);
-          const placeUrl = gmapsPlaceUrl(it.place.placeId);
+          const placeUrl = gmapsPlaceUrl(it.place);
           const prev = idx > 0 ? day.items[idx - 1] : null;
           const navUrl =
             prev && leg

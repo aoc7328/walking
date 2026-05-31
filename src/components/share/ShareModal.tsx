@@ -81,7 +81,9 @@ export default function ShareModal() {
     })();
 
     return () => controller.abort();
-  }, [open, trip]);
+    // 只在開啟 / 切到不同行程時重跑；enrich 後的 setTrip 不該重啟整個分享流程
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, trip?.id]);
 
   if (!open || !trip) return null;
 

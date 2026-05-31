@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { useSearchStore } from '../../stores/searchStore';
@@ -44,12 +44,15 @@ export default function PlaceDetailModal() {
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyResults, setNearbyResults] = useState<Place[]>([]);
   const [nearbyError, setNearbyError] = useState<string | null>(null);
+  // 目前正在等的周邊分類；快速切分類時，舊分類的結果晚回來就丟棄，避免蓋到新分類
+  const nearbyReqRef = useRef<string | null>(null);
 
   // 切換地點時清空周邊結果
   useEffect(() => {
     setNearbyKey(null);
     setNearbyResults([]);
     setNearbyError(null);
+    nearbyReqRef.current = null;
   }, [placeId]);
 
   // 從 store 找出對應 Place（行程或搜尋結果）
@@ -139,21 +142,25 @@ export default function PlaceDetailModal() {
       // 已選 → 再點一次收起
       setNearbyKey(null);
       setNearbyResults([]);
+      nearbyReqRef.current = null;
       return;
     }
     setNearbyKey(cat.key);
+    nearbyReqRef.current = cat.key;
     setNearbyLoading(true);
     setNearbyError(null);
     setNearbyResults([]);
     try {
       const results = await searchNearby(detail.coordinates, cat.types, 2500);
+      if (nearbyReqRef.current !== cat.key) return; // 使用者已切到別的分類，丟棄這次過時結果
       // 排除「自己」這個地點
       const filtered = results.filter((p) => p.placeId !== detail.placeId);
       setNearbyResults(filtered);
     } catch (err) {
+      if (nearbyReqRef.current !== cat.key) return;
       setNearbyError(err instanceof Error ? err.message : '搜尋失敗');
     } finally {
-      setNearbyLoading(false);
+      if (nearbyReqRef.current === cat.key) setNearbyLoading(false);
     }
   }
 

@@ -49,12 +49,15 @@ export async function loadActiveTrip(): Promise<Trip | null> {
       const trip = await apiFetch<Trip>(`/${encodeURIComponent(id)}`);
       return trip;
     } catch {
-      // 該 trip 不存在（可能在另一裝置刪了），fall through
+      // GET 失敗（暫時性錯誤或真的不存在）→ 往下用清單嘗試，但優先沿用原本的 active
     }
   }
   try {
     const trips = await apiFetch<Trip[]>('');
     if (trips.length > 0) {
+      // 原本的 active 還在清單裡就沿用，別因為剛才那次 GET 暫時性失敗（500/離線）就默默換成別的行程
+      const keep = id ? trips.find((t) => t.id === id) : undefined;
+      if (keep) return keep;
       setActiveTripId(trips[0]!.id);
       return trips[0]!;
     }
@@ -138,7 +141,10 @@ export async function migrateLocalTripsToKV(): Promise<{ migrated: number; faile
         failed += 1;
       }
     }
-    localStorage.setItem(MIGRATION_FLAG_KEY, String(Date.now()));
+    // 只有全部成功才標記完成；若整段離線導致全失敗，留著旗標下次重試，避免永久漏遷移
+    if (failed === 0) {
+      localStorage.setItem(MIGRATION_FLAG_KEY, String(Date.now()));
+    }
   } catch (err) {
     console.error('[walking] migration error:', err);
   }
@@ -204,7 +210,8 @@ export async function migrateAccountData(): Promise<{ migrated: number; failed: 
     // ignore
   }
 
-  markAccountMigrationDone();
+  // 只有全部成功才標記完成；否則（離線、PUT 全失敗）留著旗標下次重試，避免永久漏遷移舊行程
+  if (failed === 0) markAccountMigrationDone();
   return { migrated, failed };
 }
 

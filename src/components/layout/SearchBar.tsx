@@ -20,6 +20,10 @@ export default function SearchBar() {
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  // 自動搜尋的 debounce timer；手動搜尋（Enter / 點歷史）前要先清掉它，避免重複觸發
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 點歷史會 setQuery 又手動搜尋；標記「下一次 effect 若是這字串就跳過」避免搜兩次
+  const skipNextRef = useRef<string | null>(null);
 
   const currentDay = trip?.days.find((d) => d.id === currentDayId) ?? null;
 
@@ -29,15 +33,27 @@ export default function SearchBar() {
     const q = query.trim();
     if (!q) return;
     if (parseLatLng(q)) return;
-    const t = setTimeout(() => {
+    if (skipNextRef.current === q) {
+      // 這次是剛剛手動搜尋過的字串，別再自動搜一次
+      skipNextRef.current = null;
+      return;
+    }
+    debounceRef.current = setTimeout(() => {
       runSearch(q, currentDay?.city);
     }, 400);
-    return () => clearTimeout(t);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [query, currentDay?.city, runSearch]);
 
   function triggerSearch(q: string) {
     const trimmed = q.trim();
     if (!trimmed) return;
+    // 先取消還在排隊的自動搜尋，避免等一下又搜一次
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     setHistoryOpen(false);
     // 座標格式 → 走手動加入（prompt 名稱）
     const coord = parseLatLng(trimmed);
@@ -57,6 +73,8 @@ export default function SearchBar() {
   }
 
   function handleHistoryClick(q: string) {
+    // setQuery 會觸發 debounce effect，先標記讓它跳過，避免和下面的手動搜尋重複
+    skipNextRef.current = q.trim();
     setQuery(q);
     triggerSearch(q);
   }

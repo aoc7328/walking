@@ -330,8 +330,10 @@ export function buildStaticMapWithPath(
   if (!hasApiKey()) return null;
   if (markers.length === 0 && (!path || path.length === 0)) return null;
   const params = new URLSearchParams({ size, scale: '2', maptype: 'roadmap', key: API_KEY! });
-  if (path && path.length >= 2) {
-    const pathStr = `color:${MARKER_COLOR}CC|weight:3|` + path.map((p) => `${p.lat},${p.lng}`).join('|');
+  // 防呆：path 內若有非有限座標，整串會讓 Static Maps 回 400 → 圖掛掉（PDF 整份失敗）。先濾掉。
+  const safePath = (path ?? []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  if (safePath.length >= 2) {
+    const pathStr = `color:${MARKER_COLOR}CC|weight:3|` + safePath.map((p) => `${p.lat},${p.lng}`).join('|');
     params.append('path', pathStr);
   }
   for (const m of markers) appendMarker(params, m);

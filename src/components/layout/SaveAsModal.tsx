@@ -39,7 +39,7 @@ export default function SaveAsModal({ onClose }: Props) {
           style={{ width: '100%', marginTop: 12, marginBottom: 16, fontSize: 15, padding: '8px 10px' }}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); else if (e.key === 'Escape') onClose(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) handleSave(); else if (e.key === 'Escape') onClose(); }}
           autoFocus
           disabled={saving}
         />

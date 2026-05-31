@@ -147,18 +147,24 @@ function buildSharePayloadV2(trip: Trip): SharePayloadV2 {
 
   const days: ShareDayV2[] = trip.days.map((d: DayPlan) => {
     const items: ShareItemV2[] = [];
-    for (const it of d.items) {
+    const legs: ShareLeg[] = [];
+    let prevOrigIdx = -1;
+    d.items.forEach((it, origIdx) => {
       const x = getOrAddPlaceIdx(it.place);
-      if (x === null) continue; // 無效座標 → 跳過這個 item，不要產生爛資料
+      if (x === null) return; // 無效座標 → 跳過這個 item，不要產生爛資料
       const out: ShareItemV2 = { x, t: it.arrivalTime, s: it.stayMinutes };
       if (it.isHotel) out.h = 1;
       if (it.notes && it.notes.length > 0) out.no = it.notes;
+      // 與前一個「保留下來」的站之間補一段 leg，維持 legs.length === items.length - 1。
+      // 兩站原本相鄰才沿用原 leg；中間若有被跳過的站則退回預設（無預估時間），避免 leg 錯位。
+      if (items.length > 0) {
+        const original = prevOrigIdx === origIdx - 1 ? d.legs[origIdx - 1] : undefined;
+        legs.push(shrinkLeg(original ?? { mode: 'driving' }));
+      }
       items.push(out);
-    }
-    const out: ShareDayV2 = {
-      i: items,
-      l: d.legs.map(shrinkLeg),
-    };
+      prevOrigIdx = origIdx;
+    });
+    const out: ShareDayV2 = { i: items, l: legs };
     if (d.city) out.c = d.city;
     return out;
   });

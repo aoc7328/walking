@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useSearchStore } from '../stores/searchStore';
 import {
   detectGoogleMapsLink,
@@ -32,10 +32,15 @@ export function useSearch() {
   const setError = useSearchStore((s) => s.setError);
   const recordSearch = useSearchStore((s) => s.recordSearch);
 
+  // 每次查詢給一個遞增序號；await 回來時若已不是最新一次，就丟棄結果，
+  // 避免較慢的舊查詢蓋掉較新查詢的結果（打字過程中的競態）。
+  const reqIdRef = useRef(0);
+
   const runSearch = useCallback(
     async (query: string, biasCity?: string) => {
       setError(null);
       if (!query) {
+        reqIdRef.current++;
         setResults([]);
         return;
       }
@@ -44,17 +49,20 @@ export function useSearch() {
         setResults([]);
         return;
       }
+      const myReq = ++reqIdRef.current;
       setLoading(true);
       try {
         const link = detectGoogleMapsLink(query);
         const results = link ? await resolveGoogleMapsLink(link) : await textSearch(query, biasCity);
+        if (myReq !== reqIdRef.current) return; // 已有更新的查詢，這次是過時結果，丟棄
         setResults(results);
         if (results.length > 0) recordSearch(query);
       } catch (err) {
+        if (myReq !== reqIdRef.current) return;
         setError(err instanceof Error ? err.message : '搜尋失敗');
         setResults([]);
       } finally {
-        setLoading(false);
+        if (myReq === reqIdRef.current) setLoading(false);
       }
     },
     [setResults, setLoading, setError, recordSearch],
@@ -81,6 +89,7 @@ export function useSearch() {
         coordinates: { lat, lng },
         types: [],
       };
+      reqIdRef.current++; // 作廢任何進行中的搜尋，別讓它晚回來蓋掉這個手動結果
       setError(null);
       setResults([place]);
     },
