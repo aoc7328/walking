@@ -3,7 +3,7 @@ import { useSearchStore } from '../../stores/searchStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import SearchIcon from '../common/icons/SearchIcon';
-import { useSearch } from '../../hooks/useSearch';
+import { useSearch, parseLatLng } from '../../hooks/useSearch';
 
 export default function SearchBar() {
   const collapsed = useUIStore((s) => s.collapse.searchBar);
@@ -16,17 +16,19 @@ export default function SearchBar() {
   const clearHistory = useSearchStore((s) => s.clearHistory);
   const currentDayId = useUIStore((s) => s.currentDayId);
   const trip = useTripStore((s) => s.trip);
-  const { runSearch } = useSearch();
+  const { runSearch, addByCoordinates } = useSearch();
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const currentDay = trip?.days.find((d) => d.id === currentDayId) ?? null;
 
-  // 打字 400ms 後自動搜尋
+  // 打字 400ms 後自動搜尋。但若輸入看起來是座標，不自動觸發
+  //（否則打字打到一半就跳 prompt 很煩）——等使用者按 Enter 再處理。
   useEffect(() => {
     const q = query.trim();
     if (!q) return;
+    if (parseLatLng(q)) return;
     const t = setTimeout(() => {
       runSearch(q, currentDay?.city);
     }, 400);
@@ -34,9 +36,16 @@ export default function SearchBar() {
   }, [query, currentDay?.city, runSearch]);
 
   function triggerSearch(q: string) {
-    if (!q.trim()) return;
-    runSearch(q.trim(), currentDay?.city);
+    const trimmed = q.trim();
+    if (!trimmed) return;
     setHistoryOpen(false);
+    // 座標格式 → 走手動加入（prompt 名稱）
+    const coord = parseLatLng(trimmed);
+    if (coord) {
+      addByCoordinates(coord.lat, coord.lng);
+      return;
+    }
+    runSearch(trimmed, currentDay?.city);
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -79,7 +88,7 @@ export default function SearchBar() {
             onKeyDown={handleKey}
             onFocus={() => setHistoryOpen(true)}
             onClick={() => setHistoryOpen(true)}
-            placeholder="搜尋地點、餐廳、景點　·　或貼上 Google Maps 連結"
+            placeholder="搜尋地點、餐廳、景點　·　貼 Google Maps 連結　·　或貼經緯度（如 -45.03, 168.66）"
           />
           {query && (
             <button
