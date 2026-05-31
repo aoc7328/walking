@@ -2568,15 +2568,19 @@
   align-items: center;
 }
 
-/* 拖曳指示點：右上角 4×2 點陣，按住才能拖。
+/* 拖曳指示點：絕對定位在整張卡片的右上角，按住才能拖。
    touch-action: none 對 dnd-kit 觸控拖曳很重要，
    避免 iOS / Android 把長按當成系統滾動處理。 */
 .item-drag-handle {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 22px;
+  width: 26px;
+  height: 18px;
   padding: 0;
   background: transparent;
   border: none;

@@ -138,6 +138,27 @@ export default function ItineraryCard({
       className={`itinerary-card${isNextStop ? ' next-stop' : ''}${isDragging ? ' dragging' : ''}`}
       onClick={() => openDetail(item.place.placeId, 'itinerary')}
     >
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        className="item-drag-handle"
+        {...attributes}
+        {...listeners}
+        onClick={(e) => e.stopPropagation()}
+        title="按住拖曳調整順序"
+        aria-label="拖曳"
+      >
+        <svg viewBox="0 0 16 10" width="16" height="10" fill="currentColor" aria-hidden>
+          <circle cx="2" cy="2.5" r="1.2" />
+          <circle cx="6.7" cy="2.5" r="1.2" />
+          <circle cx="11.3" cy="2.5" r="1.2" />
+          <circle cx="16" cy="2.5" r="1.2" />
+          <circle cx="2" cy="7.5" r="1.2" />
+          <circle cx="6.7" cy="7.5" r="1.2" />
+          <circle cx="11.3" cy="7.5" r="1.2" />
+          <circle cx="16" cy="7.5" r="1.2" />
+        </svg>
+      </button>
       <div className="item-marker-stack">
         <div className="item-marker">{markerLabel}</div>
         <PlaceIconBadge iconEmoji={item.place.iconEmoji} onClick={handleBadgeClick} />
@@ -155,27 +176,6 @@ export default function ItineraryCard({
             {item.place.name}
           </span>
           <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              ref={setActivatorNodeRef}
-              className="item-drag-handle"
-              {...attributes}
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-              title="按住拖曳調整順序"
-              aria-label="拖曳"
-            >
-              <svg viewBox="0 0 16 10" width="16" height="10" fill="currentColor" aria-hidden>
-                <circle cx="2" cy="2.5" r="1.2" />
-                <circle cx="6.7" cy="2.5" r="1.2" />
-                <circle cx="11.3" cy="2.5" r="1.2" />
-                <circle cx="16" cy="2.5" r="1.2" />
-                <circle cx="2" cy="7.5" r="1.2" />
-                <circle cx="6.7" cy="7.5" r="1.2" />
-                <circle cx="11.3" cy="7.5" r="1.2" />
-                <circle cx="16" cy="7.5" r="1.2" />
-              </svg>
-            </button>
             <div className="item-copy-wrap" ref={copyRef}>
               <button
                 className="item-icon-btn"
