@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { DayPlan } from '../../types/trip';
 import { formatWithWeekday } from '../../utils/date';
+import DayMarkButton from './DayMarkButton';
 
 interface Props {
   day: DayPlan;
@@ -18,6 +19,7 @@ export default function DayTab({ day, active, onSelect }: Props) {
   };
 
   const nonHotelCount = day.items.filter((it) => !it.isHotel).length;
+  const marks = day.marks ?? [];
 
   return (
     <div
@@ -28,7 +30,10 @@ export default function DayTab({ day, active, onSelect }: Props) {
       {...attributes}
       {...listeners}
     >
-      <span className="day-tab-date">{formatWithWeekday(day.date)}</span>
+      <div className="day-tab-top">
+        <span className="day-tab-date">{formatWithWeekday(day.date)}</span>
+        <DayMarkButton dayId={day.id} dayIndex={day.dayIndex} marks={marks} />
+      </div>
       <span className="day-tab-num">
         Day <em>{day.dayIndex}</em>
       </span>

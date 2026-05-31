@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Trip, DayPlan, ItineraryItem, Leg } from '../types/trip';
+import type { Trip, DayPlan, ItineraryItem, Leg, DayMark } from '../types/trip';
 import type { Place, TransportMode } from '../types/place';
 import { MOCK_TRIP } from '../db/mockData';
 import { uuid } from '../utils/format';
@@ -54,6 +54,13 @@ interface TripStore {
 
   /** 設定某地點的 emoji 圖示（同 placeId 的所有 item 與收藏同步更新；傳 undefined 清除） */
   setPlaceIcon: (placeId: string, emoji: string | undefined) => void;
+
+  /** 在某一天蓋上 / 移除一個標記符號（已存在→移除，不存在→加入，並確保圖例有對應條目）。 */
+  toggleDayMark: (dayId: string, mark: DayMark) => void;
+  /** 設定某符號（glyph+color）在圖例裡的說明文字；圖例沒這條就新增。 */
+  setMarkLabel: (glyph: string, color: string, label: string) => void;
+  /** 從圖例移除某符號，並一併從所有天的 marks 拿掉。 */
+  removeMark: (glyph: string, color: string) => void;
 
   // 多 trip 管理
   createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
@@ -464,6 +471,51 @@ export const useTripStore = create<TripStore>((set, get) => ({
       }));
       const favorites = state.trip.favorites.map(updatePlace);
       return { trip: { ...state.trip, days, favorites, updatedAt: Date.now() } };
+    }),
+
+  toggleDayMark: (dayId, mark) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const same = (m: DayMark) => m.glyph === mark.glyph && m.color === mark.color;
+      let added = false;
+      const days = state.trip.days.map((d) => {
+        if (d.id !== dayId) return d;
+        const marks = d.marks ?? [];
+        if (marks.some(same)) {
+          return { ...d, marks: marks.filter((m) => !same(m)) };
+        }
+        added = true;
+        return { ...d, marks: [...marks, { glyph: mark.glyph, color: mark.color }] };
+      });
+      // 新加入的符號若圖例還沒有，補一條空說明讓使用者去填
+      let markLegend = state.trip.markLegend ?? [];
+      if (added && !markLegend.some(same)) {
+        markLegend = [...markLegend, { glyph: mark.glyph, color: mark.color, label: '' }];
+      }
+      return { trip: { ...state.trip, days, markLegend, updatedAt: Date.now() } };
+    }),
+
+  setMarkLabel: (glyph, color, label) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const list = state.trip.markLegend ?? [];
+      const idx = list.findIndex((e) => e.glyph === glyph && e.color === color);
+      const markLegend =
+        idx >= 0
+          ? list.map((e, i) => (i === idx ? { ...e, label } : e))
+          : [...list, { glyph, color, label }];
+      return { trip: { ...state.trip, markLegend, updatedAt: Date.now() } };
+    }),
+
+  removeMark: (glyph, color) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const same = (m: DayMark) => m.glyph === glyph && m.color === color;
+      const markLegend = (state.trip.markLegend ?? []).filter((e) => !same(e));
+      const days = state.trip.days.map((d) =>
+        d.marks?.some(same) ? { ...d, marks: d.marks.filter((m) => !same(m)) } : d,
+      );
+      return { trip: { ...state.trip, days, markLegend, updatedAt: Date.now() } };
     }),
 
   refreshLegsForDay: async (dayId) => {

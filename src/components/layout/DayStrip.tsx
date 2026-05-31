@@ -11,6 +11,7 @@ import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortabl
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import DayTab from '../day/DayTab';
+import MarkLegend from '../day/MarkLegend';
 
 export default function DayStrip() {
   const collapsed = useUIStore((s) => s.collapse.dayStrip);
@@ -72,6 +73,7 @@ export default function DayStrip() {
             {trip.days.length} 個 Day　·　拖動標籤調整順序　·　點選切換右欄
           </span>
           <div className="day-strip-tools">
+            <MarkLegend />
             <button className="btn" onClick={openDate}>
               更換起始日
             </button>

@@ -27,6 +27,23 @@ export interface Leg {
   distanceMeters?: number;
 }
 
+/**
+ * 蓋在某一天日期卡右上角的標記符號。
+ * 「形狀字符 + 顏色」的組合即是它的語意身份——
+ * 同一個（黃色五角星）不論蓋在哪一天，都對應到圖例裡的同一條說明。
+ */
+export interface DayMark {
+  glyph: string;
+  color: string;
+}
+
+/** 圖例：把某個符號（形狀+顏色）對應到一段使用者自填的說明文字。 */
+export interface MarkLegendEntry {
+  glyph: string;
+  color: string;
+  label: string;
+}
+
 export interface DayPlan {
   id: string;
   dayIndex: number;
@@ -34,6 +51,8 @@ export interface DayPlan {
   city?: string;
   items: ItineraryItem[];
   legs: Leg[];
+  /** 這天被蓋上的標記符號（顯示在日期卡右上角）。 */
+  marks?: DayMark[];
 }
 
 export interface Trip {
@@ -42,6 +61,8 @@ export interface Trip {
   startDate: string;
   days: DayPlan[];
   favorites: Place[];
+  /** 標記符號的說明（圖例）。每個符號用 glyph+color 當鍵。 */
+  markLegend?: MarkLegendEntry[];
   createdAt: number;
   updatedAt: number;
 }
