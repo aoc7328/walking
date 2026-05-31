@@ -2568,6 +2568,36 @@
   align-items: center;
 }
 
+/* 拖曳指示點：右上角 4×2 點陣，按住才能拖。
+   touch-action: none 對 dnd-kit 觸控拖曳很重要，
+   避免 iOS / Android 把長按當成系統滾動處理。 */
+.item-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--ink-faint);
+  cursor: grab;
+  border-radius: 4px;
+  touch-action: none;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.item-drag-handle:hover {
+  color: var(--ink-secondary);
+  background: var(--bg-soft);
+}
+
+.item-drag-handle:active {
+  cursor: grabbing;
+  color: var(--accent-primary);
+  background: var(--accent-primary-soft);
+}
+
 .item-icon-btn {
   width: 24px;
   height: 24px;
