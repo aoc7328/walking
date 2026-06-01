@@ -37,7 +37,7 @@ export function useSearch() {
   const reqIdRef = useRef(0);
 
   const runSearch = useCallback(
-    async (query: string, biasCity?: string) => {
+    async (query: string, bias?: { lat: number; lng: number }) => {
       setError(null);
       if (!query) {
         reqIdRef.current++;
@@ -53,7 +53,7 @@ export function useSearch() {
       setLoading(true);
       try {
         const link = detectGoogleMapsLink(query);
-        const results = link ? await resolveGoogleMapsLink(link) : await textSearch(query, biasCity);
+        const results = link ? await resolveGoogleMapsLink(link) : await textSearch(query, bias);
         if (myReq !== reqIdRef.current) return; // 已有更新的查詢，這次是過時結果，丟棄
         setResults(results);
         if (results.length > 0) recordSearch(query);

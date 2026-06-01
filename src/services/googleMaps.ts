@@ -138,19 +138,26 @@ const PLACE_DETAIL_FIELDS = [
   'reviews',
 ];
 
-export async function textSearch(query: string, biasLocation?: string): Promise<Place[]> {
+export async function textSearch(
+  query: string,
+  bias?: { lat: number; lng: number },
+): Promise<Place[]> {
   if (!hasApiKey()) return [];
   await loadGoogleMaps();
   const PlaceCls = (google.maps as any).places.Place;
-  const fullQuery = biasLocation ? `${biasLocation} ${query}` : query;
+  const req: Record<string, unknown> = {
+    textQuery: query,
+    fields: PLACE_LIST_FIELDS,
+    language: 'zh-TW',
+    maxResultCount: 20,
+  };
+  // 軟性地理偏好：把目前行程區域附近的結果往前排，但「不」排除其他地方的結果。
+  // 刻意不再寫死 region:'TW'、也不把城市塞進查詢字串——那兩者會讓海外或冷門的小店／民宿搜不到。
+  if (bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng)) {
+    req.locationBias = { center: { lat: bias.lat, lng: bias.lng }, radius: 50000 };
+  }
   try {
-    const result = await PlaceCls.searchByText({
-      textQuery: fullQuery,
-      fields: PLACE_LIST_FIELDS,
-      language: 'zh-TW',
-      region: 'TW',
-      maxResultCount: 20,
-    });
+    const result = await PlaceCls.searchByText(req);
     const places: PlaceLite[] = result?.places ?? [];
     return places.map(placeToInternal).filter((p): p is Place => p !== null);
   } catch (err) {

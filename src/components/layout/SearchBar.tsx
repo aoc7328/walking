@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
+import type { DayPlan } from '../../types/trip';
 import SearchIcon from '../common/icons/SearchIcon';
 import { useSearch, parseLatLng } from '../../hooks/useSearch';
 
@@ -25,7 +26,16 @@ export default function SearchBar() {
   // 點歷史會 setQuery 又手動搜尋；標記「下一次 effect 若是這字串就跳過」避免搜兩次
   const skipNextRef = useRef<string | null>(null);
 
-  const currentDay = trip?.days.find((d) => d.id === currentDayId) ?? null;
+  // 搜尋的地理「偏好」中心：優先取目前這天第一個有座標的點，否則整個行程第一個。
+  // 只用來把附近結果往前排，不會排除遠處／海外的地點。沒有任何座標就不偏好（全域搜）。
+  const biasCenter = useMemo<{ lat: number; lng: number } | undefined>(() => {
+    if (!trip) return undefined;
+    const pick = (day: DayPlan | undefined) =>
+      day?.items.find((it) => Number.isFinite(it.place.coordinates.lat))?.place.coordinates;
+    return pick(trip.days.find((d) => d.id === currentDayId)) ?? trip.days.map(pick).find(Boolean);
+  }, [trip, currentDayId]);
+  const biasRef = useRef(biasCenter);
+  biasRef.current = biasCenter;
 
   // 打字 400ms 後自動搜尋。但若輸入看起來是座標，不自動觸發
   //（否則打字打到一半就跳 prompt 很煩）——等使用者按 Enter 再處理。
@@ -39,12 +49,12 @@ export default function SearchBar() {
       return;
     }
     debounceRef.current = setTimeout(() => {
-      runSearch(q, currentDay?.city);
+      runSearch(q, biasRef.current);
     }, 400);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, currentDay?.city, runSearch]);
+  }, [query, currentDayId, runSearch]);
 
   function triggerSearch(q: string) {
     const trimmed = q.trim();
@@ -61,7 +71,7 @@ export default function SearchBar() {
       addByCoordinates(coord.lat, coord.lng);
       return;
     }
-    runSearch(trimmed, currentDay?.city);
+    runSearch(trimmed, biasRef.current);
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
