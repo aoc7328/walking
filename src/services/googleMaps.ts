@@ -211,6 +211,8 @@ export async function searchNearby(
 
 export async function fetchPlaceDetails(placeId: string): Promise<Partial<Place> | null> {
   if (!hasApiKey()) return null;
+  // 手動座標點（manual- 前綴）不是真的 Google placeId，跳過抓取，避免 INVALID_ARGUMENT 報錯
+  if (placeId.startsWith('manual-')) return null;
   try {
     await loadGoogleMaps();
     const PlaceCls = (google.maps as any).places.Place;

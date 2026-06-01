@@ -35,9 +35,7 @@ export const MOCK_TRIP: Trip = {
   startDate: '2026-06-01',
   createdAt: Date.now(),
   updatedAt: Date.now(),
-  favorites: [
-    place('p-fav-1', '老王牛肉麵', '臺中市西區', 24.143, 120.66, 4.5, 412),
-  ],
+  favorites: [],
   days: [
     {
       id: 'day-1',
