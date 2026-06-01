@@ -50,9 +50,15 @@ export default function SearchResultCard({ place, dayIndex }: { place: Place; da
   }
 
   return (
-    <div className="place-card-row" onClick={() => openDetail(place.placeId, 'search')}>
+    <div className="place-card-row">
       <div className="place-card-row-body">
-        <div className="place-card-row-name">{place.name}</div>
+        <div
+          className="place-card-row-name clickable"
+          onClick={() => openDetail(place.placeId, 'search')}
+          title="點擊查看地點詳細資訊"
+        >
+          {place.name}
+        </div>
         <div className="place-card-row-meta">
           {place.rating !== undefined && (
             <span className="place-card-row-rating">★ {place.rating.toFixed(1)}</span>

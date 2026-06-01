@@ -1826,6 +1826,19 @@
   -webkit-box-orient: vertical;
 }
 
+/* 只有名稱這行可點開詳細（其餘卡片區域不再是點選區）；寬度貼齊文字，避免點到右側空白 */
+.place-card-row-name.clickable {
+  cursor: pointer;
+  width: fit-content;
+  max-width: 100%;
+}
+.place-card-row-name.clickable:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
 .place-card-row-meta {
   display: flex;
   align-items: baseline;
