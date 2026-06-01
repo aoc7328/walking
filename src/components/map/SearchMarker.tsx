@@ -1,4 +1,4 @@
-import { AdvancedMarker } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import type { LatLng } from '../../utils/geo';
 import { useUIStore } from '../../stores/uiStore';
 
@@ -10,30 +10,13 @@ interface Props {
 export default function SearchMarker({ position, placeId }: Props) {
   const openDetail = useUIStore((s) => s.openDetail);
   return (
-    <AdvancedMarker position={position} onClick={() => openDetail(placeId, 'search')}>
-      <div
-        style={{
-          width: 26,
-          height: 26,
-          borderRadius: '50%',
-          background: 'white',
-          border: '2.5px solid var(--accent-warm)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-          cursor: 'pointer',
-        }}
-      >
-        <span
-          style={{
-            width: 9,
-            height: 9,
-            borderRadius: '50%',
-            background: 'var(--accent-warm)',
-          }}
-        />
-      </div>
+    <AdvancedMarker
+      position={position}
+      title="點看地點詳細 / 加入行程"
+      onClick={() => openDetail(placeId, 'search')}
+    >
+      {/* Google 樣式的水滴圖釘：尖端對準地點精確位置，比原本的大圓點好辨識、佔位也小 */}
+      <Pin background="#D85A30" borderColor="#A8431F" glyphColor="#FFF4EC" />
     </AdvancedMarker>
   );
 }
