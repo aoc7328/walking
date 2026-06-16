@@ -4520,3 +4520,8 @@ input.led-cell.num { text-align: right; }
 .led-quickadd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 10px; background: var(--bg-softer); border: 0.5px solid var(--border-medium); border-radius: var(--radius-md); }
 .led-quickadd .led-cell-boxed { min-width: 84px; }
 .led-qa-title { flex: 1; min-width: 160px; max-width: none; }
+
+.led-dot-over { background: #E24B4A; }
+.led-insights { background: var(--bg-softer); border: 0.5px solid var(--border-medium); border-radius: var(--radius-md); padding: 12px 16px; }
+.led-insights ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.led-insights li { font-size: 14px; color: var(--ink-primary); line-height: 1.5; }

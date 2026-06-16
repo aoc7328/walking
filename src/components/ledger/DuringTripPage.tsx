@@ -9,14 +9,16 @@ import QuickAddEntry from './QuickAddEntry';
 
 function BudgetBar({ committed, during, budget }: { committed: number; during: number; budget: number }) {
   const total = committed + during;
-  const over = total > budget;
-  const denom = over ? total : budget;
-  const cw = denom > 0 ? (committed / denom) * 100 : 0;
-  const dw = denom > 0 ? (during / denom) * 100 : 0;
+  const scale = Math.max(total, budget, 1);
+  const w = (v: number) => `${(v / scale) * 100}%`;
+  const committedInB = Math.min(committed, budget);          // 已訂（預算內）
+  const duringInB = Math.max(0, Math.min(budget, total) - committed); // 現場（預算內）
+  const over = Math.max(0, total - budget);                  // 超出預算
   return (
-    <div className="led-bar">
-      <div className="led-bar-seg led-bar-committed" style={{ width: `${cw}%` }} />
-      <div className={`led-bar-seg ${over ? 'led-bar-over' : 'led-bar-during'}`} style={{ width: `${dw}%` }} />
+    <div className="led-bar" title={`預算 ${Math.round(budget)}　已用 ${Math.round(total)}`}>
+      {committedInB > 0 && <div className="led-bar-seg led-bar-committed" style={{ width: w(committedInB) }} />}
+      {duringInB > 0 && <div className="led-bar-seg led-bar-during" style={{ width: w(duringInB) }} />}
+      {over > 0 && <div className="led-bar-seg led-bar-over" style={{ width: w(over) }} />}
     </div>
   );
 }
@@ -54,7 +56,7 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
       <section className="led-block">
         <div className="led-block-head"><h3>變動預算 · 還剩多少</h3>
           <span className="led-muted led-legend">
-            <i className="led-dot led-dot-committed" />已預訂　<i className="led-dot led-dot-during" />現場已花　<i className="led-dot led-dot-rest" />剩餘
+            <i className="led-dot led-dot-committed" />已預訂　<i className="led-dot led-dot-during" />現場（預算內）　<i className="led-dot led-dot-over" />超出預算　<i className="led-dot led-dot-rest" />剩餘
           </span>
         </div>
         {budgets.length === 0 ? (

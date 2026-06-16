@@ -89,7 +89,7 @@ export default function LedgerPage() {
       <div className="ledger-page-body">
         {tab === 'pre' && <PreDeparturePage ledger={ledger} tripName={trip.name} />}
         {tab === 'during' && <DuringTripPage ledger={ledger} />}
-        {tab === 'analysis' && <AnalysisPage ledger={ledger} />}
+        {tab === 'analysis' && <AnalysisPage ledger={ledger} trip={trip} />}
         {tab === 'settings' && <SettingsPage ledger={ledger} />}
       </div>
     </div>

@@ -207,6 +207,37 @@ export function actualGrandTotal(l: Ledger): number {
   return categoryTotals(l).grand;
 }
 
+export interface PlanActualRow { category: ExpenseCategory; estimate: number; actual: number; diff: number }
+
+/**
+ * 各類別「預估 vs 實際」。
+ * 預估 = 已知/已訂(committed) + 額外預估(budget extra)；實際 = committed + during；差距 = 實際 − 預估。
+ */
+export function planVsActual(l: Ledger): { rows: PlanActualRow[]; estTotal: number; actTotal: number; diff: number } {
+  const split = categorySplit(l);
+  const budMap = new Map(l.budgets.map((b) => [b.category, b.amount]));
+  const rows = categoriesOf(l).map((category) => {
+    const s = split[category] ?? { pre: 0, during: 0 };
+    const extra = budMap.get(category) ?? 0;
+    const estimate = s.pre + extra;
+    const actual = s.pre + s.during;
+    return { category, estimate, actual, diff: actual - estimate };
+  });
+  const estTotal = rows.reduce((a, r) => a + r.estimate, 0);
+  const actTotal = rows.reduce((a, r) => a + r.actual, 0);
+  return { rows, estTotal, actTotal, diff: actTotal - estTotal };
+}
+
+/** 最大單筆開銷（住宿/餐廳/支出全部一起比，台幣）。 */
+export function largestExpense(l: Ledger): { label: string; twd: number } | null {
+  let best: { label: string; twd: number } | null = null;
+  const consider = (label: string, twd: number) => { if (twd > 0 && (!best || twd > best.twd)) best = { label, twd }; };
+  for (const a of l.accommodations) consider(a.name || '住宿', toTWD(a.price, a.currency, l.fxRate));
+  for (const r of l.restaurants) if (r.amount) consider(r.name || '餐廳', toTWD(r.amount, r.currency ?? 'TWD', l.fxRate));
+  for (const e of l.expenses) consider(e.title || e.category, toTWD(e.amount, e.currency, l.fxRate));
+  return best;
+}
+
 export interface HotelStay {
   placeId?: string;
   name: string;
