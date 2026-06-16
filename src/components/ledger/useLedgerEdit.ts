@@ -5,7 +5,7 @@ import type {
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
 import { toISODate } from '../../utils/date';
-import { EXPENSE_CATEGORIES } from '../../utils/ledger';
+import { EXPENSE_CATEGORIES, type HotelStay } from '../../utils/ledger';
 
 function todayISO(): string {
   return toISODate(new Date());
@@ -35,6 +35,19 @@ export function useLedgerEdit() {
       setReservation: (patch: Partial<ReservationDefaults>) => upd((l) => ({ ...l, reservation: { ...(l.reservation ?? {}), ...patch } })),
 
       addAccommodation: () => upd((l) => ({ ...l, accommodations: [...l.accommodations, blankAccommodation()] })),
+      /** 從行程帶入住宿段：同 placeId 或同名→更新入住日/晚數；找不到→新增一列。 */
+      importStays: (stays: HotelStay[]) => upd((l) => {
+        const accs = [...l.accommodations];
+        for (const s of stays) {
+          const idx = accs.findIndex((a) => (a.placeId && s.placeId && a.placeId === s.placeId) || (!!a.name && a.name.trim() === s.name.trim()));
+          if (idx >= 0) {
+            accs[idx] = { ...accs[idx]!, placeId: s.placeId ?? accs[idx]!.placeId, checkIn: s.checkIn, nights: s.nights, area: accs[idx]!.area || s.area };
+          } else {
+            accs.push({ id: uuid(), paid: false, placeId: s.placeId, area: s.area, name: s.name, checkIn: s.checkIn, nights: s.nights, price: 0, currency: 'TWD', platform: '' });
+          }
+        }
+        return { ...l, accommodations: accs };
+      }),
       patchAccommodation: (id: string, patch: Partial<Accommodation>) =>
         upd((l) => ({ ...l, accommodations: l.accommodations.map((a) => (a.id === id ? { ...a, ...patch } : a)) })),
       delAccommodation: (id: string) => upd((l) => ({ ...l, accommodations: l.accommodations.filter((a) => a.id !== id) })),

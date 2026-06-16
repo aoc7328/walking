@@ -182,3 +182,36 @@ export function cardUsage(l: Ledger): CardUsage[] {
 export function actualGrandTotal(l: Ledger): number {
   return categoryTotals(l).grand;
 }
+
+export interface HotelStay {
+  placeId?: string;
+  name: string;
+  area?: string;
+  checkIn: string;
+  nights: number;
+}
+
+/**
+ * 從行程表抽出住宿段：每天取「最後一個被標為飯店(isHotel)的地點」當當晚住宿，
+ * 連續幾天住同一間就合併成一段（入住日=第一天、晚數=連住天數）。
+ */
+export function extractStaysFromTrip(trip: Trip): HotelStay[] {
+  const stays: HotelStay[] = [];
+  let prev: HotelStay | null = null;
+  for (const day of trip.days) {
+    let hotel: { placeId: string; name: string } | null = null;
+    for (let i = day.items.length - 1; i >= 0; i--) {
+      const it = day.items[i]!;
+      if (it.isHotel) { hotel = { placeId: it.place.placeId, name: it.place.name }; break; }
+    }
+    if (!hotel) { prev = null; continue; }
+    if (prev && ((hotel.placeId && prev.placeId === hotel.placeId) || prev.name === hotel.name)) {
+      prev.nights += 1;
+    } else {
+      const s: HotelStay = { placeId: hotel.placeId, name: hotel.name, area: day.city, checkIn: day.date, nights: 1 };
+      stays.push(s);
+      prev = s;
+    }
+  }
+  return stays;
+}

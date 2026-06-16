@@ -2,8 +2,9 @@ import type { Ledger, ExpenseCategory, ReservationStatus } from '../../types/led
 import { formatMoney, formatAmount, toTWD } from '../../utils/money';
 import {
   accommodationTotalTWD, restaurantTotalsTWD, expensesTotalTWD,
-  categoriesOf, RESERVATION_LABEL,
+  categoriesOf, RESERVATION_LABEL, extractStaysFromTrip,
 } from '../../utils/ledger';
+import { useTripStore } from '../../stores/tripStore';
 import { exportRestaurantsCSV } from '../../services/ledgerExport';
 import { printReservationCard } from '../../services/reservationCard';
 import { useLedgerEdit } from './useLedgerEdit';
@@ -17,6 +18,20 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
   const fx = ledger.fxRate;
   const catOpts = categoriesOf(ledger).map((c) => ({ value: c, label: c }));
   const locOf = (twd: number) => (fx ? Math.round(twd / fx) : 0);
+  const trip = useTripStore((s) => s.trip);
+
+  function importFromItinerary() {
+    if (!trip) return;
+    const stays = extractStaysFromTrip(trip);
+    if (stays.length === 0) {
+      window.alert('行程裡找不到標記為「飯店」的地點。\n請先在行程把住的地方加進去（圖示設成飯店），再回來帶入。');
+      return;
+    }
+    const summary = stays.map((s) => `${s.checkIn}　${s.name}（${s.nights} 晚）`).join('\n');
+    if (window.confirm(`從行程找到 ${stays.length} 段住宿：\n\n${summary}\n\n帶入住宿表？（同名的更新入住日/晚數，沒有的新增一列）`)) {
+      ed.importStays(stays);
+    }
+  }
   const payOpts = [{ value: '', label: '—' }, ...ledger.paymentMethods.map((p) => ({ value: p.id, label: p.name }))];
   const chOpts = [{ value: '', label: '—' }, ...ledger.channels.map((c) => ({ value: c, label: c }))];
   const rst = restaurantTotalsTWD(ledger);
@@ -28,7 +43,10 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
       <section className="led-block">
         <div className="led-block-head">
           <h3>住宿　<span className="led-muted">{ledger.accommodations.length} 間</span></h3>
-          <span className="led-muted">合計 <b className="led-strong">{formatMoney(accommodationTotalTWD(ledger), 'TWD')}</b></span>
+          <div className="led-block-actions">
+            <span className="led-muted">合計 <b className="led-strong">{formatMoney(accommodationTotalTWD(ledger), 'TWD')}</b></span>
+            <button className="led-export-btn" onClick={importFromItinerary} title="掃描行程裡標為飯店的地點，自動帶入入住日與連住晚數">從行程帶入</button>
+          </div>
         </div>
         <div className="led-tb-wrap">
           <table className="led-tb">

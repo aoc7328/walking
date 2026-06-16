@@ -39,6 +39,8 @@ export type ReservationStatus = 'reserved' | 'none' | 'walkin' | 'impromptu' | '
 export interface Accommodation {
   id: string;
   paid: boolean;
+  /** 對應行程裡飯店地點的 placeId（從行程帶入時設，之後重帶可對齊不重複）。 */
+  placeId?: string;
   /** 區域，例如「福岡天神」「別府」。 */
   area?: string;
   name: string;
