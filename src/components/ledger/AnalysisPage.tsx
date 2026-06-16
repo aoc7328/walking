@@ -5,6 +5,7 @@ import {
   categoryTotals, categoryColor, planVsActual, categoryToBucket,
   pivotCategoryPayment, dailySpending,
 } from '../../utils/ledger';
+import { PieChart, ColumnChart } from './LedgerCharts';
 
 const R = 70;
 const C = 2 * Math.PI * R;
@@ -36,8 +37,6 @@ export default function AnalysisPage({ ledger, trip }: { ledger: Ledger; trip: T
   });
 
   const cmpMax = Math.max(1, ...pa.rows.map((r) => Math.max(r.estimate, r.actual)));
-  const payMax = Math.max(1, ...pivot.colTotals);
-  const dayMax = Math.max(1, ...daily.map((d) => d.twd));
   const diffWord = pa.diff > 0 ? '超支' : pa.diff < 0 ? '結餘' : '打平';
   const diffPct = pa.estTotal > 0 ? Math.round((Math.abs(pa.diff) / pa.estTotal) * 100) : 0;
 
@@ -124,7 +123,10 @@ export default function AnalysisPage({ ledger, trip }: { ledger: Ledger; trip: T
           <div className="led-cmp">
             {pa.rows.filter((r) => r.estimate > 0 || r.actual > 0).map((r) => (
               <div key={r.category} className="led-cmp-grp">
-                <div className="led-cmp-cat"><i className="led-dot" style={{ background: categoryColor(r.category) }} />{r.category}</div>
+                <div className="led-cmp-cat">
+                  <span><i className="led-dot" style={{ background: categoryColor(r.category) }} />{r.category}</span>
+                  {r.diff !== 0 && <span className={r.diff > 0 ? 'led-over-text' : 'led-ok'}>{r.diff > 0 ? '超 ' : '省 '}{formatAmount(Math.abs(r.diff))}</span>}
+                </div>
                 <div className="led-cmp-lines">
                   <div className="led-cmp-line"><span className="tag">估</span><HBar value={r.estimate} max={cmpMax} color="var(--ink-faint)" /><span className="val">{formatAmount(r.estimate)}</span></div>
                   <div className="led-cmp-line"><span className="tag">實</span><HBar value={r.actual} max={cmpMax} color={categoryColor(r.category)} /><span className="val">{formatAmount(r.actual)}</span></div>
@@ -139,15 +141,7 @@ export default function AnalysisPage({ ledger, trip }: { ledger: Ledger; trip: T
       {daily.length > 0 && (
         <section className="led-block">
           <div className="led-block-head"><h3>每日花費（流水帳）</h3></div>
-          <div className="led-chart">
-            {daily.map((d) => (
-              <div key={d.date} className="led-chart-row">
-                <span className="lab">{d.date.slice(5).replace('-', '/')}</span>
-                <HBar value={d.twd} max={dayMax} color="#1D9E75" />
-                <span className="val">{formatMoney(d.twd, 'TWD')}</span>
-              </div>
-            ))}
-          </div>
+          <ColumnChart data={daily.map((d) => ({ label: d.date.slice(5).replace('-', '/'), value: d.twd }))} />
         </section>
       )}
 
@@ -155,15 +149,7 @@ export default function AnalysisPage({ ledger, trip }: { ledger: Ledger; trip: T
       {pivot.methods.length > 0 && pivot.grand > 0 && (
         <section className="led-block">
           <div className="led-block-head"><h3>各支付方式花費</h3></div>
-          <div className="led-chart">
-            {pivot.methods.map((m, i) => (
-              <div key={m.id} className="led-chart-row">
-                <span className="lab">{m.name}</span>
-                <HBar value={pivot.colTotals[i]!} max={payMax} color="var(--accent-purple)" />
-                <span className="val">{formatMoney(pivot.colTotals[i]!, 'TWD')}　<span className="led-muted">{pct(pivot.colTotals[i]!)}%</span></span>
-              </div>
-            ))}
-          </div>
+          <PieChart data={pivot.methods.map((m, i) => ({ label: m.name, value: pivot.colTotals[i]! }))} />
         </section>
       )}
 

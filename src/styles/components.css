@@ -4544,3 +4544,22 @@ input.led-cell.num { text-align: right; }
 /* 讓寬表在自己的 wrap 內橫向捲動，而不是把整頁撐寬（grid item 預設 min-width:auto 會被內容撐開） */
 .led-page-cols > .led-block { min-width: 0; }
 .led-block > .led-tb-wrap { max-width: 100%; }
+
+/* 圓餅圖 + 圖例 */
+.led-pie-wrap { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.led-pie-legend { display: grid; gap: 7px; flex: 1; min-width: 220px; }
+.led-pie-leg { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.led-pie-leg-name { flex: 1; color: var(--ink-primary); }
+.led-pie-leg-val { font-feature-settings: 'tnum' 1; color: var(--ink-primary); white-space: nowrap; }
+
+/* 垂直長條圖 */
+.led-colchart { display: block; width: 100%; max-width: 680px; }
+.led-colchart .led-grid { stroke: var(--border-soft); stroke-width: 0.5; }
+.led-colchart .led-axis-line { stroke: var(--border-medium); stroke-width: 1; }
+.led-colchart text.led-axis-y { font-size: 10px; fill: var(--ink-muted); text-anchor: end; }
+.led-colchart text.led-axis-x { font-size: 10px; fill: var(--ink-secondary); text-anchor: middle; }
+
+/* 預估vs實際：類別欄改直排，加差距 */
+.led-cmp-grp { grid-template-columns: 112px 1fr; }
+.led-cmp-cat { flex-direction: column; align-items: flex-start; gap: 2px; }
+.led-cmp-cat > span:last-child { font-size: 11px; }
