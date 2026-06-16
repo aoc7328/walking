@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Ledger, PaymentKind } from '../../types/ledger';
-import { EXPENSE_CATEGORIES, categoriesOf } from '../../utils/ledger';
+import { EXPENSE_CATEGORIES, categoriesOf, categorySplit, DESTINATIONS } from '../../utils/ledger';
+import { formatAmount } from '../../utils/money';
 import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, NumCell, SelectCell, DeleteCell } from './EditableCells';
 
@@ -15,14 +16,23 @@ export default function SettingsPage({ ledger }: { ledger: Ledger }) {
   const [newChannel, setNewChannel] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const cats = categoriesOf(ledger);
+  const split = categorySplit(ledger);
   const isDefaultCat = (c: string) => (EXPENSE_CATEGORIES as string[]).includes(c);
 
   return (
     <div className="led-page-cols">
-      {/* 幣別與匯率 */}
+      {/* 目的地・幣別・匯率 */}
       <section className="led-block">
-        <div className="led-block-head"><h3>幣別與匯率</h3></div>
+        <div className="led-block-head"><h3>目的地・幣別・匯率</h3>
+          <span className="led-muted">選目的地會自動帶幣別與語言（預訂牌就用該國語言）</span>
+        </div>
         <div className="led-settings-row">
+          <label>旅行目的地
+            <select className="led-cell led-cell-boxed" value={ledger.destination ?? ''} onChange={(e) => { const d = DESTINATIONS.find((x) => x.name === e.target.value); if (d) ed.setDestination(d.name, d.currency, d.language); }}>
+              <option value="" disabled>選擇國家…</option>
+              {DESTINATIONS.map((d) => <option key={d.name} value={d.name}>{d.name}</option>)}
+            </select>
+          </label>
           <label>當地貨幣
             <input className="led-cell led-cell-boxed" value={ledger.localCurrency} onChange={(e) => ed.setMeta({ localCurrency: e.target.value.toUpperCase() })} placeholder="JPY / NZD…" />
           </label>
@@ -74,9 +84,10 @@ export default function SettingsPage({ ledger }: { ledger: Ledger }) {
             <input className="led-cell led-cell-boxed" value={ledger.reservation?.contact ?? ''} onChange={(e) => ed.setReservation({ contact: e.target.value })} placeholder="電話 / email" />
           </label>
         </div>
-        <label className="led-fullnote">飲食習慣與語言需求
-          <input className="led-cell led-cell-boxed led-cell-wide" value={ledger.reservation?.dietaryNote ?? ''} onChange={(e) => ed.setReservation({ dietaryNote: e.target.value })} placeholder="例：兩位都不吃生食、會過敏蝦蟹；不會日文，請以英文或圖片溝通" />
-        </label>
+        <div className="led-fullnote led-fullnote-col">
+          <span>飲食習慣與語言需求</span>
+          <textarea className="led-cell led-cell-boxed led-textarea" rows={3} value={ledger.reservation?.dietaryNote ?? ''} onChange={(e) => ed.setReservation({ dietaryNote: e.target.value })} placeholder="例：&#10;・兩位都不吃生食、會過敏蝦蟹&#10;・不會日文，請以英文或圖片溝通&#10;・其中一位吃素" />
+        </div>
       </section>
 
       {/* 預約管道 */}
@@ -98,18 +109,22 @@ export default function SettingsPage({ ledger }: { ledger: Ledger }) {
       {/* 類別與各類別預算 */}
       <section className="led-block">
         <div className="led-block-head"><h3>類別與預算（台幣）</h3>
-          <span className="led-muted">可新增自訂類別；預算上限給出發後分頁顯示三段進度</span>
+          <span className="led-muted">「已知/已訂」自動帶入（機票・租車・已訂餐廳…），你只要填「額外預估」零星支出，總預算自動加好</span>
         </div>
         <div className="led-tb-wrap">
           <table className="led-tb">
-            <thead><tr><th>類別</th><th className="num">預算上限</th><th></th></tr></thead>
+            <thead><tr><th>類別</th><th className="num">已知 / 已訂</th><th className="num">＋ 額外預估</th><th className="num">＝ 總預算</th><th></th></tr></thead>
             <tbody>
               {cats.map((cat) => {
                 const b = ledger.budgets.find((x) => x.category === cat);
+                const committed = Math.round(split[cat]?.pre ?? 0);
+                const extra = b?.amount ?? 0;
                 return (
                   <tr key={cat}>
                     <td className="led-strong">{cat}{isDefaultCat(cat) ? '' : ' ·自訂'}</td>
-                    <td className="num"><NumCell value={b?.amount} onChange={(v) => ed.setBudget(cat, v)} placeholder="未設" /></td>
+                    <td className="num led-muted">{committed ? formatAmount(committed) : '—'}</td>
+                    <td className="num"><NumCell value={b?.amount} onChange={(v) => ed.setBudget(cat, v)} placeholder="0" /></td>
+                    <td className="num led-strong">{committed + extra ? formatAmount(committed + extra) : '—'}</td>
                     <td>{isDefaultCat(cat) ? null : <DeleteCell onClick={() => { if (window.confirm(`刪除自訂類別「${cat}」？（已用此類別的紀錄不會被刪，只是類別清單與預算移除）`)) ed.delCategory(cat); }} />}</td>
                   </tr>
                 );

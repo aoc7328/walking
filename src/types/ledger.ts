@@ -26,7 +26,11 @@ export interface PaymentMethod {
   note?: string;
 }
 
-/** 各類別預算天花板（台幣）。pre + during 同類別共用一個池子一起扣。 */
+/**
+ * 各類別預算（台幣）。amount = 「額外變動預估」：已知/已付的項目(機票/租車/已訂餐廳)
+ * 由系統自動算進來，這裡只填你要再加上的零星預估(地鐵、超市等)。
+ * 有效總預算 = 該類別已知花費(committed) + amount。
+ */
 export interface CategoryBudget {
   category: ExpenseCategory;
   amount: number;
@@ -123,6 +127,10 @@ export interface ReservationDefaults {
 }
 
 export interface Ledger {
+  /** 旅行目的地國家名稱（選了會自動帶幣別與語言）。 */
+  destination?: string;
+  /** 目的地語言代碼（'ja' / 'en' / 'zh'…），給預訂牌等產生內容用。 */
+  language?: string;
   /** 目的地當地貨幣代碼，例如 'JPY' / 'NZD'。跟著專案走。 */
   localCurrency: string;
   /** 1 單位當地貨幣 = fxRate 台幣（全趟一個匯率）。 */

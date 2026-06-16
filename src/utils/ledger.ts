@@ -58,6 +58,25 @@ export function categoryColor(cat: string): string {
   return CATEGORY_PALETTE[h]!;
 }
 
+/** 常見旅行目的地 → 幣別 + 預訂牌語言（ja/en/zh，其餘語言以 en 呈現）。 */
+export interface Destination { name: string; currency: string; language: string }
+export const DESTINATIONS: Destination[] = [
+  { name: '日本', currency: 'JPY', language: 'ja' },
+  { name: '韓國', currency: 'KRW', language: 'en' },
+  { name: '台灣', currency: 'TWD', language: 'zh' },
+  { name: '香港', currency: 'HKD', language: 'zh' },
+  { name: '中國', currency: 'CNY', language: 'zh' },
+  { name: '泰國', currency: 'THB', language: 'en' },
+  { name: '新加坡', currency: 'SGD', language: 'en' },
+  { name: '越南', currency: 'VND', language: 'en' },
+  { name: '紐西蘭', currency: 'NZD', language: 'en' },
+  { name: '澳洲', currency: 'AUD', language: 'en' },
+  { name: '美國', currency: 'USD', language: 'en' },
+  { name: '加拿大', currency: 'CAD', language: 'en' },
+  { name: '英國', currency: 'GBP', language: 'en' },
+  { name: '歐洲（歐元區）', currency: 'EUR', language: 'en' },
+];
+
 export const RESERVATION_LABEL: Record<ReservationStatus, string> = {
   reserved: '已預約',
   none: '未預約',
@@ -139,18 +158,23 @@ export function categoryTotals(l: Ledger): { rows: CategoryTotal[]; grand: numbe
 
 export interface BudgetRow {
   category: ExpenseCategory;
-  budget: number;
-  committed: number; // 出發前已預訂/已承諾（pre）
+  extra: number; // 使用者額外抓的零星預估
+  budget: number; // 有效總預算 = committed + extra
+  committed: number; // 出發前已預訂/已承諾（pre，自動算入）
   during: number; // 現場已花
-  remaining: number; // 剩餘可花（可為負＝超支）
+  remaining: number; // 剩餘可花 = extra − during（可為負＝超支）
 }
 
-/** 各設定預算的類別：已預訂 + 現場 + 剩餘（三段拆解）。 */
+/**
+ * 各設定預算類別的拆解。
+ * 已知/已付(committed) 由系統自動算進來；budget.amount 只是額外零星預估(extra)。
+ * 有效總預算 = committed + extra；剩餘 = extra − during。
+ */
 export function budgetBreakdown(l: Ledger): BudgetRow[] {
   const split = categorySplit(l);
   return l.budgets.map((b) => {
     const s = split[b.category] ?? { pre: 0, during: 0 };
-    return { category: b.category, budget: b.amount, committed: s.pre, during: s.during, remaining: b.amount - s.pre - s.during };
+    return { category: b.category, extra: b.amount, budget: s.pre + b.amount, committed: s.pre, during: s.during, remaining: b.amount - s.during };
   });
 }
 

@@ -32,6 +32,8 @@ export function useLedgerEdit() {
     const upd = (fn: (l: Ledger) => Ledger) => updateLedger(fn);
     return {
       setMeta: (patch: Partial<Pick<Ledger, 'localCurrency' | 'fxRate'>>) => upd((l) => ({ ...l, ...patch })),
+      setDestination: (name: string, currency: string, language: string) =>
+        upd((l) => ({ ...l, destination: name, localCurrency: currency, language })),
 
       setColWidth: (tableId: string, key: string, width: number) =>
         upd((l) => {

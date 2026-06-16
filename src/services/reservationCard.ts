@@ -32,7 +32,8 @@ function row(label: string, value: string): string {
 
 /** 開新視窗印出一張餐廳預訂牌，標籤依目的地語言自動切換。 */
 export function printReservationCard(r: Restaurant, ledger: Ledger): void {
-  const L = LABELS[langForCurrency(ledger.localCurrency)];
+  const lang = (ledger.language as Lang) ?? langForCurrency(ledger.localCurrency);
+  const L = LABELS[lang] ?? LABELS.en;
   const res = ledger.reservation ?? {};
   const dt = `${r.date}${r.date ? `（${weekdayLabel(r.date)}）` : ''}${r.time ? ` ${r.time}` : ''}`;
   const booker = r.bookingName ?? res.bookingName ?? '';
