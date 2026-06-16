@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 export interface LedgerColumn<R> {
   key: string;
@@ -31,11 +31,11 @@ interface Props<R> {
 /** 可拖寬、可隱藏欄、可排序的編輯表格。欄寬變更透過 onResize 寫回（按儲存才上雲端）。 */
 export default function LedgerTable<R>(props: Props<R>) {
   const { columns, rows, rowKey, hidden = [], widths = {}, onResize, sort, onSort, footerLabel, emptyText } = props;
-  const [live, setLive] = useState<{ key: string; width: number } | null>(null);
+  const colRefs = useRef<Record<string, HTMLTableColElement | null>>({});
 
   const hiddenSet = new Set(hidden);
   const cols = columns.filter((c) => !hiddenSet.has(c.key));
-  const widthOf = (c: LedgerColumn<R>) => (live && live.key === c.key ? live.width : widths[c.key] ?? c.width ?? 120);
+  const widthOf = (c: LedgerColumn<R>) => widths[c.key] ?? c.width ?? 120;
 
   let display = rows;
   if (sort) {
@@ -55,11 +55,12 @@ export default function LedgerTable<R>(props: Props<R>) {
     e.stopPropagation();
     const startX = e.clientX;
     const startW = widthOf(c);
+    const colEl = colRefs.current[c.key];
     const calc = (ev: MouseEvent) => Math.max(48, startW + (ev.clientX - startX));
-    const move = (ev: MouseEvent) => setLive({ key: c.key, width: calc(ev) });
+    // 拖曳期間直接改 <col> 寬度（不觸發 React 重繪），避免大表(餐廳 14 列)每像素重繪整張表而卡死
+    const move = (ev: MouseEvent) => { if (colEl) colEl.style.width = `${calc(ev)}px`; };
     const up = (ev: MouseEvent) => {
       onResize?.(c.key, Math.round(calc(ev)));
-      setLive(null);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
     };
@@ -73,7 +74,7 @@ export default function LedgerTable<R>(props: Props<R>) {
     <div className="led-tb-wrap">
       <table className="led-tb led-tb-fixed">
         <colgroup>
-          {cols.map((c) => <col key={c.key} style={{ width: widthOf(c) }} />)}
+          {cols.map((c) => <col key={c.key} ref={(el) => { colRefs.current[c.key] = el; }} style={{ width: widthOf(c) }} />)}
         </colgroup>
         <thead>
           <tr>
