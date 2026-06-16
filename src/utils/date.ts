@@ -25,6 +25,11 @@ export function formatMonthDay(iso: string): string {
   return `${m}/${d}`;
 }
 
+/** 只回週幾單字（日/一/…/六）。 */
+export function weekdayLabel(iso: string): string {
+  return WEEKDAYS[parseDate(iso).getDay()] ?? '';
+}
+
 export function formatWithWeekday(iso: string): string {
   const date = parseDate(iso);
   const m = String(date.getMonth() + 1).padStart(2, '0');

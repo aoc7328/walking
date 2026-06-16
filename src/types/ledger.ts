@@ -6,10 +6,10 @@
  * 分析三大塊由 category 決定，不由 phase：餐飲→food、購物→shopping、其餘→fixed。
  */
 
-export type ExpenseCategory = '交通' | '住宿' | '餐飲' | '購物' | '其他';
+export type ExpenseCategory = '交通' | '住宿' | '飲食' | '購物' | '其他';
 export type ExpensePhase = 'pre' | 'during';
 
-/** 消費分析的三大塊。 */
+/** 消費分析的歸併塊（headline）。五類別實際佔比另算。 */
 export type AnalysisBucket = 'fixed' | 'food' | 'shopping';
 
 export type PaymentKind = 'card' | 'cash' | 'mobile';
@@ -29,24 +29,28 @@ export interface CategoryBudget {
   amount: number;
 }
 
-/** 餐廳預約狀態：已預約 / 沒預約 / 不用預約 / 臨時想去（候補）。 */
-export type ReservationStatus = 'reserved' | 'none' | 'walkin' | 'maybe';
+/** 餐廳預約狀態：已預約 / 未預約 / 不需預約(現場) / 臨時想去 / 已取消。 */
+export type ReservationStatus = 'reserved' | 'none' | 'walkin' | 'impromptu' | 'cancelled';
 
 /** 住宿訂房（出發前專用厚表）。語意上 category 固定為「住宿」。 */
 export interface Accommodation {
   id: string;
   paid: boolean;
-  area: string;
+  /** 區域，例如「福岡天神」「別府」。 */
+  area?: string;
   name: string;
-  /** 入住日 YYYY-MM-DD（退房日 = checkIn + nights）。 */
-  checkIn: string;
+  /** 入住日 YYYY-MM-DD（退房日 = checkIn + nights）。規劃中可留空、只填晚數。 */
+  checkIn?: string;
   nights: number;
-  pricePerNight: number;
-  /** 每晚價格的幣別（台灣訂可能刷 TWD，當地訂可能刷當地）。 */
+  /** 整段住宿總價（不是每晚；每晚 = price / nights）。 */
+  price: number;
+  /** 價格幣別（台灣訂多為 TWD，當地訂可能為當地幣）。 */
   currency: string;
-  breakfast: boolean;
-  /** 訂購平台 Agoda / Booking / 官網… */
+  /** 附餐：'早餐' / '早餐、晚餐' / 空＝無。 */
+  meals?: string;
+  /** 訂購平台 Agoda / Booking.com / hotels.com / 官網… */
   platform: string;
+  /** 刷卡日期或付款狀態註記（'已付款' / '現場付款' / 日期）。 */
   chargeDate?: string;
   paymentMethodId?: string;
   note?: string;
@@ -73,6 +77,9 @@ export interface Restaurant {
   bookingRef?: string;
 
   // 帳務（可事先填，台灣訂位時有時就先刷了）
+  /** 預估費用（台幣）。出國前抓的預算參考。 */
+  estimated?: number;
+  /** 實際開銷。 */
   amount?: number;
   currency?: string;
   paid: boolean;

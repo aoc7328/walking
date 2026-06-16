@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { getLedger } from '../../utils/ledger';
+import { SAMPLE_KYUSHU_LEDGER } from '../../db/sampleLedger';
+import PreDepartureTab from './PreDepartureTab';
 
 type Tab = 'pre' | 'during' | 'analysis';
 
@@ -11,17 +13,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'analysis', label: '消費分析' },
 ];
 
-/** 各分頁 P1 先放結構說明的空殼，P2/P3 再填進真正的表與圖。 */
 const PLACEHOLDER: Record<Tab, { title: string; lines: string[] }> = {
-  pre: {
-    title: '出發前 · 已知 / 預訂項目',
-    lines: [
-      '住宿訂房表（付款狀態・區域・店名・入住日+晚數・每晚價+幣別・含早餐・平台・刷卡日）',
-      '餐廳預訂表（狀態・種類・時間・訂位資訊・預約管道/編號・開銷・支付）— 可匯出 CSV/PDF 給秘書',
-      '其他固定項（交通/簽證/保險/eSIM…）',
-      '各類別預算設定（餐飲、購物…的預算天花板）',
-    ],
-  },
+  pre: { title: '', lines: [] },
   during: {
     title: '出發後 · 旅途流水帳',
     lines: [
@@ -34,8 +27,8 @@ const PLACEHOLDER: Record<Tab, { title: string; lines: string[] }> = {
     title: '消費分析',
     lines: [
       '預估總額 vs 實際總額 + 差距',
-      '三大塊圓環：固定成本 / 吃飯 / 購物',
-      '各類別明細比例',
+      '五類別佔比圓環：交通 / 住宿 / 飲食 / 購物 / 其他',
+      '前期開銷 vs 流水帳 大項彙總',
     ],
   },
 };
@@ -44,12 +37,18 @@ export default function LedgerModal() {
   const open = useUIStore((s) => s.ledgerModalOpen);
   const close = useUIStore((s) => s.closeLedgerModal);
   const trip = useTripStore((s) => s.trip);
+  const updateLedger = useTripStore((s) => s.updateLedger);
   const [tab, setTab] = useState<Tab>('pre');
 
   if (!open || !trip) return null;
 
   const ledger = getLedger(trip);
-  const ph = PLACEHOLDER[tab];
+
+  function loadSample() {
+    if (window.confirm('載入九州實帳範例？這會覆蓋目前這趟行程的帳本內容。')) {
+      updateLedger(() => structuredClone(SAMPLE_KYUSHU_LEDGER));
+    }
+  }
 
   return (
     <div
@@ -66,7 +65,10 @@ export default function LedgerModal() {
               {trip.name}　·　{ledger.localCurrency} ↔ TWD　·　匯率 1 {ledger.localCurrency} = {ledger.fxRate} TWD
             </div>
           </div>
-          <button className="btn" onClick={close} title="關閉">關閉</button>
+          <div className="ledger-modal-header-actions">
+            <button className="btn" onClick={loadSample} title="一鍵灌入九州實帳，方便用真實資料檢視">載入九州實帳</button>
+            <button className="btn" onClick={close} title="關閉">關閉</button>
+          </div>
         </div>
 
         <div className="ledger-tabs">
@@ -82,15 +84,19 @@ export default function LedgerModal() {
         </div>
 
         <div className="ledger-modal-body">
-          <div className="ledger-placeholder">
-            <div className="ledger-placeholder-title">{ph.title}</div>
-            <ul className="ledger-placeholder-list">
-              {ph.lines.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-            <div className="ledger-placeholder-note">這個分頁的內容即將上線。</div>
-          </div>
+          {tab === 'pre' ? (
+            <PreDepartureTab ledger={ledger} tripName={trip.name} />
+          ) : (
+            <div className="ledger-placeholder">
+              <div className="ledger-placeholder-title">{PLACEHOLDER[tab].title}</div>
+              <ul className="ledger-placeholder-list">
+                {PLACEHOLDER[tab].lines.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+              <div className="ledger-placeholder-note">這個分頁的內容即將上線。</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
