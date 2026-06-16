@@ -5,6 +5,7 @@ import { budgetBreakdown, cardUsage, expensesTotalTWD, categoriesOf } from '../.
 import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, DateCell, SelectCell, DeleteCell, MoneyInput } from './EditableCells';
 import LedgerTable, { type LedgerColumn, type SortState } from './LedgerTable';
+import QuickAddEntry from './QuickAddEntry';
 
 function BudgetBar({ committed, during, budget }: { committed: number; during: number; budget: number }) {
   const total = committed + during;
@@ -111,12 +112,10 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
       <section className="led-block">
         <div className="led-block-head">
           <h3>流水帳　<span className="led-muted">{during.length} 筆</span></h3>
-          <div className="led-block-actions">
-            <button className="led-add-btn led-add-primary" style={{ marginTop: 0 }} onClick={() => ed.addExpense('during', local)}>＋ 新增一筆</button>
-            <span className="led-muted">合計 <b className="led-strong">{formatMoney(duringTotal, 'TWD')}</b></span>
-          </div>
+          <span className="led-muted">合計 <b className="led-strong">{formatMoney(duringTotal, 'TWD')}</b></span>
         </div>
-        <LedgerTable tableId="during" columns={cols} rows={during} rowKey={(e) => e.id} hidden={ledger.view?.hiddenCols?.during ?? []} widths={ledger.view?.colWidths?.during ?? {}} onResize={(k, w) => ed.setColWidth('during', k, w)} sort={sort} onSort={onSort} footerLabel="小計" emptyText="尚無流水帳，按上方「＋ 新增一筆」開始記" />
+        <QuickAddEntry ledger={ledger} onAdd={ed.addDuringEntry} />
+        <LedgerTable tableId="during" columns={cols} rows={during} rowKey={(e) => e.id} hidden={ledger.view?.hiddenCols?.during ?? []} widths={ledger.view?.colWidths?.during ?? {}} onResize={(k, w) => ed.setColWidth('during', k, w)} sort={sort} onSort={onSort} footerLabel="小計" emptyText="上方填一筆按「送出」就會記進來" />
       </section>
     </div>
   );

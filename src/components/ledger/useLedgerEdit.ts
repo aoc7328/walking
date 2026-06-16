@@ -84,6 +84,9 @@ export function useLedgerEdit() {
       delRestaurant: (id: string) => upd((l) => ({ ...l, restaurants: l.restaurants.filter((r) => r.id !== id) })),
 
       addExpense: (phase: ExpensePhase, localCurrency: string) => upd((l) => ({ ...l, expenses: [...l.expenses, blankExpense(phase, localCurrency)] })),
+      /** 用填好的值直接新增一筆流水帳（給上方快速輸入列用）。 */
+      addDuringEntry: (data: { date: string; category: ExpenseCategory; title: string; amount: number; currency: string; paymentMethodId?: string }) =>
+        upd((l) => ({ ...l, expenses: [...l.expenses, { id: uuid(), phase: 'during', paid: true, ...data, paymentMethodId: data.paymentMethodId || undefined }] })),
       patchExpense: (id: string, patch: Partial<Expense>) =>
         upd((l) => ({ ...l, expenses: l.expenses.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
       delExpense: (id: string) => upd((l) => ({ ...l, expenses: l.expenses.filter((e) => e.id !== id) })),
