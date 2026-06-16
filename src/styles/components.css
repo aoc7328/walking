@@ -4491,7 +4491,7 @@ input.led-cell.num { text-align: right; }
 .led-cell-wide { max-width: none; flex: 1; min-width: 280px; }
 
 /* 可拖寬 / 排序 / 隱藏欄 的表格 */
-.led-tb-fixed { table-layout: fixed; width: auto; min-width: 100%; }
+.led-tb-fixed { table-layout: fixed; width: max-content; min-width: 100%; }
 .led-tb-fixed th { position: relative; }
 .led-tb-fixed td { overflow: hidden; text-overflow: ellipsis; }
 .led-col-resizer { position: absolute; top: 0; right: 0; width: 9px; height: 100%; cursor: col-resize; z-index: 5; }
@@ -4540,3 +4540,7 @@ input.led-cell.num { text-align: right; }
 .led-cmp-line { display: grid; grid-template-columns: 22px 1fr 84px; align-items: center; gap: 8px; font-size: 12px; }
 .led-cmp-line .tag { color: var(--ink-muted); }
 .led-cmp-line .val { text-align: right; font-feature-settings: 'tnum' 1; }
+
+/* 讓寬表在自己的 wrap 內橫向捲動，而不是把整頁撐寬（grid item 預設 min-width:auto 會被內容撐開） */
+.led-page-cols > .led-block { min-width: 0; }
+.led-block > .led-tb-wrap { max-width: 100%; }
