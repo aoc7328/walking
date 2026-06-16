@@ -1,6 +1,10 @@
-import type { Ledger } from '../../types/ledger';
+import type { Ledger, ExpenseCategory } from '../../types/ledger';
 import { formatMoney, formatAmount, toTWD } from '../../utils/money';
-import { budgetBreakdown, cardUsage, expensesTotalTWD } from '../../utils/ledger';
+import { budgetBreakdown, cardUsage, expensesTotalTWD, EXPENSE_CATEGORIES } from '../../utils/ledger';
+import { useLedgerEdit } from './useLedgerEdit';
+import { TextCell, NumCell, DateCell, SelectCell, DeleteCell } from './EditableCells';
+
+const catOpts = EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }));
 
 function BudgetBar({ committed, during, budget }: { committed: number; during: number; budget: number }) {
   const total = committed + during;
@@ -17,8 +21,11 @@ function BudgetBar({ committed, during, budget }: { committed: number; during: n
 }
 
 export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
+  const ed = useLedgerEdit();
   const fx = ledger.fxRate;
-  const pmName = (id?: string) => ledger.paymentMethods.find((p) => p.id === id)?.name ?? '';
+  const local = ledger.localCurrency;
+  const curOpts = local === 'TWD' ? [{ value: 'TWD', label: 'TWD' }] : [{ value: local, label: local }, { value: 'TWD', label: 'TWD' }];
+  const payOpts = [{ value: '', label: '—' }, ...ledger.paymentMethods.map((p) => ({ value: p.id, label: p.name }))];
   const budgets = budgetBreakdown(ledger);
   const cards = cardUsage(ledger).filter((c) => c.spent > 0 || c.limit !== undefined);
   const during = [...ledger.expenses.filter((e) => e.phase === 'during')].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
@@ -34,7 +41,7 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
           </span>
         </div>
         {budgets.length === 0 ? (
-          <div className="led-empty-row led-pad">這趟還沒設各類別預算（住宿/餐廳的已知花費仍會進「消費分析」）。</div>
+          <div className="led-empty-row led-pad">這趟還沒設各類別預算。到「設定」分頁可以設餐飲/購物等預算。</div>
         ) : (
           <div className="led-budgets">
             {budgets.map((b) => (
@@ -92,24 +99,25 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
         <div className="led-tb-wrap">
           <table className="led-tb">
             <thead>
-              <tr><th>日期</th><th>分類</th><th>項目</th><th className="num">原幣</th><th className="num">台幣</th><th>支付</th></tr>
+              <tr><th>日期</th><th>分類</th><th>項目</th><th className="num">金額</th><th>幣別</th><th className="num">台幣</th><th>支付</th><th></th></tr>
             </thead>
             <tbody>
-              {during.length === 0 ? (
-                <tr><td colSpan={6} className="led-empty-row">尚無流水帳</td></tr>
-              ) : during.map((e) => (
+              {during.map((e) => (
                 <tr key={e.id}>
-                  <td>{e.date ? e.date.slice(5).replace('-', '/') : ''}</td>
-                  <td>{e.category}</td>
-                  <td className="led-strong">{e.title}</td>
-                  <td className="num">{e.currency === 'TWD' ? <span className="led-muted">—</span> : formatMoney(e.amount, e.currency)}</td>
-                  <td className="num led-strong">{formatMoney(toTWD(e.amount, e.currency, fx), 'TWD')}</td>
-                  <td>{pmName(e.paymentMethodId)}</td>
+                  <td><DateCell value={e.date} onChange={(v) => ed.patchExpense(e.id, { date: v })} /></td>
+                  <td><SelectCell value={e.category} onChange={(v) => ed.patchExpense(e.id, { category: v as ExpenseCategory })} options={catOpts} /></td>
+                  <td><TextCell value={e.title} onChange={(v) => ed.patchExpense(e.id, { title: v })} placeholder="買了什麼" /></td>
+                  <td className="num"><NumCell value={e.amount} onChange={(v) => ed.patchExpense(e.id, { amount: v })} /></td>
+                  <td><SelectCell value={e.currency} onChange={(v) => ed.patchExpense(e.id, { currency: v })} options={curOpts} /></td>
+                  <td className="num led-muted">{formatAmount(toTWD(e.amount, e.currency, fx))}</td>
+                  <td><SelectCell value={e.paymentMethodId ?? ''} onChange={(v) => ed.patchExpense(e.id, { paymentMethodId: v || undefined })} options={payOpts} /></td>
+                  <td><DeleteCell onClick={() => ed.delExpense(e.id)} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <button className="led-add-btn" onClick={() => ed.addExpense('during', local)}>＋ 新增一筆流水帳</button>
       </section>
     </div>
   );

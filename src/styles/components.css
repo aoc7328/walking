@@ -4391,15 +4391,48 @@
 
 /* 密集表格（Excel 風） */
 .led-tb-wrap { overflow-x: auto; border: 0.5px solid var(--border-soft); border-radius: var(--radius-md); }
-.led-tb { width: 100%; border-collapse: collapse; font-size: 12.5px; font-feature-settings: 'tnum' 1; }
-.led-tb th { background: var(--bg-soft); color: var(--ink-secondary); font-weight: 500; text-align: left; padding: 6px 9px; border: 0.5px solid var(--border-soft); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
-.led-tb td { padding: 5px 9px; border: 0.5px solid var(--border-soft); color: var(--ink-secondary); vertical-align: top; }
+.led-tb { width: 100%; min-width: max-content; border-collapse: collapse; font-size: 14px; font-feature-settings: 'tnum' 1; }
+.led-tb td .led-cell { min-width: 56px; }
+.led-tb th { background: var(--border-soft); color: var(--ink-primary); font-weight: 600; text-align: left; padding: 8px 10px; border: 0.5px solid var(--border-medium); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+.led-tb td { padding: 6px 10px; border: 0.5px solid var(--border-soft); color: var(--ink-primary); vertical-align: middle; }
 .led-tb td.num, .led-tb th.num { text-align: right; white-space: nowrap; }
 .led-tb tbody tr:hover td { background: var(--bg-softer); }
-.led-tb tfoot td { font-weight: 500; background: var(--bg-soft); color: var(--ink-primary); }
+.led-tb tfoot td { font-weight: 600; background: var(--bg-soft); color: var(--ink-primary); }
 .led-strong { color: var(--ink-primary); font-weight: 500; }
-.led-muted { color: var(--ink-muted); font-size: 11px; }
+.led-muted { color: var(--ink-secondary); font-size: 12.5px; }
 .led-note { color: var(--ink-secondary); white-space: normal; min-width: 120px; }
+
+/* 可直接編輯的儲存格（看起來像純文字，hover/focus 才顯邊框） */
+.led-cell {
+  width: 100%;
+  min-width: 44px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink-primary);
+  padding: 3px 5px;
+  border-radius: var(--radius-sm);
+  font-feature-settings: 'tnum' 1;
+}
+.led-cell::placeholder { color: var(--ink-faint); }
+.led-cell:hover { border-color: var(--border-medium); background: var(--bg-card); }
+.led-cell:focus { outline: none; border-color: var(--accent-primary); background: #fff; box-shadow: 0 0 0 2px var(--accent-primary-soft); }
+select.led-cell { cursor: pointer; }
+input.led-cell.num { text-align: right; }
+.led-check { width: 17px; height: 17px; cursor: pointer; accent-color: var(--accent-primary); }
+.led-row-del {
+  border: none; background: transparent; color: var(--ink-muted); cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: var(--radius-sm);
+}
+.led-row-del:hover { background: var(--accent-warm-soft); color: var(--accent-warm); }
+.led-add-btn {
+  margin-top: 8px; font-family: var(--font-body); font-size: 13px; color: var(--accent-primary);
+  background: transparent; border: 1px dashed var(--border-medium); border-radius: var(--radius-md);
+  padding: 7px 14px; cursor: pointer; transition: background var(--t-fast);
+}
+.led-add-btn:hover { background: var(--accent-primary-soft); }
 .led-yes { color: #0F6E56; }
 .led-no { color: var(--ink-muted); }
 .led-empty-row { text-align: center; color: var(--ink-muted); font-style: italic; padding: 14px; }
@@ -4444,3 +4477,12 @@
 .led-donut-cap { font-size: 11px; fill: var(--ink-muted); }
 .led-donut-num { font-size: 15px; font-weight: 500; fill: var(--ink-primary); font-feature-settings: 'tnum' 1; }
 .led-tb-analysis { flex: 1; min-width: 300px; }
+
+/* Ledger 設定分頁 */
+.led-settings-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.led-settings-row label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-primary); }
+.led-cell-boxed { border: 0.5px solid var(--border-medium); background: var(--bg-card); width: auto; min-width: 90px; max-width: 160px; }
+.led-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.led-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-soft); color: var(--ink-primary); font-size: 13px; padding: 4px 6px 4px 12px; border-radius: 99px; }
+.led-chip-x { border: none; background: transparent; color: var(--ink-muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 4px; border-radius: 99px; }
+.led-chip-x:hover { background: var(--accent-warm-soft); color: var(--accent-warm); }

@@ -72,7 +72,10 @@ const TOKYO: Ledger = {
   ],
   channels: ['TabeLog', '秘書'],
   budgets: [],
-  accommodations: [],
+  accommodations: [
+    // 東京帳只有「飯店 35,064」的總額（試算表沒留逐間明細），先放一筆合計，可再拆細編輯。
+    { id: 'tk-ac-1', paid: true, area: '東京', name: '東京住宿（全程合計）', checkIn: '2025-01-08', nights: 6, price: 35064, currency: 'TWD', platform: '', chargeDate: '已付款' },
+  ],
   restaurants: [
     { id: 'tk-rs-1', date: '2025-01-08', time: '12:30', name: '淺草今半', cuisine: '壽喜燒', status: 'walkin', amount: 29403, currency: 'JPY', paid: true, paymentMethodId: 'tk-feixing', note: '午餐只能現場排隊' },
     { id: 'tk-rs-2', date: '2025-01-09', time: '12:00', name: '麥當勞', cuisine: '', status: 'impromptu', amount: 520, currency: 'JPY', paid: true, paymentMethodId: 'tk-feixing' },
@@ -91,7 +94,6 @@ const TOKYO: Ledger = {
   ],
   expenses: [
     { id: 'tk-pre-1', phase: 'pre', category: '交通', title: '機票', amount: 26636, currency: 'TWD', paid: true },
-    { id: 'tk-pre-2', phase: 'pre', category: '住宿', title: '飯店（全程）', amount: 35064, currency: 'TWD', paid: true },
     { id: 'tk-pre-3', phase: 'pre', category: '交通', title: '行李接送', amount: 3154, currency: 'TWD', paid: true },
     { id: 'tk-pre-4', phase: 'pre', category: '交通', title: '機場快線來回', amount: 1870, currency: 'TWD', paid: true },
     { id: 'tk-pre-5', phase: 'pre', category: '交通', title: '機場接送加值', amount: 300, currency: 'TWD', paid: true },

@@ -6,13 +6,15 @@ import { SAMPLE_LEDGERS } from '../../db/sampleLedger';
 import PreDeparturePage from './PreDeparturePage';
 import DuringTripPage from './DuringTripPage';
 import AnalysisPage from './AnalysisPage';
+import SettingsPage from './SettingsPage';
 
-type Tab = 'pre' | 'during' | 'analysis';
+type Tab = 'pre' | 'during' | 'analysis' | 'settings';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'pre', label: '出發前 · 預訂' },
   { key: 'during', label: '出發後 · 流水帳' },
   { key: 'analysis', label: '消費分析' },
+  { key: 'settings', label: '設定' },
 ];
 
 export default function LedgerPage() {
@@ -22,6 +24,7 @@ export default function LedgerPage() {
   const updateLedger = useTripStore((s) => s.updateLedger);
   const dirty = useTripStore((s) => s.dirty);
   const saveTrip = useTripStore((s) => s.saveTrip);
+  const saveAsNewTrip = useTripStore((s) => s.saveAsNewTrip);
   const persisted = useTripStore((s) => s.persisted);
   const [tab, setTab] = useState<Tab>('pre');
   const [saving, setSaving] = useState(false);
@@ -43,10 +46,15 @@ export default function LedgerPage() {
   }
 
   async function handleSave() {
-    if (saving || !persisted) return;
+    if (saving) return;
     setSaving(true);
     try {
-      await saveTrip();
+      if (persisted) {
+        await saveTrip();
+      } else {
+        const name = window.prompt('這趟還沒存過，要存成新行程。行程名稱：', trip?.name ?? '新行程');
+        if (name) await saveAsNewTrip(name);
+      }
     } catch (err) {
       window.alert('儲存失敗：' + (err instanceof Error ? err.message : String(err)));
     } finally {
@@ -67,16 +75,14 @@ export default function LedgerPage() {
           </span>
         </div>
         <div className="ledger-page-bar-actions">
-          {persisted && (
-            <button
-              className={`btn${dirty ? ' btn-primary' : ''}`}
-              onClick={handleSave}
-              disabled={saving || !dirty}
-              title="把帳本變更存到雲端"
-            >
-              {saving ? '儲存中…' : dirty ? '儲存 ●' : '已儲存'}
-            </button>
-          )}
+          <button
+            className={`btn${dirty || !persisted ? ' btn-primary' : ''}`}
+            onClick={handleSave}
+            disabled={saving || (persisted && !dirty)}
+            title="把帳本變更存到雲端，重整也不會不見"
+          >
+            {saving ? '儲存中…' : !persisted ? '另存行程' : dirty ? '儲存 ●' : '已儲存'}
+          </button>
           <select className="led-import-select" defaultValue="" onChange={importSample} title="把對應那趟的實帳匯入到目前行程（只填帳本、不動行程）">
             <option value="" disabled>匯入範例帳本…</option>
             {SAMPLE_LEDGERS.map((s) => (
@@ -102,6 +108,7 @@ export default function LedgerPage() {
         {tab === 'pre' && <PreDeparturePage ledger={ledger} tripName={trip.name} />}
         {tab === 'during' && <DuringTripPage ledger={ledger} />}
         {tab === 'analysis' && <AnalysisPage ledger={ledger} />}
+        {tab === 'settings' && <SettingsPage ledger={ledger} />}
       </div>
     </div>
   );
