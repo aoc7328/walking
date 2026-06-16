@@ -131,6 +131,8 @@ export interface Ledger {
   reservation?: ReservationDefaults;
   /** 自訂類別清單（含預設五類）。未設時用預設五類。 */
   categories?: string[];
+  /** 表格欄寬與隱藏欄設定。 */
+  view?: LedgerView;
   budgets: CategoryBudget[];
   paymentMethods: PaymentMethod[];
   /** 可自訂的預約管道選項（餐廳用）。 */
@@ -138,6 +140,14 @@ export interface Ledger {
   accommodations: Accommodation[];
   restaurants: Restaurant[];
   expenses: Expense[];
+}
+
+/** 表格檢視設定（欄寬、隱藏欄）；存在 ledger 裡，按「儲存」才寫雲端。 */
+export interface LedgerView {
+  /** tableId → 欄 key → 寬度(px)。 */
+  colWidths?: Record<string, Record<string, number>>;
+  /** tableId → 被隱藏的欄 key 陣列。 */
+  hiddenCols?: Record<string, string[]>;
 }
 
 /** 本位幣（分析、預算、卡片額度一律以此為基準）。 */

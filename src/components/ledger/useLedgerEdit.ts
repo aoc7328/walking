@@ -32,6 +32,30 @@ export function useLedgerEdit() {
     const upd = (fn: (l: Ledger) => Ledger) => updateLedger(fn);
     return {
       setMeta: (patch: Partial<Pick<Ledger, 'localCurrency' | 'fxRate'>>) => upd((l) => ({ ...l, ...patch })),
+
+      setColWidth: (tableId: string, key: string, width: number) =>
+        upd((l) => {
+          const v = l.view ?? {};
+          const cw = { ...(v.colWidths ?? {}) };
+          cw[tableId] = { ...(cw[tableId] ?? {}), [key]: width };
+          return { ...l, view: { ...v, colWidths: cw } };
+        }),
+      toggleCol: (tableId: string, key: string) =>
+        upd((l) => {
+          const v = l.view ?? {};
+          const hc = { ...(v.hiddenCols ?? {}) };
+          const cur = new Set(hc[tableId] ?? []);
+          if (cur.has(key)) cur.delete(key); else cur.add(key);
+          hc[tableId] = [...cur];
+          return { ...l, view: { ...v, hiddenCols: hc } };
+        }),
+      setHiddenCols: (tableId: string, keys: string[]) =>
+        upd((l) => {
+          const v = l.view ?? {};
+          const hc = { ...(v.hiddenCols ?? {}) };
+          hc[tableId] = keys;
+          return { ...l, view: { ...v, hiddenCols: hc } };
+        }),
       setReservation: (patch: Partial<ReservationDefaults>) => upd((l) => ({ ...l, reservation: { ...(l.reservation ?? {}), ...patch } })),
 
       addAccommodation: () => upd((l) => ({ ...l, accommodations: [...l.accommodations, blankAccommodation()] })),

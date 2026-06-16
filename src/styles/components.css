@@ -4489,3 +4489,27 @@ input.led-cell.num { text-align: right; }
 
 .led-fullnote { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--ink-primary); }
 .led-cell-wide { max-width: none; flex: 1; min-width: 280px; }
+
+/* 可拖寬 / 排序 / 隱藏欄 的表格 */
+.led-tb-fixed { table-layout: fixed; width: auto; min-width: 100%; }
+.led-tb-fixed th { position: relative; overflow: hidden; }
+.led-tb-fixed td { overflow: hidden; text-overflow: ellipsis; }
+.led-col-resizer { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 2; }
+.led-col-resizer:hover { background: var(--accent-primary); opacity: 0.35; }
+.led-th-sort { cursor: pointer; user-select: none; }
+.led-th-sort:hover { color: var(--accent-warm); }
+.led-sort-ind { color: var(--accent-warm); }
+
+.led-cols-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0 10px; font-size: 13px; }
+.led-cols-panel { position: relative; display: inline-block; }
+.led-cols-panel > summary { cursor: pointer; list-style: none; padding: 5px 11px; border: 0.5px solid var(--border-medium); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 13px; color: var(--ink-primary); }
+.led-cols-panel > summary::-webkit-details-marker { display: none; }
+.led-cols-panel[open] > summary { border-color: var(--accent-primary); color: var(--accent-primary); }
+.led-cols-body { position: absolute; z-index: 20; margin-top: 4px; background: var(--bg-card); border: 0.5px solid var(--border-medium); border-radius: var(--radius-md); box-shadow: var(--shadow-modal); padding: 12px; width: 280px; }
+.led-cols-actions { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.led-cols-checks { display: flex; flex-wrap: wrap; gap: 7px 14px; }
+.led-col-check { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-primary); white-space: nowrap; cursor: pointer; }
+.led-col-check input { accent-color: var(--accent-primary); }
+
+.led-add-primary { background: var(--accent-primary); color: #fff; border: 1px solid var(--accent-primary); }
+.led-add-primary:hover { background: var(--accent-primary); opacity: 0.9; }

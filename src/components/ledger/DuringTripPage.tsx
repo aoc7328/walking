@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import type { Ledger, ExpenseCategory } from '../../types/ledger';
-import { formatMoney, formatAmount } from '../../utils/money';
+import { formatMoney, formatAmount, toTWD } from '../../utils/money';
 import { budgetBreakdown, cardUsage, expensesTotalTWD, categoriesOf } from '../../utils/ledger';
 import { useLedgerEdit } from './useLedgerEdit';
-import { TextCell, DateCell, SelectCell, DeleteCell, MoneyCells } from './EditableCells';
+import { TextCell, DateCell, SelectCell, DeleteCell, MoneyInput } from './EditableCells';
+import LedgerTable, { type LedgerColumn, type SortState } from './LedgerTable';
 
 function BudgetBar({ committed, during, budget }: { committed: number; during: number; budget: number }) {
   const total = committed + during;
@@ -24,11 +26,26 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
   const local = ledger.localCurrency;
   const catOpts = categoriesOf(ledger).map((c) => ({ value: c, label: c }));
   const locOf = (twd: number) => (fx ? Math.round(twd / fx) : 0);
+  const pmName = (id?: string) => ledger.paymentMethods.find((p) => p.id === id)?.name ?? '';
   const payOpts = [{ value: '', label: '—' }, ...ledger.paymentMethods.map((p) => ({ value: p.id, label: p.name }))];
   const budgets = budgetBreakdown(ledger);
   const cards = cardUsage(ledger).filter((c) => c.spent > 0 || c.limit !== undefined);
-  const during = [...ledger.expenses.filter((e) => e.phase === 'during')].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+  const during = ledger.expenses.filter((e) => e.phase === 'during');
   const duringTotal = expensesTotalTWD(ledger, 'during');
+
+  const [sort, setSort] = useState<SortState | null>({ key: 'date', dir: 'desc' });
+  const onSort = (key: string) => setSort((s) => (s && s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+
+  type E = Ledger['expenses'][number];
+  const cols: LedgerColumn<E>[] = [
+    { key: 'date', label: '日期', width: 132, sortable: true, sortValue: (e) => e.date ?? '', render: (e) => <DateCell value={e.date} onChange={(v) => ed.patchExpense(e.id, { date: v })} /> },
+    { key: 'category', label: '分類', width: 96, sortable: true, sortValue: (e) => e.category, render: (e) => <SelectCell value={e.category} onChange={(v) => ed.patchExpense(e.id, { category: v as ExpenseCategory })} options={catOpts} /> },
+    { key: 'title', label: '項目', width: 180, render: (e) => <TextCell value={e.title} onChange={(v) => ed.patchExpense(e.id, { title: v })} placeholder="買了什麼" /> },
+    { key: 'amtTwd', label: '金額 NT$', num: true, width: 96, sortable: true, sortValue: (e) => toTWD(e.amount, e.currency, fx), render: (e) => <MoneyInput kind="twd" amount={e.amount} currency={e.currency} localCurrency={local} fxRate={fx} onChange={(amt, cur) => ed.patchExpense(e.id, { amount: amt, currency: cur })} />, foot: <b className="led-strong">{formatAmount(duringTotal)}</b> },
+    { key: 'amtLocal', label: `金額 ${local}`, num: true, width: 96, render: (e) => <MoneyInput kind="local" amount={e.amount} currency={e.currency} localCurrency={local} fxRate={fx} onChange={(amt, cur) => ed.patchExpense(e.id, { amount: amt, currency: cur })} />, foot: formatAmount(locOf(duringTotal)) },
+    { key: 'pay', label: '支付', width: 110, sortable: true, sortValue: (e) => pmName(e.paymentMethodId), render: (e) => <SelectCell value={e.paymentMethodId ?? ''} onChange={(v) => ed.patchExpense(e.id, { paymentMethodId: v || undefined })} options={payOpts} /> },
+    { key: 'del', label: '', width: 40, render: (e) => <DeleteCell onClick={() => ed.delExpense(e.id)} /> },
+  ];
 
   return (
     <div className="led-page-cols">
@@ -92,37 +109,14 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
 
       {/* 流水帳 */}
       <section className="led-block">
-        <div className="led-block-head"><h3>流水帳　<span className="led-muted">{during.length} 筆</span></h3>
-          <span className="led-muted">合計 <b className="led-strong">{formatMoney(duringTotal, 'TWD')}</b></span>
+        <div className="led-block-head">
+          <h3>流水帳　<span className="led-muted">{during.length} 筆</span></h3>
+          <div className="led-block-actions">
+            <button className="led-add-btn led-add-primary" style={{ marginTop: 0 }} onClick={() => ed.addExpense('during', local)}>＋ 新增一筆</button>
+            <span className="led-muted">合計 <b className="led-strong">{formatMoney(duringTotal, 'TWD')}</b></span>
+          </div>
         </div>
-        <div className="led-tb-wrap">
-          <table className="led-tb">
-            <thead>
-              <tr><th>日期</th><th>分類</th><th>項目</th><th className="num">金額 NT$</th><th className="num">金額 {local}</th><th>支付</th><th></th></tr>
-            </thead>
-            <tbody>
-              {during.map((e) => (
-                <tr key={e.id}>
-                  <td><DateCell value={e.date} onChange={(v) => ed.patchExpense(e.id, { date: v })} /></td>
-                  <td><SelectCell value={e.category} onChange={(v) => ed.patchExpense(e.id, { category: v as ExpenseCategory })} options={catOpts} /></td>
-                  <td><TextCell value={e.title} onChange={(v) => ed.patchExpense(e.id, { title: v })} placeholder="買了什麼" /></td>
-                  <MoneyCells amount={e.amount} currency={e.currency} localCurrency={local} fxRate={fx} onChange={(amt, cur) => ed.patchExpense(e.id, { amount: amt, currency: cur })} />
-                  <td><SelectCell value={e.paymentMethodId ?? ''} onChange={(v) => ed.patchExpense(e.id, { paymentMethodId: v || undefined })} options={payOpts} /></td>
-                  <td><DeleteCell onClick={() => ed.delExpense(e.id)} /></td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={3}>小計</td>
-                <td className="num">{formatAmount(duringTotal)}</td>
-                <td className="num">{formatAmount(locOf(duringTotal))}</td>
-                <td colSpan={2}></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <button className="led-add-btn" onClick={() => ed.addExpense('during', local)}>＋ 新增一筆流水帳</button>
+        <LedgerTable tableId="during" columns={cols} rows={during} rowKey={(e) => e.id} hidden={ledger.view?.hiddenCols?.during ?? []} widths={ledger.view?.colWidths?.during ?? {}} onResize={(k, w) => ed.setColWidth('during', k, w)} sort={sort} onSort={onSort} footerLabel="小計" emptyText="尚無流水帳，按上方「＋ 新增一筆」開始記" />
       </section>
     </div>
   );

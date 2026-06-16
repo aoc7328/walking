@@ -72,6 +72,33 @@ export function DeleteCell({ onClick }: { onClick: () => void }) {
   );
 }
 
+/** 單格金額輸入（台幣或當地其中一格）；打進去就把整筆的金額+幣別設成這格的幣別。 */
+export function MoneyInput({
+  kind, amount, currency, localCurrency, fxRate, onChange,
+}: {
+  kind: 'twd' | 'local';
+  amount: number | undefined;
+  currency: string;
+  localCurrency: string;
+  fxRate: number;
+  onChange: (amount: number, currency: string) => void;
+}) {
+  const has = amount !== undefined && amount !== null && !Number.isNaN(amount);
+  let val: number | '' = '';
+  if (has) {
+    if (kind === 'twd') val = currency === 'TWD' ? amount! : Math.round(amount! * fxRate);
+    else val = currency === localCurrency ? amount! : fxRate ? Math.round(amount! / fxRate) : '';
+  }
+  return (
+    <input
+      className="led-cell num"
+      type="number"
+      value={val}
+      onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value), kind === 'twd' ? 'TWD' : localCurrency)}
+    />
+  );
+}
+
 /**
  * 金額雙欄：台幣 + 當地幣並排，打哪一欄、另一欄自動換算。
  * 儲存的是「使用者輸入的值 + 幣別」（避免換算來回的捨入誤差）。
