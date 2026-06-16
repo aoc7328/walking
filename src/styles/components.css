@@ -4525,3 +4525,18 @@ input.led-cell.num { text-align: right; }
 .led-insights { background: var(--bg-softer); border: 0.5px solid var(--border-medium); border-radius: var(--radius-md); padding: 12px 16px; }
 .led-insights ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
 .led-insights li { font-size: 14px; color: var(--ink-primary); line-height: 1.5; }
+
+/* 分析圖表 */
+.led-hbar { height: 11px; background: var(--bg-soft); border-radius: 99px; overflow: hidden; }
+.led-hbar-fill { height: 100%; border-radius: 99px; }
+.led-chart { display: grid; gap: 9px; }
+.led-chart-row { display: grid; grid-template-columns: 116px 1fr 100px; align-items: center; gap: 12px; font-size: 13px; }
+.led-chart-row .lab { display: flex; align-items: center; gap: 6px; color: var(--ink-primary); }
+.led-chart-row .val { text-align: right; font-feature-settings: 'tnum' 1; color: var(--ink-primary); }
+.led-cmp { display: grid; gap: 12px; }
+.led-cmp-grp { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: center; }
+.led-cmp-cat { font-size: 13px; display: flex; align-items: center; gap: 6px; color: var(--ink-primary); }
+.led-cmp-lines { display: grid; gap: 4px; }
+.led-cmp-line { display: grid; grid-template-columns: 22px 1fr 84px; align-items: center; gap: 8px; font-size: 12px; }
+.led-cmp-line .tag { color: var(--ink-muted); }
+.led-cmp-line .val { text-align: right; font-feature-settings: 'tnum' 1; }

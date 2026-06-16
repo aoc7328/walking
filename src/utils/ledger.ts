@@ -228,6 +228,51 @@ export function planVsActual(l: Ledger): { rows: PlanActualRow[]; estTotal: numb
   return { rows, estTotal, actTotal, diff: actTotal - estTotal };
 }
 
+export interface PivotResult {
+  methods: { id: string; name: string }[];
+  rows: { category: string; cells: number[]; total: number }[];
+  colTotals: number[];
+  grand: number;
+}
+
+/** 樞紐表：類別（列）× 支付方式（欄），值為台幣花費。自動去掉全空的支付方式欄。 */
+export function pivotCategoryPayment(l: Ledger): PivotResult {
+  const NONE = '__none__';
+  const allMethods = [...l.paymentMethods.map((p) => ({ id: p.id, name: p.name })), { id: NONE, name: '未指定' }];
+  const idx = new Map(allMethods.map((m, i) => [m.id, i]));
+  const catMap = new Map<string, number[]>();
+  const add = (cat: string, pmId: string | undefined, twd: number) => {
+    if (!twd) return;
+    if (!catMap.has(cat)) catMap.set(cat, new Array(allMethods.length).fill(0));
+    const i = idx.get(pmId && idx.has(pmId) ? pmId : NONE)!;
+    catMap.get(cat)![i] += twd;
+  };
+  for (const a of l.accommodations) add('住宿', a.paymentMethodId, toTWD(a.price, a.currency, l.fxRate));
+  for (const r of l.restaurants) if (r.amount) add('飲食', r.paymentMethodId, toTWD(r.amount, r.currency ?? 'TWD', l.fxRate));
+  for (const e of l.expenses) add(e.category, e.paymentMethodId, toTWD(e.amount, e.currency, l.fxRate));
+
+  const rows0 = categoriesOf(l).filter((c) => catMap.has(c)).map((category) => ({ category, cells: catMap.get(category)! }));
+  const colTotalsAll = allMethods.map((_, i) => rows0.reduce((s, r) => s + r.cells[i]!, 0));
+  const keep = allMethods.map((_, i) => i).filter((i) => colTotalsAll[i]! > 0);
+  const methods = keep.map((i) => allMethods[i]!);
+  const rows = rows0.map((r) => {
+    const cells = keep.map((i) => r.cells[i]!);
+    return { category: r.category, cells, total: cells.reduce((a, b) => a + b, 0) };
+  });
+  const colTotals = keep.map((i) => colTotalsAll[i]!);
+  return { methods, rows, colTotals, grand: colTotals.reduce((a, b) => a + b, 0) };
+}
+
+/** 出發後流水帳依日期加總（台幣），日期升冪。 */
+export function dailySpending(l: Ledger): { date: string; twd: number }[] {
+  const map = new Map<string, number>();
+  for (const e of l.expenses) {
+    if (e.phase !== 'during' || !e.date) continue;
+    map.set(e.date, (map.get(e.date) ?? 0) + toTWD(e.amount, e.currency, l.fxRate));
+  }
+  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, twd]) => ({ date, twd }));
+}
+
 /** 最大單筆開銷（住宿/餐廳/支出全部一起比，台幣）。 */
 export function largestExpense(l: Ledger): { label: string; twd: number } | null {
   let best: { label: string; twd: number } | null = null;
