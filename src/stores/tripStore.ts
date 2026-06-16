@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { Trip, DayPlan, ItineraryItem, Leg, DayMark } from '../types/trip';
+import type { Ledger } from '../types/ledger';
 import type { Place, TransportMode } from '../types/place';
+import { emptyLedger } from '../utils/ledger';
 import { MOCK_TRIP } from '../db/mockData';
 import { uuid } from '../utils/format';
 import { addDays, addMinutesToTime } from '../utils/date';
@@ -61,6 +63,9 @@ interface TripStore {
   setMarkLabel: (glyph: string, color: string, label: string) => void;
   /** 從圖例移除某符號，並一併從所有天的 marks 拿掉。 */
   removeMark: (glyph: string, color: string) => void;
+
+  /** 編輯帳本：以 mutator 改 ledger 並寫回（沒設過帳本會先補空的）。trip ref 變動 → 自動標 dirty。 */
+  updateLedger: (mutate: (ledger: Ledger) => Ledger) => void;
 
   // 多 trip 管理
   createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
@@ -569,6 +574,14 @@ export const useTripStore = create<TripStore>((set, get) => ({
         d.marks?.some(same) ? { ...d, marks: d.marks.filter((m) => !same(m)) } : d,
       );
       return { trip: { ...state.trip, days, markLegend, updatedAt: Date.now() } };
+    }),
+
+  updateLedger: (mutate) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const current = state.trip.ledger ?? emptyLedger();
+      const ledger = mutate(current);
+      return { trip: { ...state.trip, ledger, updatedAt: Date.now() } };
     }),
 
   refreshLegsForDay: async (dayId) => {

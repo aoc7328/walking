@@ -1,4 +1,5 @@
 import type { Place, TransportMode } from './place';
+import type { Ledger } from './ledger';
 
 export interface ItineraryItem {
   id: string;
@@ -63,6 +64,8 @@ export interface Trip {
   favorites: Place[];
   /** 標記符號的說明（圖例）。每個符號用 glyph+color 當鍵。 */
   markLegend?: MarkLegendEntry[];
+  /** 旅遊帳本（出發前預訂/出發後流水帳/預算/消費分析）。舊行程為 undefined，讀寫時 fallback 空帳本。 */
+  ledger?: Ledger;
   createdAt: number;
   updatedAt: number;
 }

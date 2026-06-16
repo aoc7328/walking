@@ -11,6 +11,7 @@ import NewTripModal from './NewTripModal';
 import ShareModal from '../share/ShareModal';
 import TripOverviewModal from '../overview/TripOverviewModal';
 import DownloadModal from '../download/DownloadModal';
+import LedgerModal from '../ledger/LedgerModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
@@ -25,6 +26,7 @@ export default function AppShell() {
   const collapse = useUIStore((s) => s.collapse);
   const closeDetail = useUIStore((s) => s.closeDetail);
   const closeDateModal = useUIStore((s) => s.closeDateModal);
+  const closeLedgerModal = useUIStore((s) => s.closeLedgerModal);
   const searchResults = useSearchStore((s) => s.results);
   const searchQuery = useSearchStore((s) => s.query);
   const toggleCollapse = useUIStore((s) => s.toggleCollapse);
@@ -82,11 +84,12 @@ export default function AppShell() {
       if (e.key === 'Escape') {
         closeDetail();
         closeDateModal();
+        closeLedgerModal();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [closeDetail, closeDateModal]);
+  }, [closeDetail, closeDateModal, closeLedgerModal]);
 
   const mainClass = ['main', collapse.leftPanel ? 'no-left' : '', collapse.rightPanel ? 'no-right' : '']
     .filter(Boolean)
@@ -108,6 +111,7 @@ export default function AppShell() {
       <ShareModal />
       <TripOverviewModal />
       <DownloadModal />
+      <LedgerModal />
     </div>
   );
 }

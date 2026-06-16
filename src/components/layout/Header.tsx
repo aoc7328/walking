@@ -62,6 +62,7 @@ export default function Header() {
   const openShareModal = useUIStore((s) => s.openShareModal);
   const openOverviewModal = useUIStore((s) => s.openOverviewModal);
   const openDownloadModal = useUIStore((s) => s.openDownloadModal);
+  const openLedgerModal = useUIStore((s) => s.openLedgerModal);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -105,6 +106,7 @@ export default function Header() {
         </div>
         <div className="header-actions">
           <button className="btn" onClick={openOverviewModal} title="打開整段行程的總覽地圖">總覽</button>
+          <button className="btn" onClick={openLedgerModal} title="這趟旅行的帳本：預訂、流水帳、預算與消費分析">帳本</button>
           <TripSwitcher />
           <button
             className={`btn${dirty ? ' btn-primary' : ''}`}

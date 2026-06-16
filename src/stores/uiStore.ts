@@ -40,6 +40,7 @@ interface UIStore {
   shareModalOpen: boolean;
   overviewModalOpen: boolean;
   downloadModalOpen: boolean;
+  ledgerModalOpen: boolean;
   collapse: CollapseState;
   setCurrentDay: (dayId: string | null) => void;
   setSelectedItem: (itemId: string | null) => void;
@@ -57,6 +58,8 @@ interface UIStore {
   closeOverviewModal: () => void;
   openDownloadModal: () => void;
   closeDownloadModal: () => void;
+  openLedgerModal: () => void;
+  closeLedgerModal: () => void;
   toggleCollapse: (key: keyof CollapseState) => void;
 }
 
@@ -71,6 +74,7 @@ export const useUIStore = create<UIStore>((set) => ({
   shareModalOpen: false,
   overviewModalOpen: false,
   downloadModalOpen: false,
+  ledgerModalOpen: false,
   collapse: loadCollapse(),
   setCurrentDay: (dayId) => set({ currentDayId: dayId }),
   setSelectedItem: (itemId) => set({ selectedItemId: itemId }),
@@ -89,6 +93,8 @@ export const useUIStore = create<UIStore>((set) => ({
   closeOverviewModal: () => set({ overviewModalOpen: false }),
   openDownloadModal: () => set({ downloadModalOpen: true }),
   closeDownloadModal: () => set({ downloadModalOpen: false }),
+  openLedgerModal: () => set({ ledgerModalOpen: true }),
+  closeLedgerModal: () => set({ ledgerModalOpen: false }),
   toggleCollapse: (key) =>
     set((state) => {
       const next = { ...state.collapse, [key]: !state.collapse[key] };
