@@ -1,10 +1,8 @@
 import type { Ledger, ExpenseCategory } from '../../types/ledger';
 import { formatMoney, formatAmount } from '../../utils/money';
-import { budgetBreakdown, cardUsage, expensesTotalTWD, EXPENSE_CATEGORIES } from '../../utils/ledger';
+import { budgetBreakdown, cardUsage, expensesTotalTWD, categoriesOf } from '../../utils/ledger';
 import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, DateCell, SelectCell, DeleteCell, MoneyCells } from './EditableCells';
-
-const catOpts = EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }));
 
 function BudgetBar({ committed, during, budget }: { committed: number; during: number; budget: number }) {
   const total = committed + during;
@@ -24,6 +22,8 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
   const ed = useLedgerEdit();
   const fx = ledger.fxRate;
   const local = ledger.localCurrency;
+  const catOpts = categoriesOf(ledger).map((c) => ({ value: c, label: c }));
+  const locOf = (twd: number) => (fx ? Math.round(twd / fx) : 0);
   const payOpts = [{ value: '', label: '—' }, ...ledger.paymentMethods.map((p) => ({ value: p.id, label: p.name }))];
   const budgets = budgetBreakdown(ledger);
   const cards = cardUsage(ledger).filter((c) => c.spent > 0 || c.limit !== undefined);
@@ -112,6 +112,14 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3}>小計</td>
+                <td className="num">{formatAmount(duringTotal)}</td>
+                <td className="num">{formatAmount(locOf(duringTotal))}</td>
+                <td colSpan={2}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         <button className="led-add-btn" onClick={() => ed.addExpense('during', local)}>＋ 新增一筆流水帳</button>

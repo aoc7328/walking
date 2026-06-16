@@ -6,7 +6,8 @@
  * 分析三大塊由 category 決定，不由 phase：餐飲→food、購物→shopping、其餘→fixed。
  */
 
-export type ExpenseCategory = '交通' | '住宿' | '飲食' | '購物' | '其他';
+/** 類別字串。預設五類(交通/住宿/飲食/購物/其他)，但使用者可在設定新增自訂類別。 */
+export type ExpenseCategory = string;
 export type ExpensePhase = 'pre' | 'during';
 
 /** 消費分析的歸併塊（headline）。五類別實際佔比另算。 */
@@ -21,6 +22,8 @@ export interface PaymentMethod {
   kind: PaymentKind;
   /** 刷卡上限（台幣）；只有 kind==='card' 有意義，undefined = 不限。 */
   limit?: number;
+  /** 備註：這張卡在這個國家的優惠/回饋方式等。 */
+  note?: string;
 }
 
 /** 各類別預算天花板（台幣）。pre + during 同類別共用一個池子一起扣。 */
@@ -113,6 +116,8 @@ export interface ReservationDefaults {
   leadGuest?: string;
   partySize?: number;
   contact?: string;
+  /** 飲食習慣與語言需求（過敏、素食、不會日文…），訂位牌與 CSV 會帶上。 */
+  dietaryNote?: string;
 }
 
 export interface Ledger {
@@ -122,6 +127,8 @@ export interface Ledger {
   fxRate: number;
   /** 餐廳訂位全域預設（訂位人/主訂者/人數/聯絡）。 */
   reservation?: ReservationDefaults;
+  /** 自訂類別清單（含預設五類）。未設時用預設五類。 */
+  categories?: string[];
   budgets: CategoryBudget[];
   paymentMethods: PaymentMethod[];
   /** 可自訂的預約管道選項（餐廳用）。 */

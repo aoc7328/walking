@@ -4486,3 +4486,6 @@ input.led-cell.num { text-align: right; }
 .led-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-soft); color: var(--ink-primary); font-size: 13px; padding: 4px 6px 4px 12px; border-radius: 99px; }
 .led-chip-x { border: none; background: transparent; color: var(--ink-muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 4px; border-radius: 99px; }
 .led-chip-x:hover { background: var(--accent-warm-soft); color: var(--accent-warm); }
+
+.led-fullnote { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--ink-primary); }
+.led-cell-wide { max-width: none; flex: 1; min-width: 280px; }

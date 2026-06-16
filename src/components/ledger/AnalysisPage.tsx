@@ -1,6 +1,6 @@
 import type { Ledger } from '../../types/ledger';
 import { formatMoney, formatAmount } from '../../utils/money';
-import { categoryTotals, CATEGORY_COLOR, restaurantTotalsTWD, budgetBreakdown } from '../../utils/ledger';
+import { categoryTotals, categoryColor, restaurantTotalsTWD, budgetBreakdown } from '../../utils/ledger';
 
 const R = 70;
 const C = 2 * Math.PI * R;
@@ -17,7 +17,7 @@ export default function AnalysisPage({ ledger }: { ledger: Ledger }) {
     .filter((r) => r.total > 0)
     .map((r) => {
       const len = (r.total / grand) * C;
-      const seg = { color: CATEGORY_COLOR[r.category], dash: len, off: -offset };
+      const seg = { color: categoryColor(r.category), dash: len, off: -offset };
       offset += len;
       return seg;
     });
@@ -55,7 +55,7 @@ export default function AnalysisPage({ ledger }: { ledger: Ledger }) {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.category}>
-                    <td><i className="led-dot" style={{ background: CATEGORY_COLOR[r.category] }} />{r.category}</td>
+                    <td><i className="led-dot" style={{ background: categoryColor(r.category) }} />{r.category}</td>
                     <td className="num">{formatAmount(r.pre)}</td>
                     <td className="num">{formatAmount(r.during)}</td>
                     <td className="num led-strong">{formatAmount(r.total)}</td>

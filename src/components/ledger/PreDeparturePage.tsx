@@ -2,19 +2,21 @@ import type { Ledger, ExpenseCategory, ReservationStatus } from '../../types/led
 import { formatMoney, formatAmount, toTWD } from '../../utils/money';
 import {
   accommodationTotalTWD, restaurantTotalsTWD, expensesTotalTWD,
-  EXPENSE_CATEGORIES, RESERVATION_LABEL,
+  categoriesOf, RESERVATION_LABEL,
 } from '../../utils/ledger';
 import { exportRestaurantsCSV } from '../../services/ledgerExport';
+import { printReservationCard } from '../../services/reservationCard';
 import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, NumCell, DateCell, TimeCell, SelectCell, CheckCell, DeleteCell, MoneyCells } from './EditableCells';
 
-const catOpts = EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }));
 const statusOpts = (['reserved', 'none', 'walkin', 'impromptu', 'cancelled'] as ReservationStatus[]).map((s) => ({ value: s, label: RESERVATION_LABEL[s] }));
 
 export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger; tripName: string }) {
   const ed = useLedgerEdit();
   const local = ledger.localCurrency;
   const fx = ledger.fxRate;
+  const catOpts = categoriesOf(ledger).map((c) => ({ value: c, label: c }));
+  const locOf = (twd: number) => (fx ? Math.round(twd / fx) : 0);
   const payOpts = [{ value: '', label: '—' }, ...ledger.paymentMethods.map((p) => ({ value: p.id, label: p.name }))];
   const chOpts = [{ value: '', label: '—' }, ...ledger.channels.map((c) => ({ value: c, label: c }))];
   const rst = restaurantTotalsTWD(ledger);
@@ -54,6 +56,14 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={6}>小計</td>
+                <td className="num">{formatAmount(accommodationTotalTWD(ledger))}</td>
+                <td className="num">{formatAmount(locOf(accommodationTotalTWD(ledger)))}</td>
+                <td colSpan={5}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         <button className="led-add-btn" onClick={ed.addAccommodation}>＋ 新增住宿</button>
@@ -66,7 +76,10 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
           <div className="led-block-actions">
             <span className="led-muted">預估 {formatAmount(rst.estimated)}　·　實際 <b className="led-strong">{formatAmount(rst.actual)}</b></span>
             {ledger.restaurants.length > 0 && (
-              <button className="led-export-btn" onClick={() => exportRestaurantsCSV(ledger, tripName)} title="匯出 CSV 給秘書訂位">匯出 CSV</button>
+              <>
+                <button className="led-export-btn" onClick={() => exportRestaurantsCSV(ledger, tripName, 'all')} title="完整欄位（含金額），給自己對帳">匯出全部</button>
+                <button className="led-export-btn" onClick={() => exportRestaurantsCSV(ledger, tripName, 'secretary')} title="只含訂位需要的欄位 + 飲食/語言需求，給秘書">給秘書</button>
+              </>
             )}
           </div>
         </div>
@@ -76,7 +89,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
               <tr>
                 <th>日期</th><th>時間</th><th>店名</th><th>種類</th><th>狀態</th>
                 <th className="num">預估 NT$</th><th className="num">預估 {local}</th><th className="num">實際 NT$</th><th className="num">實際 {local}</th>
-                <th>支付</th><th>編號</th><th>管道</th><th>備註</th><th></th>
+                <th>支付</th><th>編號</th><th>管道</th><th>備註</th><th>牌</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -93,10 +106,21 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
                   <td><TextCell value={r.bookingRef} onChange={(v) => ed.patchRestaurant(r.id, { bookingRef: v })} /></td>
                   <td><SelectCell value={r.channel ?? ''} onChange={(v) => ed.patchRestaurant(r.id, { channel: v || undefined })} options={chOpts} /></td>
                   <td><TextCell value={r.note} onChange={(v) => ed.patchRestaurant(r.id, { note: v })} /></td>
+                  <td><button className="led-export-btn" onClick={() => printReservationCard(r, ledger)} title="印出預訂牌（語言依目的地）">牌</button></td>
                   <td><DeleteCell onClick={() => ed.delRestaurant(r.id)} /></td>
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={5}>小計 · 吃飯</td>
+                <td className="num">{formatAmount(rst.estimated)}</td>
+                <td className="num">{formatAmount(locOf(rst.estimated))}</td>
+                <td className="num">{formatAmount(rst.actual)}</td>
+                <td className="num">{formatAmount(locOf(rst.actual))}</td>
+                <td colSpan={6}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         <button className="led-add-btn" onClick={() => ed.addRestaurant(local)}>＋ 新增餐廳</button>
@@ -126,6 +150,14 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3}>小計</td>
+                <td className="num">{formatAmount(expensesTotalTWD(ledger, 'pre'))}</td>
+                <td className="num">{formatAmount(locOf(expensesTotalTWD(ledger, 'pre')))}</td>
+                <td colSpan={3}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         <button className="led-add-btn" onClick={() => ed.addExpense('pre', local)}>＋ 新增固定項</button>

@@ -5,6 +5,7 @@ import type {
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
 import { toISODate } from '../../utils/date';
+import { EXPENSE_CATEGORIES } from '../../utils/ledger';
 
 function todayISO(): string {
   return toISODate(new Date());
@@ -55,6 +56,17 @@ export function useLedgerEdit() {
 
       addChannel: (name: string) => upd((l) => (name && !l.channels.includes(name) ? { ...l, channels: [...l.channels, name] } : l)),
       delChannel: (name: string) => upd((l) => ({ ...l, channels: l.channels.filter((c) => c !== name) })),
+
+      addCategory: (name: string) =>
+        upd((l) => {
+          const cur = l.categories && l.categories.length ? l.categories : [...EXPENSE_CATEGORIES];
+          return name && !cur.includes(name) ? { ...l, categories: [...cur, name] } : l;
+        }),
+      delCategory: (name: string) =>
+        upd((l) => {
+          const cur = l.categories && l.categories.length ? l.categories : [...EXPENSE_CATEGORIES];
+          return { ...l, categories: cur.filter((c) => c !== name), budgets: l.budgets.filter((b) => b.category !== name) };
+        }),
 
       setBudget: (category: ExpenseCategory, amount: number) =>
         upd((l) => {

@@ -5,6 +5,15 @@ import { addDays, formatMonthDay, weekdayLabel } from './date';
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = ['交通', '住宿', '飲食', '購物', '其他'];
 
+/** 這份帳本實際用到的類別：預設五類 ∪ 使用者自訂 ∪ 資料中已出現的，保序去重。 */
+export function categoriesOf(l: Ledger): string[] {
+  const base = l.categories && l.categories.length ? l.categories : EXPENSE_CATEGORIES;
+  const seen = new Set<string>(base);
+  const out = [...base];
+  for (const e of l.expenses) if (e.category && !seen.has(e.category)) { seen.add(e.category); out.push(e.category); }
+  return out;
+}
+
 /** 空帳本（任何沒設過帳本的 trip 讀寫時的 fallback）。預設日本，可改。 */
 export function emptyLedger(): Ledger {
   return {
@@ -37,14 +46,17 @@ export const BUCKET_LABEL: Record<AnalysisBucket, string> = {
   shopping: '購物',
 };
 
-/** 五類別在圓環/比例圖的固定配色（對齊概念草稿）。 */
-export const CATEGORY_COLOR: Record<ExpenseCategory, string> = {
-  交通: '#5B4B7F',
-  住宿: '#378ADD',
-  飲食: '#EF9F27',
-  購物: '#1D9E75',
-  其他: '#888780',
+/** 五類別固定配色；自訂類別用調色盤依名稱決定（穩定、不隨機）。 */
+const FIXED_CATEGORY_COLOR: Record<string, string> = {
+  交通: '#5B4B7F', 住宿: '#378ADD', 飲食: '#EF9F27', 購物: '#1D9E75', 其他: '#888780',
 };
+const CATEGORY_PALETTE = ['#D4537E', '#0F6E56', '#BA7517', '#534AB7', '#A32D2D', '#185FA5', '#639922'];
+export function categoryColor(cat: string): string {
+  if (FIXED_CATEGORY_COLOR[cat]) return FIXED_CATEGORY_COLOR[cat]!;
+  let h = 0;
+  for (const ch of cat) h = (h + ch.charCodeAt(0)) % CATEGORY_PALETTE.length;
+  return CATEGORY_PALETTE[h]!;
+}
 
 export const RESERVATION_LABEL: Record<ReservationStatus, string> = {
   reserved: '已預約',
@@ -75,7 +87,7 @@ export function accommodationTotalTWD(l: Ledger): number {
 export function restaurantTotalsTWD(l: Ledger): { estimated: number; actual: number } {
   return l.restaurants.reduce(
     (s, r) => ({
-      estimated: s.estimated + (r.estimated ?? 0),
+      estimated: s.estimated + (r.estimated ? toTWD(r.estimated, r.estimatedCurrency ?? 'TWD', l.fxRate) : 0),
       actual: s.actual + (r.amount ? toTWD(r.amount, r.currency ?? 'TWD', l.fxRate) : 0),
     }),
     { estimated: 0, actual: 0 },
@@ -89,27 +101,19 @@ export function expensesTotalTWD(l: Ledger, phase: 'pre' | 'during'): number {
     .reduce((s, e) => s + toTWD(e.amount, e.currency, l.fxRate), 0);
 }
 
-type CatSplit = Record<ExpenseCategory, { pre: number; during: number }>;
-
-function emptyCatSplit(): CatSplit {
-  return {
-    交通: { pre: 0, during: 0 },
-    住宿: { pre: 0, during: 0 },
-    飲食: { pre: 0, during: 0 },
-    購物: { pre: 0, during: 0 },
-    其他: { pre: 0, during: 0 },
-  };
-}
+type CatSplit = Record<string, { pre: number; during: number }>;
 
 /**
  * 各類別實際花費（台幣），拆 pre（出發前已知/預訂）與 during（流水帳）。
  * 住宿表→住宿pre；餐廳實際→飲食pre（預訂的視為已承諾）；通用支出依自己的 phase/category。
+ * 動態類別：用到才建鍵。
  */
 export function categorySplit(l: Ledger): CatSplit {
-  const out = emptyCatSplit();
-  for (const a of l.accommodations) out.住宿.pre += toTWD(a.price, a.currency, l.fxRate);
-  for (const r of l.restaurants) if (r.amount) out.飲食.pre += toTWD(r.amount, r.currency ?? 'TWD', l.fxRate);
-  for (const e of l.expenses) out[e.category][e.phase] += toTWD(e.amount, e.currency, l.fxRate);
+  const out: CatSplit = {};
+  const bucket = (c: string) => (out[c] ??= { pre: 0, during: 0 });
+  for (const a of l.accommodations) bucket('住宿').pre += toTWD(a.price, a.currency, l.fxRate);
+  for (const r of l.restaurants) if (r.amount) bucket('飲食').pre += toTWD(r.amount, r.currency ?? 'TWD', l.fxRate);
+  for (const e of l.expenses) bucket(e.category)[e.phase] += toTWD(e.amount, e.currency, l.fxRate);
   return out;
 }
 
@@ -121,11 +125,11 @@ export interface CategoryTotal {
   pct: number;
 }
 
-/** 五類別實際佔比（總額為分母）。 */
+/** 各類別實際佔比（總額為分母）。 */
 export function categoryTotals(l: Ledger): { rows: CategoryTotal[]; grand: number } {
   const split = categorySplit(l);
-  const rows0 = EXPENSE_CATEGORIES.map((category) => {
-    const { pre, during } = split[category];
+  const rows0 = categoriesOf(l).map((category) => {
+    const { pre, during } = split[category] ?? { pre: 0, during: 0 };
     return { category, pre, during, total: pre + during, pct: 0 };
   });
   const grand = rows0.reduce((s, r) => s + r.total, 0);
@@ -145,9 +149,8 @@ export interface BudgetRow {
 export function budgetBreakdown(l: Ledger): BudgetRow[] {
   const split = categorySplit(l);
   return l.budgets.map((b) => {
-    const committed = split[b.category].pre;
-    const during = split[b.category].during;
-    return { category: b.category, budget: b.amount, committed, during, remaining: b.amount - committed - during };
+    const s = split[b.category] ?? { pre: 0, during: 0 };
+    return { category: b.category, budget: b.amount, committed: s.pre, during: s.during, remaining: b.amount - s.pre - s.during };
   });
 }
 
