@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { getLedger } from '../../utils/ledger';
+import { printLedgerReport } from '../../services/ledgerReport';
 import PreDeparturePage from './PreDeparturePage';
 import DuringTripPage from './DuringTripPage';
 import AnalysisPage from './AnalysisPage';
@@ -61,6 +62,7 @@ export default function LedgerPage() {
           </span>
         </div>
         <div className="ledger-page-bar-actions">
+          <button className="btn" onClick={() => printLedgerReport(trip, ledger)} title="列印整本帳結算單（可存成 PDF）">列印 / PDF</button>
           <button
             className={`btn${dirty || !persisted ? ' btn-primary' : ''}`}
             onClick={handleSave}
