@@ -71,3 +71,33 @@ export function DeleteCell({ onClick }: { onClick: () => void }) {
     <button className="led-row-del" onClick={onClick} title="刪除這一列" aria-label="刪除">×</button>
   );
 }
+
+/**
+ * 金額雙欄：台幣 + 當地幣並排，打哪一欄、另一欄自動換算。
+ * 儲存的是「使用者輸入的值 + 幣別」（避免換算來回的捨入誤差）。
+ * 回傳兩個 <td>，放在 <tr> 裡。
+ */
+export function MoneyCells({
+  amount, currency, localCurrency, fxRate, onChange,
+}: {
+  amount: number | undefined;
+  currency: string;
+  localCurrency: string;
+  fxRate: number;
+  onChange: (amount: number, currency: string) => void;
+}) {
+  const has = amount !== undefined && amount !== null && !Number.isNaN(amount);
+  const twd = !has ? '' : currency === 'TWD' ? amount! : Math.round(amount! * fxRate);
+  const loc = !has ? '' : currency === localCurrency ? amount! : fxRate ? Math.round(amount! / fxRate) : '';
+  const parse = (v: string) => (v === '' ? 0 : Number(v));
+  return (
+    <>
+      <td className="num">
+        <input className="led-cell num" type="number" value={twd} onChange={(e) => onChange(parse(e.target.value), 'TWD')} />
+      </td>
+      <td className="num">
+        <input className="led-cell num" type="number" value={loc} onChange={(e) => onChange(parse(e.target.value), localCurrency)} />
+      </td>
+    </>
+  );
+}

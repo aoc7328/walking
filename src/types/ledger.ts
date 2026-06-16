@@ -77,8 +77,10 @@ export interface Restaurant {
   bookingRef?: string;
 
   // 帳務（可事先填，台灣訂位時有時就先刷了）
-  /** 預估費用（台幣）。出國前抓的預算參考。 */
+  /** 預估費用。 */
   estimated?: number;
+  /** 預估費用的幣別（台幣或當地）。 */
+  estimatedCurrency?: string;
   /** 實際開銷。 */
   amount?: number;
   currency?: string;
@@ -105,11 +107,21 @@ export interface Expense {
   note?: string;
 }
 
+/** 餐廳訂位的全域預設（同行成員固定，不必每餐重填）。 */
+export interface ReservationDefaults {
+  bookingName?: string;
+  leadGuest?: string;
+  partySize?: number;
+  contact?: string;
+}
+
 export interface Ledger {
   /** 目的地當地貨幣代碼，例如 'JPY' / 'NZD'。跟著專案走。 */
   localCurrency: string;
   /** 1 單位當地貨幣 = fxRate 台幣（全趟一個匯率）。 */
   fxRate: number;
+  /** 餐廳訂位全域預設（訂位人/主訂者/人數/聯絡）。 */
+  reservation?: ReservationDefaults;
   budgets: CategoryBudget[];
   paymentMethods: PaymentMethod[];
   /** 可自訂的預約管道選項（餐廳用）。 */

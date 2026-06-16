@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import type {
-  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory,
+  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults,
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
 import { toISODate } from '../../utils/date';
@@ -31,6 +31,7 @@ export function useLedgerEdit() {
     const upd = (fn: (l: Ledger) => Ledger) => updateLedger(fn);
     return {
       setMeta: (patch: Partial<Pick<Ledger, 'localCurrency' | 'fxRate'>>) => upd((l) => ({ ...l, ...patch })),
+      setReservation: (patch: Partial<ReservationDefaults>) => upd((l) => ({ ...l, reservation: { ...(l.reservation ?? {}), ...patch } })),
 
       addAccommodation: () => upd((l) => ({ ...l, accommodations: [...l.accommodations, blankAccommodation()] })),
       patchAccommodation: (id: string, patch: Partial<Accommodation>) =>

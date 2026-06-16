@@ -1,8 +1,8 @@
 import type { Ledger, ExpenseCategory } from '../../types/ledger';
-import { formatMoney, formatAmount, toTWD } from '../../utils/money';
+import { formatMoney, formatAmount } from '../../utils/money';
 import { budgetBreakdown, cardUsage, expensesTotalTWD, EXPENSE_CATEGORIES } from '../../utils/ledger';
 import { useLedgerEdit } from './useLedgerEdit';
-import { TextCell, NumCell, DateCell, SelectCell, DeleteCell } from './EditableCells';
+import { TextCell, DateCell, SelectCell, DeleteCell, MoneyCells } from './EditableCells';
 
 const catOpts = EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }));
 
@@ -24,7 +24,6 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
   const ed = useLedgerEdit();
   const fx = ledger.fxRate;
   const local = ledger.localCurrency;
-  const curOpts = local === 'TWD' ? [{ value: 'TWD', label: 'TWD' }] : [{ value: local, label: local }, { value: 'TWD', label: 'TWD' }];
   const payOpts = [{ value: '', label: '—' }, ...ledger.paymentMethods.map((p) => ({ value: p.id, label: p.name }))];
   const budgets = budgetBreakdown(ledger);
   const cards = cardUsage(ledger).filter((c) => c.spent > 0 || c.limit !== undefined);
@@ -99,7 +98,7 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
         <div className="led-tb-wrap">
           <table className="led-tb">
             <thead>
-              <tr><th>日期</th><th>分類</th><th>項目</th><th className="num">金額</th><th>幣別</th><th className="num">台幣</th><th>支付</th><th></th></tr>
+              <tr><th>日期</th><th>分類</th><th>項目</th><th className="num">金額 NT$</th><th className="num">金額 {local}</th><th>支付</th><th></th></tr>
             </thead>
             <tbody>
               {during.map((e) => (
@@ -107,9 +106,7 @@ export default function DuringTripPage({ ledger }: { ledger: Ledger }) {
                   <td><DateCell value={e.date} onChange={(v) => ed.patchExpense(e.id, { date: v })} /></td>
                   <td><SelectCell value={e.category} onChange={(v) => ed.patchExpense(e.id, { category: v as ExpenseCategory })} options={catOpts} /></td>
                   <td><TextCell value={e.title} onChange={(v) => ed.patchExpense(e.id, { title: v })} placeholder="買了什麼" /></td>
-                  <td className="num"><NumCell value={e.amount} onChange={(v) => ed.patchExpense(e.id, { amount: v })} /></td>
-                  <td><SelectCell value={e.currency} onChange={(v) => ed.patchExpense(e.id, { currency: v })} options={curOpts} /></td>
-                  <td className="num led-muted">{formatAmount(toTWD(e.amount, e.currency, fx))}</td>
+                  <MoneyCells amount={e.amount} currency={e.currency} localCurrency={local} fxRate={fx} onChange={(amt, cur) => ed.patchExpense(e.id, { amount: amt, currency: cur })} />
                   <td><SelectCell value={e.paymentMethodId ?? ''} onChange={(v) => ed.patchExpense(e.id, { paymentMethodId: v || undefined })} options={payOpts} /></td>
                   <td><DeleteCell onClick={() => ed.delExpense(e.id)} /></td>
                 </tr>

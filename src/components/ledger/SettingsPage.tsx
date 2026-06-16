@@ -51,6 +51,27 @@ export default function SettingsPage({ ledger }: { ledger: Ledger }) {
         <button className="led-add-btn" onClick={ed.addPayment}>＋ 新增支付方式</button>
       </section>
 
+      {/* 餐廳訂位預設 */}
+      <section className="led-block">
+        <div className="led-block-head"><h3>餐廳訂位預設</h3>
+          <span className="led-muted">同行成員固定，每餐共用；匯出給秘書時自動帶上，不必每餐重填</span>
+        </div>
+        <div className="led-settings-row">
+          <label>訂位人
+            <input className="led-cell led-cell-boxed" value={ledger.reservation?.bookingName ?? ''} onChange={(e) => ed.setReservation({ bookingName: e.target.value })} placeholder="例：張先生" />
+          </label>
+          <label>主訂者
+            <input className="led-cell led-cell-boxed" value={ledger.reservation?.leadGuest ?? ''} onChange={(e) => ed.setReservation({ leadGuest: e.target.value })} placeholder="主要聯絡人" />
+          </label>
+          <label>人數
+            <input className="led-cell led-cell-boxed num" type="number" value={ledger.reservation?.partySize ?? ''} onChange={(e) => ed.setReservation({ partySize: e.target.value === '' ? undefined : Number(e.target.value) })} placeholder="2" />
+          </label>
+          <label>聯絡方式
+            <input className="led-cell led-cell-boxed" value={ledger.reservation?.contact ?? ''} onChange={(e) => ed.setReservation({ contact: e.target.value })} placeholder="電話 / email" />
+          </label>
+        </div>
+      </section>
+
       {/* 預約管道 */}
       <section className="led-block">
         <div className="led-block-head"><h3>預約管道</h3></div>

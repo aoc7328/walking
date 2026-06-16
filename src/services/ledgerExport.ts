@@ -29,6 +29,7 @@ export function exportRestaurantsCSV(ledger: Ledger, tripName: string): void {
     '預估(台幣)', '實際開銷', '幣別', '支付方式', '備註',
   ];
   const pmName = (id?: string) => ledger.paymentMethods.find((p) => p.id === id)?.name ?? '';
+  const res = ledger.reservation ?? {};
   const rows = ledger.restaurants.map((r) => [
     r.date,
     r.date ? weekdayLabel(r.date) : '',
@@ -36,10 +37,10 @@ export function exportRestaurantsCSV(ledger: Ledger, tripName: string): void {
     r.name,
     r.cuisine,
     RESERVATION_LABEL[r.status],
-    r.bookingName ?? '',
-    r.partySize ?? '',
-    r.leadGuest ?? '',
-    r.contact ?? '',
+    r.bookingName ?? res.bookingName ?? '',
+    r.partySize ?? res.partySize ?? '',
+    r.leadGuest ?? res.leadGuest ?? '',
+    r.contact ?? res.contact ?? '',
     r.channel ?? '',
     r.bookingRef ?? '',
     r.estimated ?? '',
