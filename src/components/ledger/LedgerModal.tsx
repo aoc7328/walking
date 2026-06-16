@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { getLedger } from '../../utils/ledger';
-import { SAMPLE_KYUSHU_LEDGER } from '../../db/sampleLedger';
+import { SAMPLE_LEDGERS } from '../../db/sampleLedger';
 import PreDepartureTab from './PreDepartureTab';
 
 type Tab = 'pre' | 'during' | 'analysis';
@@ -44,10 +44,16 @@ export default function LedgerModal() {
 
   const ledger = getLedger(trip);
 
-  function loadSample() {
-    if (window.confirm('載入九州實帳範例？這會覆蓋目前這趟行程的帳本內容。')) {
-      updateLedger(() => structuredClone(SAMPLE_KYUSHU_LEDGER));
-    }
+  function importSample(e: React.ChangeEvent<HTMLSelectElement>) {
+    const key = e.target.value;
+    e.target.value = '';
+    if (!key || !trip) return;
+    const sample = SAMPLE_LEDGERS.find((s) => s.key === key);
+    if (!sample) return;
+    const ok = window.confirm(
+      `把【${sample.name}實帳】匯入到目前行程「${trip.name}」的帳本？\n\n只會填入這趟的帳本，不會更動行程內容，也不影響其他行程。`,
+    );
+    if (ok) updateLedger(() => structuredClone(sample.ledger));
   }
 
   return (
@@ -66,7 +72,12 @@ export default function LedgerModal() {
             </div>
           </div>
           <div className="ledger-modal-header-actions">
-            <button className="btn" onClick={loadSample} title="一鍵灌入九州實帳，方便用真實資料檢視">載入九州實帳</button>
+            <select className="led-import-select" defaultValue="" onChange={importSample} title="把對應那趟的實帳匯入到目前行程（只填帳本、不動行程）">
+              <option value="" disabled>匯入範例帳本…</option>
+              {SAMPLE_LEDGERS.map((s) => (
+                <option key={s.key} value={s.key}>{s.name}</option>
+              ))}
+            </select>
             <button className="btn" onClick={close} title="關閉">關閉</button>
           </div>
         </div>

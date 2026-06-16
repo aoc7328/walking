@@ -4320,3 +4320,14 @@
   font-style: italic;
   padding: 14px 4px;
 }
+
+.led-import-select {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-secondary);
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+}

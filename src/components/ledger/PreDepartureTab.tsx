@@ -122,7 +122,7 @@ export default function PreDepartureTab({ ledger, tripName }: { ledger: Ledger; 
                       {r.contact ? `　${r.contact}` : ''}
                     </span>
                     <span>
-                      <span className="led-dim">估 {formatAmount(r.estimated ?? 0)}　</span>
+                      {r.estimated ? <span className="led-dim">估 {formatAmount(r.estimated)}　</span> : null}
                       {r.amount ? (
                         <>
                           <b>{formatMoney(r.amount, r.currency ?? 'TWD')}</b>
