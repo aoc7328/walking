@@ -96,7 +96,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
   const fixedPreset = ['amtLocal', 'note'];
 
   return (
-    <div className="led-page-cols">
+    <div className="led-page-cols led-cols-wide">
       <div className="led-cols-bar">
         <span className="led-muted">欄位顯示：</span>
         <ColumnToggles tableId="acc" title="住宿" columns={accCols} hidden={hiddenOf('acc')} presetHidden={accPreset} onToggle={ed.toggleCol} onSet={ed.setHiddenCols} />
