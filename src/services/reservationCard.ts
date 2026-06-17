@@ -5,13 +5,13 @@ type Lang = 'ja' | 'en' | 'zh';
 
 interface Labels {
   heading: string; name: string; datetime: string; channel: string;
-  ref: string; booker: string; party: string; notes: string; unit: string;
+  ref: string; booker: string; party: string; contact: string; notes: string; unit: string;
 }
 
 const LABELS: Record<Lang, Labels> = {
-  ja: { heading: 'ご予約確認', name: '店名', datetime: '日時', channel: '予約サイト', ref: '予約番号', booker: '予約者', party: '人数', notes: '備考', unit: '名' },
-  en: { heading: 'Reservation', name: 'Restaurant', datetime: 'Date / Time', channel: 'Booked via', ref: 'Confirmation No.', booker: 'Name', party: 'Party', notes: 'Notes', unit: 'pax' },
-  zh: { heading: '訂位卡', name: '餐廳', datetime: '日期時間', channel: '預約管道', ref: '預約編號', booker: '訂位人', party: '人數', notes: '備註', unit: '位' },
+  ja: { heading: 'ご予約確認', name: '店名', datetime: '日時', channel: '予約サイト', ref: '予約番号', booker: '予約者', party: '人数', contact: '連絡先', notes: '備考（食事・言語）', unit: '名' },
+  en: { heading: 'Reservation', name: 'Restaurant', datetime: 'Date / Time', channel: 'Booked via', ref: 'Confirmation No.', booker: 'Name', party: 'Party', contact: 'Contact', notes: 'Notes (diet / language)', unit: 'pax' },
+  zh: { heading: '訂位卡', name: '餐廳', datetime: '日期時間', channel: '預約管道', ref: '預約編號', booker: '訂位人', party: '人數', contact: '聯絡方式', notes: '備註（飲食・語言）', unit: '位' },
 };
 
 /** 目的地貨幣 → 卡片語言（依目的地自動切換）。 */
@@ -30,25 +30,37 @@ function row(label: string, value: string): string {
   return `<tr><td class="k">${esc(label)}</td><td class="v">${esc(value)}</td></tr>`;
 }
 
+/** 允許多行（\n → <br>）的列。 */
+function rowMultiline(label: string, value: string): string {
+  if (!value) return '';
+  const html = esc(value).replace(/\n/g, '<br>');
+  return `<tr><td class="k">${esc(label)}</td><td class="v">${html}</td></tr>`;
+}
+
 /** 開新視窗印出一張餐廳預訂牌，標籤依目的地語言自動切換。 */
 export function printReservationCard(r: Restaurant, ledger: Ledger): void {
   const lang = (ledger.language as Lang) ?? langForCurrency(ledger.localCurrency);
   const L = LABELS[lang] ?? LABELS.en;
   const res = ledger.reservation ?? {};
   const dt = `${r.date}${r.date ? `（${weekdayLabel(r.date)}）` : ''}${r.time ? ` ${r.time}` : ''}`;
-  const booker = r.bookingName ?? res.bookingName ?? '';
+  const booker = r.bookingName || res.bookingName || '';
+  const contact = r.contact || res.contact || '';
   const party = r.partySize ?? res.partySize;
   const partyStr = party !== undefined ? `${party} ${L.unit}` : '';
-  const notes = [r.note, res.dietaryNote].filter(Boolean).join('　/　');
+  // 備註抓全域「飲食習慣與語言需求」（多行）；若該餐廳另有單筆備註再補在後面
+  const dietary = (res.dietaryNote ?? '').trim();
+  const perNote = (r.note ?? '').trim();
+  const notes = [dietary, perNote].filter(Boolean).join('\n');
 
   const body = [
     row(L.name, r.name + (r.cuisine ? `（${r.cuisine}）` : '')),
     row(L.datetime, dt),
-    row(L.channel, r.channel ?? ''),
-    row(L.ref, r.bookingRef ?? ''),
     row(L.booker, booker),
     row(L.party, partyStr),
-    row(L.notes, notes),
+    row(L.contact, contact),
+    row(L.channel, r.channel ?? ''),
+    row(L.ref, r.bookingRef ?? ''),
+    rowMultiline(L.notes, notes),
   ].join('');
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(r.name)}</title>

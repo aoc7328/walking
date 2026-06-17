@@ -4503,9 +4503,9 @@ input.led-cell.num { text-align: right; }
 
 .led-cols-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0 10px; font-size: 13px; }
 .led-cols-panel { position: relative; display: inline-block; }
-.led-cols-panel > summary { cursor: pointer; list-style: none; padding: 5px 11px; border: 0.5px solid var(--border-medium); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 13px; color: var(--ink-primary); }
-.led-cols-panel > summary::-webkit-details-marker { display: none; }
-.led-cols-panel[open] > summary { border-color: var(--accent-primary); color: var(--accent-primary); }
+.led-cols-summary { cursor: pointer; font-family: var(--font-body); padding: 5px 11px; border: 0.5px solid var(--border-medium); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 13px; color: var(--ink-primary); }
+.led-cols-summary:hover { border-color: var(--border-medium); }
+.led-cols-summary.open { border-color: var(--accent-primary); color: var(--accent-primary); }
 .led-cols-body { position: absolute; z-index: 20; margin-top: 4px; background: var(--bg-card); border: 0.5px solid var(--border-medium); border-radius: var(--radius-md); box-shadow: var(--shadow-modal); padding: 12px; width: 280px; }
 .led-cols-actions { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .led-cols-checks { display: flex; flex-wrap: wrap; gap: 7px 14px; }
