@@ -11,13 +11,6 @@ import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, NumCell, DateCell, TimeCell, SelectCell, CheckCell, DeleteCell, MoneyInput } from './EditableCells';
 import LedgerTable, { type LedgerColumn } from './LedgerTable';
 import ColumnToggles from './ColumnToggles';
-import { SectionNav } from './LedgerNav';
-
-const SECTIONS = [
-  { id: 'sec-acc', label: '住宿' },
-  { id: 'sec-rest', label: '餐廳預訂' },
-  { id: 'sec-fixed', label: '其他固定項' },
-];
 
 const statusOpts = (['reserved', 'none', 'walkin', 'impromptu', 'cancelled'] as ReservationStatus[]).map((s) => ({ value: s, label: RESERVATION_LABEL[s] }));
 
@@ -104,7 +97,6 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
 
   return (
     <div className="led-page-cols led-cols-wide">
-      <SectionNav items={SECTIONS} />
       <div className="led-cols-bar">
         <span className="led-muted">欄位顯示：</span>
         <ColumnToggles tableId="acc" title="住宿" columns={accCols} hidden={hiddenOf('acc')} presetHidden={accPreset} onToggle={ed.toggleCol} onSet={ed.setHiddenCols} />

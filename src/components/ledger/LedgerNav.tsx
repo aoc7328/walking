@@ -23,15 +23,3 @@ export function BackToTop() {
     >↑</button>
   );
 }
-
-/** 左側浮動區段導覽：點了跳到對應區段。items 是 [{id,label}]。 */
-export function SectionNav({ items }: { items: { id: string; label: string }[] }) {
-  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  return (
-    <nav className="led-sidenav" aria-label="區段導覽">
-      {items.map((s) => (
-        <button key={s.id} onClick={() => jump(s.id)}>{s.label}</button>
-      ))}
-    </nav>
-  );
-}
