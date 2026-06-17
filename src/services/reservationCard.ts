@@ -44,7 +44,6 @@ export function printReservationCard(r: Restaurant, ledger: Ledger): void {
   const res = ledger.reservation ?? {};
   const dt = `${r.date}${r.date ? `（${weekdayLabel(r.date)}）` : ''}${r.time ? ` ${r.time}` : ''}`;
   const booker = r.bookingName || res.bookingName || '';
-  const leadGuest = r.leadGuest || res.leadGuest || '';
   const contact = r.contact || res.contact || '';
   const party = r.partySize ?? res.partySize;
   const partyStr = party !== undefined ? `${party} ${L.unit}` : '';
@@ -55,7 +54,6 @@ export function printReservationCard(r: Restaurant, ledger: Ledger): void {
     row(L.name, r.name + (r.cuisine ? `（${r.cuisine}）` : '')),
     row(L.datetime, dt),
     row(L.booker, booker),
-    row(L.leadGuest, leadGuest),
     row(L.party, partyStr),
     row(L.contact, contact),
     row(L.channel, r.channel ?? ''),

@@ -19,3 +19,15 @@ createRoot(rootEl).render(
     {isViewerRoute() ? <TripViewer /> : <App />}
   </StrictMode>,
 );
+
+// PWA：部署新版後，新的 service worker 接管時自動重新整理，
+// 避免使用者一直停在舊快取版本（首次安裝不重載，只有「換版」才重載）。
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return;
+    reloaded = true;
+    if (hadController) window.location.reload();
+  });
+}

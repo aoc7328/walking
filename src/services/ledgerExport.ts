@@ -49,12 +49,12 @@ export function exportRestaurantsCSV(ledger: Ledger, tripName: string, mode: Res
 
   const headers = [
     '日期', '週幾', '時段', '店名', '種類', '預約狀態',
-    '訂位人', '人數', '主訂者', '聯絡方式', '預約管道', '預約編號',
+    '訂位人', '人數', '聯絡方式', '預約管道', '預約編號',
     '預估(台幣)', '實際開銷', '幣別', '支付方式', '備註',
   ];
   const rows = ledger.restaurants.map((r) => [
     r.date, r.date ? weekdayLabel(r.date) : '', r.time ?? '', r.name, r.cuisine, RESERVATION_LABEL[r.status],
-    bookingName(r), partySize(r), r.leadGuest ?? res.leadGuest ?? '', contact(r),
+    bookingName(r), partySize(r), contact(r),
     r.channel ?? '', r.bookingRef ?? '',
     r.estimated ?? '', r.amount ?? '', r.currency ?? '', pmName(r.paymentMethodId), r.note ?? '',
   ]);

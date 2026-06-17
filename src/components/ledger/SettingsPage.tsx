@@ -74,9 +74,6 @@ export default function SettingsPage({ ledger }: { ledger: Ledger }) {
           <label>訂位人
             <input className="led-cell led-cell-boxed" value={ledger.reservation?.bookingName ?? ''} onChange={(e) => ed.setReservation({ bookingName: e.target.value })} placeholder="例：張先生" />
           </label>
-          <label>主訂者
-            <input className="led-cell led-cell-boxed" value={ledger.reservation?.leadGuest ?? ''} onChange={(e) => ed.setReservation({ leadGuest: e.target.value })} placeholder="主要聯絡人" />
-          </label>
           <label>人數
             <input className="led-cell led-cell-boxed num" type="number" value={ledger.reservation?.partySize ?? ''} onChange={(e) => ed.setReservation({ partySize: e.target.value === '' ? undefined : Number(e.target.value) })} placeholder="2" />
           </label>
