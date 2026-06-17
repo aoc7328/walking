@@ -5,13 +5,13 @@ type Lang = 'ja' | 'en' | 'zh';
 
 interface Labels {
   heading: string; name: string; datetime: string; channel: string;
-  ref: string; booker: string; party: string; contact: string; notes: string; unit: string;
+  ref: string; booker: string; leadGuest: string; party: string; contact: string; notes: string; unit: string;
 }
 
 const LABELS: Record<Lang, Labels> = {
-  ja: { heading: 'ご予約確認', name: '店名', datetime: '日時', channel: '予約サイト', ref: '予約番号', booker: '予約者', party: '人数', contact: '連絡先', notes: '備考（食事・言語）', unit: '名' },
-  en: { heading: 'Reservation', name: 'Restaurant', datetime: 'Date / Time', channel: 'Booked via', ref: 'Confirmation No.', booker: 'Name', party: 'Party', contact: 'Contact', notes: 'Notes (diet / language)', unit: 'pax' },
-  zh: { heading: '訂位卡', name: '餐廳', datetime: '日期時間', channel: '預約管道', ref: '預約編號', booker: '訂位人', party: '人數', contact: '聯絡方式', notes: '備註（飲食・語言）', unit: '位' },
+  ja: { heading: 'ご予約確認', name: '店名', datetime: '日時', channel: '予約サイト', ref: '予約番号', booker: '予約者', leadGuest: '代表者', party: '人数', contact: '連絡先', notes: '備考（食事・言語）', unit: '名' },
+  en: { heading: 'Reservation', name: 'Restaurant', datetime: 'Date / Time', channel: 'Booked via', ref: 'Confirmation No.', booker: 'Name', leadGuest: 'Host', party: 'Party', contact: 'Contact', notes: 'Notes (diet / language)', unit: 'pax' },
+  zh: { heading: '訂位卡', name: '餐廳', datetime: '日期時間', channel: '預約管道', ref: '預約編號', booker: '訂位人', leadGuest: '主訂者', party: '人數', contact: '聯絡方式', notes: '備註（飲食・語言）', unit: '位' },
 };
 
 /** 目的地貨幣 → 卡片語言（依目的地自動切換）。 */
@@ -44,18 +44,18 @@ export function printReservationCard(r: Restaurant, ledger: Ledger): void {
   const res = ledger.reservation ?? {};
   const dt = `${r.date}${r.date ? `（${weekdayLabel(r.date)}）` : ''}${r.time ? ` ${r.time}` : ''}`;
   const booker = r.bookingName || res.bookingName || '';
+  const leadGuest = r.leadGuest || res.leadGuest || '';
   const contact = r.contact || res.contact || '';
   const party = r.partySize ?? res.partySize;
   const partyStr = party !== undefined ? `${party} ${L.unit}` : '';
-  // 備註抓全域「飲食習慣與語言需求」（多行）；若該餐廳另有單筆備註再補在後面
-  const dietary = (res.dietaryNote ?? '').trim();
-  const perNote = (r.note ?? '').trim();
-  const notes = [dietary, perNote].filter(Boolean).join('\n');
+  // 備註只抓全域「飲食習慣與語言需求」（多行）；每筆餐廳自己的備註是給自己看的，不上卡片
+  const notes = (res.dietaryNote ?? '').trim();
 
   const body = [
     row(L.name, r.name + (r.cuisine ? `（${r.cuisine}）` : '')),
     row(L.datetime, dt),
     row(L.booker, booker),
+    row(L.leadGuest, leadGuest),
     row(L.party, partyStr),
     row(L.contact, contact),
     row(L.channel, r.channel ?? ''),
