@@ -4564,3 +4564,30 @@ input.led-cell.num { text-align: right; }
 .led-cmp-grp { grid-template-columns: 112px 1fr; }
 .led-cmp-cat { flex-direction: column; align-items: flex-start; gap: 2px; }
 .led-cmp-cat > span:last-child { font-size: 11px; }
+
+/* 浮動導覽：回頂鈕 + 左側區段導覽 */
+.led-fab { position: fixed; right: 26px; bottom: 26px; z-index: 260; width: 46px; height: 46px; border-radius: 50%; border: 0.5px solid var(--border-medium); background: var(--bg-card); color: var(--accent-primary); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: var(--shadow-modal); display: flex; align-items: center; justify-content: center; }
+.led-fab:hover { background: var(--accent-primary); color: #fff; }
+.led-sidenav { position: fixed; left: 14px; top: 134px; z-index: 250; display: grid; gap: 6px; }
+.led-sidenav button { font-family: var(--font-body); font-size: 13px; text-align: left; padding: 7px 13px; border: 0.5px solid var(--border-soft); border-radius: var(--radius-md); background: var(--bg-card); color: var(--ink-secondary); cursor: pointer; white-space: nowrap; box-shadow: var(--shadow-soft); }
+.led-sidenav button:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+
+/* 圓餅切片 % + 圖例緊鄰名稱 */
+.led-pie-slice-pct { font-size: 11px; fill: #fff; font-weight: 600; }
+.led-pie-leg { gap: 6px; }
+.led-pie-leg-name { flex: 0 0 auto; }
+.led-pie-leg-val { margin-left: 4px; color: var(--ink-secondary); }
+
+/* 預估 vs 實際 標線圖 */
+.led-ea { display: grid; gap: 14px; }
+.led-ea-legend { display: flex; gap: 16px; font-size: 12px; margin-bottom: 2px; }
+.led-ea-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.led-ea-swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+.led-ea-tickmark { width: 2px; height: 13px; background: var(--ink-primary); display: inline-block; }
+.led-ea-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 13px; margin-bottom: 5px; }
+.led-ea-cat { display: flex; align-items: center; gap: 6px; color: var(--ink-primary); }
+.led-ea-nums { font-feature-settings: 'tnum' 1; color: var(--ink-secondary); white-space: nowrap; }
+.led-ea-track { position: relative; height: 16px; }
+.led-ea-bar { display: flex; height: 100%; background: var(--bg-soft); border-radius: 99px; overflow: hidden; }
+.led-ea-seg { height: 100%; }
+.led-ea-tick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink-primary); z-index: 2; }

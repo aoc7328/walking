@@ -5,15 +5,10 @@ import {
   categoryTotals, categoryColor, planVsActual, categoryToBucket,
   pivotCategoryPayment, dailySpending,
 } from '../../utils/ledger';
-import { PieChart, ColumnChart } from './LedgerCharts';
+import { PieChart, ColumnChart, EstActualChart } from './LedgerCharts';
 
 const R = 70;
 const C = 2 * Math.PI * R;
-
-function HBar({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.max(0, (value / max) * 100) : 0;
-  return <div className="led-hbar"><div className="led-hbar-fill" style={{ width: `${pct}%`, background: color }} /></div>;
-}
 
 export default function AnalysisPage({ ledger, trip }: { ledger: Ledger; trip: Trip }) {
   const { rows, grand } = categoryTotals(ledger);
@@ -36,7 +31,6 @@ export default function AnalysisPage({ ledger, trip }: { ledger: Ledger; trip: T
     return seg;
   });
 
-  const cmpMax = Math.max(1, ...pa.rows.map((r) => Math.max(r.estimate, r.actual)));
   const diffWord = pa.diff > 0 ? '超支' : pa.diff < 0 ? '結餘' : '打平';
   const diffPct = pa.estTotal > 0 ? Math.round((Math.abs(pa.diff) / pa.estTotal) * 100) : 0;
 
@@ -119,21 +113,8 @@ export default function AnalysisPage({ ledger, trip }: { ledger: Ledger; trip: T
       {/* 預估 vs 實際 長條圖 */}
       {grand > 0 && (
         <section className="led-block">
-          <div className="led-block-head"><h3>預估 vs 實際</h3><span className="led-muted led-legend"><i className="led-dot" style={{ background: 'var(--ink-faint)' }} />預估　<i className="led-dot" style={{ background: 'var(--accent-primary)' }} />實際</span></div>
-          <div className="led-cmp">
-            {pa.rows.filter((r) => r.estimate > 0 || r.actual > 0).map((r) => (
-              <div key={r.category} className="led-cmp-grp">
-                <div className="led-cmp-cat">
-                  <span><i className="led-dot" style={{ background: categoryColor(r.category) }} />{r.category}</span>
-                  {r.diff !== 0 && <span className={r.diff > 0 ? 'led-over-text' : 'led-ok'}>{r.diff > 0 ? '超 ' : '省 '}{formatAmount(Math.abs(r.diff))}</span>}
-                </div>
-                <div className="led-cmp-lines">
-                  <div className="led-cmp-line"><span className="tag">估</span><HBar value={r.estimate} max={cmpMax} color="var(--ink-faint)" /><span className="val">{formatAmount(r.estimate)}</span></div>
-                  <div className="led-cmp-line"><span className="tag">實</span><HBar value={r.actual} max={cmpMax} color={categoryColor(r.category)} /><span className="val">{formatAmount(r.actual)}</span></div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="led-block-head"><h3>預估 vs 實際</h3></div>
+          <EstActualChart data={pa.rows.map((r) => ({ label: r.category, color: categoryColor(r.category), estimate: r.estimate, actual: r.actual, diff: r.diff }))} />
         </section>
       )}
 

@@ -7,6 +7,7 @@ import PreDeparturePage from './PreDeparturePage';
 import DuringTripPage from './DuringTripPage';
 import AnalysisPage from './AnalysisPage';
 import SettingsPage from './SettingsPage';
+import { BackToTop } from './LedgerNav';
 
 type Tab = 'pre' | 'during' | 'analysis' | 'settings';
 
@@ -92,6 +93,7 @@ export default function LedgerPage() {
         {tab === 'analysis' && <AnalysisPage ledger={ledger} trip={trip} />}
         {tab === 'settings' && <SettingsPage ledger={ledger} />}
       </div>
+      <BackToTop />
     </div>
   );
 }

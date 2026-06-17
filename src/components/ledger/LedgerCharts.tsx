@@ -2,7 +2,6 @@ import { formatAmount } from '../../utils/money';
 
 const PIE_PALETTE = ['#5B4B7F', '#378ADD', '#EF9F27', '#1D9E75', '#D4537E', '#888780', '#BA7517', '#0F6E56', '#A32D2D'];
 
-/** 把上界進位到漂亮的刻度（1/2/5 × 10^n）。 */
 function niceCeil(v: number): number {
   if (v <= 0) return 1;
   const mag = Math.pow(10, Math.floor(Math.log10(v)));
@@ -11,7 +10,7 @@ function niceCeil(v: number): number {
   return step * mag;
 }
 
-/** 圓餅圖 + 圖例。 */
+/** 圓餅圖：大切片直接在圖上標百分比；圖例名稱與金額/% 緊鄰。 */
 export function PieChart({ data }: { data: { label: string; value: number }[] }) {
   const items = data.filter((d) => d.value > 0);
   const total = items.reduce((s, d) => s + d.value, 0);
@@ -23,7 +22,7 @@ export function PieChart({ data }: { data: { label: string; value: number }[] })
     const start = acc;
     const end = acc + ang;
     acc = end;
-    return { d, color: PIE_PALETTE[i % PIE_PALETTE.length], start, end };
+    return { d, color: PIE_PALETTE[i % PIE_PALETTE.length], start, end, pct: (d.value / total) * 100 };
   });
   const arc = (start: number, end: number) => {
     const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
@@ -37,13 +36,18 @@ export function PieChart({ data }: { data: { label: string; value: number }[] })
         {items.length === 1
           ? <circle cx={cx} cy={cy} r={r} fill={wedges[0]!.color} />
           : wedges.map((w, i) => <path key={i} d={arc(w.start, w.end)} fill={w.color} stroke="var(--bg-page)" strokeWidth="1" />)}
+        {items.length > 1 && wedges.filter((w) => w.pct >= 6).map((w, i) => {
+          const mid = (w.start + w.end) / 2;
+          const lr = r * 0.62;
+          return <text key={i} x={cx + lr * Math.cos(mid)} y={cy + lr * Math.sin(mid) + 3} textAnchor="middle" className="led-pie-slice-pct">{w.pct.toFixed(0)}%</text>;
+        })}
       </svg>
       <div className="led-pie-legend">
         {wedges.map((w, i) => (
           <div key={i} className="led-pie-leg">
             <span className="led-dot" style={{ background: w.color }} />
             <span className="led-pie-leg-name">{w.d.label}</span>
-            <span className="led-pie-leg-val">{formatAmount(w.d.value)}　<span className="led-muted">{((w.d.value / total) * 100).toFixed(1)}%</span></span>
+            <span className="led-pie-leg-val">{formatAmount(w.d.value)}・{w.pct.toFixed(1)}%</span>
           </div>
         ))}
       </div>
@@ -81,5 +85,41 @@ export function ColumnChart({ data, color = '#1D9E75' }: { data: { label: string
       <line x1={mL} y1={mT} x2={mL} y2={mT + pH} className="led-axis-line" />
       <line x1={mL} y1={mT + pH} x2={W - mR} y2={mT + pH} className="led-axis-line" />
     </svg>
+  );
+}
+
+/** 預估 vs 實際：每類別一條（實際填色），預估用標線標出，超出部分轉紅。 */
+export function EstActualChart({ data }: { data: { label: string; color: string; estimate: number; actual: number; diff: number }[] }) {
+  const rows = data.filter((d) => d.estimate > 0 || d.actual > 0);
+  if (rows.length === 0) return <div className="led-empty-row led-pad">尚無資料</div>;
+  const max = Math.max(1, ...rows.map((r) => Math.max(r.estimate, r.actual)));
+  const w = (v: number) => `${(v / max) * 100}%`;
+  return (
+    <div className="led-ea">
+      <div className="led-ea-legend led-muted">
+        <span><i className="led-ea-swatch" style={{ background: 'var(--ink-secondary)' }} />實際</span>
+        <span><i className="led-ea-tickmark" />預估（標線）</span>
+        <span><i className="led-ea-swatch" style={{ background: '#E24B4A' }} />超出</span>
+      </div>
+      {rows.map((r) => {
+        const inB = Math.min(r.actual, r.estimate);
+        const over = Math.max(0, r.actual - r.estimate);
+        return (
+          <div key={r.label} className="led-ea-row">
+            <div className="led-ea-head">
+              <span className="led-ea-cat"><i className="led-dot" style={{ background: r.color }} />{r.label}</span>
+              <span className="led-ea-nums">估 {formatAmount(r.estimate)}　實 <b>{formatAmount(r.actual)}</b>{r.diff !== 0 && <span className={r.diff > 0 ? 'led-over-text' : 'led-ok'}>　{r.diff > 0 ? '超 ' : '省 '}{formatAmount(Math.abs(r.diff))}</span>}</span>
+            </div>
+            <div className="led-ea-track">
+              <div className="led-ea-bar">
+                <div className="led-ea-seg" style={{ width: w(inB), background: r.color }} />
+                {over > 0 && <div className="led-ea-seg" style={{ width: w(over), background: '#E24B4A' }} />}
+              </div>
+              {r.estimate > 0 && <div className="led-ea-tick" style={{ left: w(r.estimate) }} />}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

@@ -11,6 +11,13 @@ import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, NumCell, DateCell, TimeCell, SelectCell, CheckCell, DeleteCell, MoneyInput } from './EditableCells';
 import LedgerTable, { type LedgerColumn } from './LedgerTable';
 import ColumnToggles from './ColumnToggles';
+import { SectionNav } from './LedgerNav';
+
+const SECTIONS = [
+  { id: 'sec-acc', label: '住宿' },
+  { id: 'sec-rest', label: '餐廳預訂' },
+  { id: 'sec-fixed', label: '其他固定項' },
+];
 
 const statusOpts = (['reserved', 'none', 'walkin', 'impromptu', 'cancelled'] as ReservationStatus[]).map((s) => ({ value: s, label: RESERVATION_LABEL[s] }));
 
@@ -97,6 +104,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
 
   return (
     <div className="led-page-cols led-cols-wide">
+      <SectionNav items={SECTIONS} />
       <div className="led-cols-bar">
         <span className="led-muted">欄位顯示：</span>
         <ColumnToggles tableId="acc" title="住宿" columns={accCols} hidden={hiddenOf('acc')} presetHidden={accPreset} onToggle={ed.toggleCol} onSet={ed.setHiddenCols} />
@@ -106,7 +114,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
       </div>
 
       {/* 住宿 */}
-      <section className="led-block">
+      <section className="led-block" id="sec-acc">
         <div className="led-block-head">
           <h3>住宿　<span className="led-muted">{ledger.accommodations.length} 間</span></h3>
           <div className="led-block-actions">
@@ -118,7 +126,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
       </section>
 
       {/* 餐廳預訂 */}
-      <section className="led-block">
+      <section className="led-block" id="sec-rest">
         <div className="led-block-head">
           <h3>餐廳預訂　<span className="led-muted">{ledger.restaurants.length} 間</span></h3>
           <div className="led-block-actions">
@@ -135,7 +143,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
       </section>
 
       {/* 其他固定項 */}
-      <section className="led-block">
+      <section className="led-block" id="sec-fixed">
         <div className="led-block-head">
           <h3>其他固定項　<span className="led-muted">{pre.length} 筆</span></h3>
           <button className="led-add-btn" style={{ marginTop: 0 }} onClick={() => ed.addExpense('pre', local)}>＋ 新增固定項</button>
