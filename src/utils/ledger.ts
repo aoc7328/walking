@@ -1,9 +1,20 @@
-import type { Ledger, ExpenseCategory, AnalysisBucket, ReservationStatus, Accommodation } from '../types/ledger';
+import type { Ledger, ExpenseCategory, AnalysisBucket, ReservationStatus, Accommodation, ReservationDefaults } from '../types/ledger';
 import type { Trip } from '../types/trip';
 import { toTWD } from './money';
 import { addDays, formatMonthDay, weekdayLabel } from './date';
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = ['交通', '住宿', '飲食', '購物', '其他'];
+
+/**
+ * 餐廳訂位全域預設（沒特別設定就自動帶上這組，秘書 CSV / 訂位牌都吃得到）。
+ * 逐欄位當 fallback（見 getLedger）：使用者在設定改了或清空，都以他填的為準。
+ */
+export const DEFAULT_RESERVATION: ReservationDefaults = {
+  bookingName: '張先生',
+  partySize: 2,
+  contact: '0911-195-855',
+  email: 'aoc7328@gmail.com',
+};
 
 /** 這份帳本實際用到的類別：預設五類 ∪ 使用者自訂 ∪ 資料中已出現的，保序去重。 */
 export function categoriesOf(l: Ledger): string[] {
@@ -19,6 +30,7 @@ export function emptyLedger(): Ledger {
   return {
     localCurrency: 'JPY',
     fxRate: 0.21,
+    reservation: { ...DEFAULT_RESERVATION },
     budgets: [],
     paymentMethods: [],
     channels: [],
@@ -28,9 +40,14 @@ export function emptyLedger(): Ledger {
   };
 }
 
-/** 永遠拿得到一份 ledger（沒設過就給空的）。 */
+/**
+ * 永遠拿得到一份 ledger（沒設過就給空的）。
+ * 順便把餐廳訂位預設逐欄位補上：舊帳本沒填的欄位自動帶 DEFAULT_RESERVATION，
+ * 使用者填過/清空過的欄位一律以他的為準（只是顯示層合併，不寫回持久化）。
+ */
 export function getLedger(trip: Trip | null | undefined): Ledger {
-  return trip?.ledger ?? emptyLedger();
+  const l = trip?.ledger ?? emptyLedger();
+  return { ...l, reservation: { ...DEFAULT_RESERVATION, ...(l.reservation ?? {}) } };
 }
 
 /** 類別 → 歸併塊：飲食→food、購物→shopping、其餘(交通/住宿/其他)→fixed。 */

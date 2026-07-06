@@ -121,7 +121,10 @@ export interface ReservationDefaults {
   bookingName?: string;
   leadGuest?: string;
   partySize?: number;
+  /** 聯絡電話。 */
   contact?: string;
+  /** 聯絡 Email（訂位確認信、給秘書 CSV / 訂位牌帶上）。 */
+  email?: string;
   /** 飲食習慣與語言需求（過敏、素食、不會日文…），訂位牌與 CSV 會帶上。 */
   dietaryNote?: string;
 }

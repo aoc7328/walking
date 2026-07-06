@@ -78,7 +78,10 @@ export default function SettingsPage({ ledger }: { ledger: Ledger }) {
             <input className="led-cell led-cell-boxed num" type="number" value={ledger.reservation?.partySize ?? ''} onChange={(e) => ed.setReservation({ partySize: e.target.value === '' ? undefined : Number(e.target.value) })} placeholder="2" />
           </label>
           <label>聯絡方式
-            <input className="led-cell led-cell-boxed" value={ledger.reservation?.contact ?? ''} onChange={(e) => ed.setReservation({ contact: e.target.value })} placeholder="電話 / email" />
+            <input className="led-cell led-cell-boxed" value={ledger.reservation?.contact ?? ''} onChange={(e) => ed.setReservation({ contact: e.target.value })} placeholder="電話" />
+          </label>
+          <label>Email
+            <input className="led-cell led-cell-boxed" type="email" value={ledger.reservation?.email ?? ''} onChange={(e) => ed.setReservation({ email: e.target.value })} placeholder="name@example.com" />
           </label>
         </div>
         <div className="led-fullnote led-fullnote-col">

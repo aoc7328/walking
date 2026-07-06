@@ -5,13 +5,13 @@ type Lang = 'ja' | 'en' | 'zh';
 
 interface Labels {
   heading: string; name: string; datetime: string; channel: string;
-  ref: string; booker: string; party: string; contact: string; notes: string; unit: string;
+  ref: string; booker: string; party: string; contact: string; email: string; notes: string; unit: string;
 }
 
 const LABELS: Record<Lang, Labels> = {
-  ja: { heading: 'ご予約確認', name: '店名', datetime: '日時', channel: '予約方法', ref: '予約番号', booker: '予約者', party: '人数', contact: '連絡先', notes: '備考（食事・言語）', unit: '名' },
-  en: { heading: 'Reservation', name: 'Restaurant', datetime: 'Date / Time', channel: 'Booked via', ref: 'Confirmation No.', booker: 'Name', party: 'Party', contact: 'Contact', notes: 'Notes (diet / language)', unit: 'pax' },
-  zh: { heading: '訂位卡', name: '餐廳', datetime: '日期時間', channel: '預約管道', ref: '預約編號', booker: '訂位人', party: '人數', contact: '聯絡方式', notes: '備註（飲食・語言）', unit: '位' },
+  ja: { heading: 'ご予約確認', name: '店名', datetime: '日時', channel: '予約方法', ref: '予約番号', booker: '予約者', party: '人数', contact: '連絡先', email: 'メール', notes: '備考（食事・言語）', unit: '名' },
+  en: { heading: 'Reservation', name: 'Restaurant', datetime: 'Date / Time', channel: 'Booked via', ref: 'Confirmation No.', booker: 'Name', party: 'Party', contact: 'Contact', email: 'Email', notes: 'Notes (diet / language)', unit: 'pax' },
+  zh: { heading: '訂位卡', name: '餐廳', datetime: '日期時間', channel: '預約管道', ref: '預約編號', booker: '訂位人', party: '人數', contact: '聯絡方式', email: 'Email', notes: '備註（飲食・語言）', unit: '位' },
 };
 
 const WEEKDAYS: Record<Lang, string[]> = {
@@ -109,6 +109,7 @@ async function buildHtml(r: Restaurant, ledger: Ledger, L: Labels, lang: Lang): 
 
   const booker = r.bookingName || res.bookingName || '';  // 專有名詞，不翻
   const contact = r.contact || res.contact || '';
+  const email = res.email || '';  // Email 位址，不翻
   const party = r.partySize ?? res.partySize;
   const partyStr = party !== undefined ? `${party} ${L.unit}` : '';
 
@@ -118,6 +119,7 @@ async function buildHtml(r: Restaurant, ledger: Ledger, L: Labels, lang: Lang): 
     row(L.booker, booker),
     row(L.party, partyStr),
     row(L.contact, contact),
+    row(L.email, email),
     row(L.channel, channel),
     row(L.ref, r.bookingRef ?? ''),
     rowMultiline(L.notes, dietary),

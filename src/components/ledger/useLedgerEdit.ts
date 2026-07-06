@@ -4,7 +4,7 @@ import type {
   Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults,
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
-import { toISODate } from '../../utils/date';
+import { toISODate, addDays } from '../../utils/date';
 import { EXPENSE_CATEGORIES, type HotelStay } from '../../utils/ledger';
 
 function todayISO(): string {
@@ -60,7 +60,25 @@ export function useLedgerEdit() {
         }),
       setReservation: (patch: Partial<ReservationDefaults>) => upd((l) => ({ ...l, reservation: { ...(l.reservation ?? {}), ...patch } })),
 
-      addAccommodation: () => upd((l) => ({ ...l, accommodations: [...l.accommodations, blankAccommodation()] })),
+      /**
+       * 新增住宿：有前一筆就沿用不常變的欄位當參考——
+       * 入住日自動接在前一筆退房日（= 前一筆入住日 + 晚數，至少算 1 晚），
+       * 平台 / 信用卡 / 幣別直接帶入前一筆；飯店名・區域・價格・附餐等留空自己填。
+       */
+      addAccommodation: () => upd((l) => {
+        const prev = l.accommodations[l.accommodations.length - 1];
+        const base = blankAccommodation();
+        const next: Accommodation = prev
+          ? {
+              ...base,
+              checkIn: prev.checkIn ? addDays(prev.checkIn, Math.max(1, prev.nights)) : base.checkIn,
+              currency: prev.currency,
+              platform: prev.platform,
+              paymentMethodId: prev.paymentMethodId,
+            }
+          : base;
+        return { ...l, accommodations: [...l.accommodations, next] };
+      }),
       /** 從行程帶入住宿段：同 placeId 或同名→更新入住日/晚數；找不到→新增一列。 */
       importStays: (stays: HotelStay[]) => upd((l) => {
         const accs = [...l.accommodations];
