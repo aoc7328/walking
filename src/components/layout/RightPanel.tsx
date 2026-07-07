@@ -12,6 +12,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { formatWithWeekday } from '../../utils/date';
 import ItineraryCard from '../itinerary/ItineraryCard';
+import NoteCardItem from '../itinerary/NoteCardItem';
 import LegConnector from '../itinerary/LegConnector';
 import type { TransportMode } from '../../types/place';
 
@@ -24,6 +25,7 @@ export default function RightPanel() {
   const reorderItems = useTripStore((s) => s.reorderItems);
   const setLegMode = useTripStore((s) => s.setLegMode);
   const removeDay = useTripStore((s) => s.removeDay);
+  const addNoteCard = useTripStore((s) => s.addNoteCard);
   const refreshLegsForDay = useTripStore((s) => s.refreshLegsForDay);
 
   const day = trip?.days.find((d) => d.id === currentDayId) ?? null;
@@ -107,7 +109,9 @@ export default function RightPanel() {
               </div>
             </div>
             <div className="right-panel-list thin-scroll">
-              {day.items.length === 0 && <div className="empty-day">這天還沒安排　·　在上方搜尋並加入地點</div>}
+              {day.items.length === 0 && (day.cards?.length ?? 0) === 0 && (
+                <div className="empty-day">這天還沒安排　·　在上方搜尋加入地點，或在下方新增一張小卡片</div>
+              )}
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={day.items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
                   {day.items.map((item, idx) => {
@@ -142,6 +146,22 @@ export default function RightPanel() {
                   })}
                 </SortableContext>
               </DndContext>
+
+              {(day.cards?.length ?? 0) > 0 && (
+                <div className="note-card-list">
+                  {day.cards!.map((c) => (
+                    <NoteCardItem key={c.id} card={c} dayId={day.id} />
+                  ))}
+                </div>
+              )}
+
+              <button
+                className="add-note-card-btn"
+                onClick={() => addNoteCard(day.id)}
+                title="新增一張無時間、無地點的隨手小卡片（適合放空日 / long stay）"
+              >
+                ＋ 新增小卡片
+              </button>
             </div>
           </>
         )}

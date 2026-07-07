@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Trip, DayPlan, ItineraryItem, Leg, DayMark } from '../types/trip';
+import type { Trip, DayPlan, ItineraryItem, Leg, DayMark, NoteCard } from '../types/trip';
 import type { Ledger } from '../types/ledger';
 import type { Place, TransportMode } from '../types/place';
 import { emptyLedger } from '../utils/ledger';
@@ -66,6 +66,11 @@ interface TripStore {
 
   /** 編輯帳本：以 mutator 改 ledger 並寫回（沒設過帳本會先補空的）。trip ref 變動 → 自動標 dirty。 */
   updateLedger: (mutate: (ledger: Ledger) => Ledger) => void;
+
+  /** 小卡片（無時間/地點的隨手備忘）：新增 / 編輯 / 刪除。與 items 獨立，不動路線與時間鏈。 */
+  addNoteCard: (dayId: string) => void;
+  updateNoteCard: (dayId: string, cardId: string, patch: Partial<Pick<NoteCard, 'text' | 'iconEmoji'>>) => void;
+  removeNoteCard: (dayId: string, cardId: string) => void;
 
   // 多 trip 管理
   createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
@@ -582,6 +587,36 @@ export const useTripStore = create<TripStore>((set, get) => ({
       const current = state.trip.ledger ?? emptyLedger();
       const ledger = mutate(current);
       return { trip: { ...state.trip, ledger, updatedAt: Date.now() } };
+    }),
+
+  // 小卡片：只改該天的 cards 陣列，不碰 items/legs，因此不需 chainAll/withAutoFill。
+  addNoteCard: (dayId) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const days = state.trip.days.map((d) =>
+        d.id === dayId ? { ...d, cards: [...(d.cards ?? []), { id: uuid(), text: '' }] } : d,
+      );
+      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+    }),
+
+  updateNoteCard: (dayId, cardId, patch) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const days = state.trip.days.map((d) =>
+        d.id === dayId
+          ? { ...d, cards: (d.cards ?? []).map((c) => (c.id === cardId ? { ...c, ...patch } : c)) }
+          : d,
+      );
+      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+    }),
+
+  removeNoteCard: (dayId, cardId) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const days = state.trip.days.map((d) =>
+        d.id === dayId ? { ...d, cards: (d.cards ?? []).filter((c) => c.id !== cardId) } : d,
+      );
+      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
     }),
 
   refreshLegsForDay: async (dayId) => {

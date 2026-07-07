@@ -4040,6 +4040,77 @@
   border-radius: var(--radius-md);
 }
 
+/* ========== 小卡片（無時間/地點的隨手備忘） ========== */
+.note-card-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+}
+
+.note-card {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 10px;
+  transition: border-color var(--t-fast);
+}
+
+.note-card:hover {
+  border-color: var(--border-medium);
+}
+
+.note-card-text {
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-primary);
+  padding: 3px 0;
+}
+
+.note-card-text:focus {
+  outline: none;
+}
+
+.note-card-text::placeholder {
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.note-card-del {
+  align-self: start;
+}
+
+.add-note-card-btn {
+  margin-top: 4px;
+  padding: 9px 12px;
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-secondary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+.add-note-card-btn:hover {
+  border-color: var(--accent-warm);
+  color: var(--accent-warm);
+  background: var(--accent-warm-soft);
+}
+
 .empty-search {
   font-size: 16px;
   color: var(--ink-muted);
