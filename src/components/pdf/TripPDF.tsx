@@ -7,7 +7,7 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer';
-import type { Trip, DayPlan, ItineraryItem, Leg } from '../../types/trip';
+import type { Trip, DayPlan, ItineraryItem, Leg, NoteCard } from '../../types/trip';
 import {
   formatWithWeekday,
   formatStayDuration,
@@ -434,7 +434,54 @@ function buildCardStyles(scale: number) {
       paddingTop: s(4),
       marginTop: s(2),
     },
+    noteCardList: {
+      flexDirection: 'column',
+      gap: s(6),
+      marginTop: s(8),
+    },
+    noteCard: {
+      backgroundColor: C.bgCard,
+      border: `0.5pt solid ${C.borderSoft}`,
+      borderRadius: s(4),
+      paddingTop: s(8),
+      paddingBottom: s(8),
+      paddingLeft: s(11),
+      paddingRight: s(11),
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: s(8),
+    },
+    noteCardIcon: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(15),
+      lineHeight: 1,
+      width: s(20),
+      textAlign: 'center',
+    },
+    noteCardText: {
+      flex: 1,
+      fontFamily: 'NotoSansTC',
+      fontSize: s(11),
+      color: C.inkPrimary,
+      lineHeight: 1.5,
+    },
   });
+}
+
+/** PDF 版小卡片：無時間/地點，只有圖示（可選）＋ 自由文字（保留換行）。 */
+function NoteCardBlock({
+  card,
+  styles,
+}: {
+  card: NoteCard;
+  styles: ReturnType<typeof buildCardStyles>;
+}) {
+  return (
+    <View style={styles.noteCard}>
+      {card.iconEmoji ? <Text style={styles.noteCardIcon}>{card.iconEmoji}</Text> : null}
+      <Text style={styles.noteCardText}>{card.text}</Text>
+    </View>
+  );
 }
 
 /**
@@ -588,10 +635,13 @@ function DayPage({
     );
   }
 
+  // 只印有意義的小卡片（有文字或有圖示）。
+  const cards = (day.cards ?? []).filter((c) => c.text.trim() !== '' || !!c.iconEmoji);
+
   const dayMap = buildDayMapData(day);
   // 改用接近 1.75:1 的 aspect，跟 PDF 顯示區（A4 內容寬 ~495pt / 高 280pt）對齊，
-  // 避免 objectFit:cover 切掉邊緣。
-  const dayMapUrl = hasApiKey()
+  // 避免 objectFit:cover 切掉邊緣。只有真的有景點才畫當日地圖（放空日不畫）。
+  const dayMapUrl = N > 0 && hasApiKey()
     ? buildStaticMapWithPath(dayMap.markers, dayMap.path, '700x400')
     : null;
 
@@ -599,42 +649,56 @@ function DayPage({
     <Page size="A4" style={base.page} wrap={false}>
       <DayHeader trip={trip} day={day} totalDays={totalDays} />
 
-      {/* Grid 區：flex 1 吃中間剩餘空間 */}
-      <View style={{ flex: 1, flexDirection: 'row', gap: 14 }}>
-        {columns.map((colItems, ci) => (
-          <View key={ci} style={{ flex: 1, flexDirection: 'column', gap: 0 }}>
-            {colItems.map((item, idx) => {
-              const globalIdx = itemIndices[ci]![idx]!;
-              const showLegBefore = idx > 0;
-              const prevGlobalIdx = globalIdx - 1;
-              const leg = showLegBefore ? day.legs[prevGlobalIdx] : null;
-              return (
-                <View key={item.id}>
-                  {leg && <LegRow leg={leg} styles={styles} />}
-                  <Card
-                    item={item}
-                    index={globalIdx}
-                    styles={styles}
-                    baseNameSize={baseNameSize}
-                  />
-                </View>
-              );
-            })}
-            {ci < cols - 1 && colItems.length > 0 && <CrossLeg styles={styles} />}
+      {/* 中段（flex 1 吃剩餘空間）：行程卡格線 + 小卡片 */}
+      <View style={{ flex: 1 }}>
+        {N > 0 && (
+          <View style={{ flexDirection: 'row', gap: 14 }}>
+            {columns.map((colItems, ci) => (
+              <View key={ci} style={{ flex: 1, flexDirection: 'column', gap: 0 }}>
+                {colItems.map((item, idx) => {
+                  const globalIdx = itemIndices[ci]![idx]!;
+                  const showLegBefore = idx > 0;
+                  const prevGlobalIdx = globalIdx - 1;
+                  const leg = showLegBefore ? day.legs[prevGlobalIdx] : null;
+                  return (
+                    <View key={item.id}>
+                      {leg && <LegRow leg={leg} styles={styles} />}
+                      <Card
+                        item={item}
+                        index={globalIdx}
+                        styles={styles}
+                        baseNameSize={baseNameSize}
+                      />
+                    </View>
+                  );
+                })}
+                {ci < cols - 1 && colItems.length > 0 && <CrossLeg styles={styles} />}
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        )}
 
-      {/* 當日路線地圖 */}
-      <View style={dayMapStyle.wrap}>
-        <Text style={dayMapStyle.label}>當日路線　TODAY&apos;S ROUTE</Text>
-        {dayMapUrl && (
-          <Image
-            src={dayMapUrl}
-            style={[dayMapStyle.image, { height: mapHeight }]}
-          />
+        {cards.length > 0 && (
+          <View style={styles.noteCardList}>
+            {cards.map((c) => (
+              <NoteCardBlock key={c.id} card={c} styles={styles} />
+            ))}
+          </View>
         )}
       </View>
+
+      {/* 當日路線地圖（放空日沒有景點 → 不畫） */}
+      {N > 0 && (
+        <View style={dayMapStyle.wrap}>
+          <Text style={dayMapStyle.label}>當日路線　TODAY&apos;S ROUTE</Text>
+          {dayMapUrl && (
+            <Image
+              src={dayMapUrl}
+              style={[dayMapStyle.image, { height: mapHeight }]}
+            />
+          )}
+        </View>
+      )}
 
       {/* 頁尾 */}
       <View style={footerStyle.row}>
@@ -650,8 +714,10 @@ function DayPage({
 export function TripPDF({ trip }: { trip: Trip }) {
   const end = getEndDate(trip);
   const totalDays = diffDays(trip.startDate, end) + 1;
-  const daysWithItems = trip.days.filter((d) => d.items.length > 0);
-  // 用 daysWithItems 不會印空白天的頁面；要全印就用 trip.days
+  // 有景點、或有意義的小卡片（放空日）都要印；兩者皆空的天才略過。
+  const daysWithItems = trip.days.filter(
+    (d) => d.items.length > 0 || (d.cards ?? []).some((c) => c.text.trim() !== '' || !!c.iconEmoji),
+  );
   void nonHotelCountInDay; // 給未來 layout 用，先消除未用警告
   void buildStaticMapUrl;
   return (

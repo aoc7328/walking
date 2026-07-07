@@ -4053,8 +4053,8 @@
   border-radius: var(--radius-md);
   padding: 10px 12px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 8px;
   align-items: start;
   box-shadow: var(--shadow-soft);
   margin-bottom: 10px;
@@ -4063,6 +4063,42 @@
 
 .note-card:hover {
   border-color: var(--border-medium);
+}
+
+.note-card.dragging {
+  opacity: 0.5;
+}
+
+/* 拖曳把手：直向三對點，按住可排序 */
+.note-card-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--ink-faint);
+  cursor: grab;
+  touch-action: none;
+  transition: color var(--t-fast);
+}
+
+.note-card-drag:hover {
+  color: var(--ink-secondary);
+}
+
+.note-card-drag:active {
+  cursor: grabbing;
+  color: var(--accent-primary);
+}
+
+.note-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .note-card-text {

@@ -26,6 +26,7 @@ export default function RightPanel() {
   const setLegMode = useTripStore((s) => s.setLegMode);
   const removeDay = useTripStore((s) => s.removeDay);
   const addNoteCard = useTripStore((s) => s.addNoteCard);
+  const reorderNoteCards = useTripStore((s) => s.reorderNoteCards);
   const refreshLegsForDay = useTripStore((s) => s.refreshLegsForDay);
 
   const day = trip?.days.find((d) => d.id === currentDayId) ?? null;
@@ -68,6 +69,17 @@ export default function RightPanel() {
   function handleLegMode(legIdx: number, mode: TransportMode) {
     if (!day) return;
     setLegMode(day.id, legIdx, mode);
+  }
+
+  function handleCardDragEnd(e: DragEndEvent) {
+    if (!day) return;
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const cards = day.cards ?? [];
+    const oldIndex = cards.findIndex((c) => c.id === active.id);
+    const newIndex = cards.findIndex((c) => c.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    reorderNoteCards(day.id, oldIndex, newIndex);
   }
 
   return (
@@ -148,11 +160,15 @@ export default function RightPanel() {
               </DndContext>
 
               {(day.cards?.length ?? 0) > 0 && (
-                <div className="note-card-list">
-                  {day.cards!.map((c) => (
-                    <NoteCardItem key={c.id} card={c} dayId={day.id} />
-                  ))}
-                </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCardDragEnd}>
+                  <SortableContext items={day.cards!.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                    <div className="note-card-list">
+                      {day.cards!.map((c) => (
+                        <NoteCardItem key={c.id} card={c} dayId={day.id} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               )}
 
               <button

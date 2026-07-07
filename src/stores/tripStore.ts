@@ -67,10 +67,12 @@ interface TripStore {
   /** 編輯帳本：以 mutator 改 ledger 並寫回（沒設過帳本會先補空的）。trip ref 變動 → 自動標 dirty。 */
   updateLedger: (mutate: (ledger: Ledger) => Ledger) => void;
 
-  /** 小卡片（無時間/地點的隨手備忘）：新增 / 編輯 / 刪除。與 items 獨立，不動路線與時間鏈。 */
+  /** 小卡片（無時間/地點的隨手備忘）：新增 / 編輯 / 刪除 / 排序 / 複製到某天。與 items 獨立，不動路線與時間鏈。 */
   addNoteCard: (dayId: string) => void;
   updateNoteCard: (dayId: string, cardId: string, patch: Partial<Pick<NoteCard, 'text' | 'iconEmoji'>>) => void;
   removeNoteCard: (dayId: string, cardId: string) => void;
+  reorderNoteCards: (dayId: string, fromIndex: number, toIndex: number) => void;
+  copyNoteCardToDay: (dayId: string, cardId: string, destDayId: string) => void;
 
   // 多 trip 管理
   createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
@@ -615,6 +617,32 @@ export const useTripStore = create<TripStore>((set, get) => ({
       if (!state.trip) return {};
       const days = state.trip.days.map((d) =>
         d.id === dayId ? { ...d, cards: (d.cards ?? []).filter((c) => c.id !== cardId) } : d,
+      );
+      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+    }),
+
+  reorderNoteCards: (dayId, fromIndex, toIndex) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const days = state.trip.days.map((d) => {
+        if (d.id !== dayId) return d;
+        const cards = [...(d.cards ?? [])];
+        const [moved] = cards.splice(fromIndex, 1);
+        if (!moved) return d;
+        cards.splice(toIndex, 0, moved);
+        return { ...d, cards };
+      });
+      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+    }),
+
+  copyNoteCardToDay: (dayId, cardId, destDayId) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const srcCard = state.trip.days.find((d) => d.id === dayId)?.cards?.find((c) => c.id === cardId);
+      if (!srcCard) return {};
+      const copy: NoteCard = { ...srcCard, id: uuid() };
+      const days = state.trip.days.map((d) =>
+        d.id === destDayId ? { ...d, cards: [...(d.cards ?? []), copy] } : d,
       );
       return { trip: { ...state.trip, days, updatedAt: Date.now() } };
     }),

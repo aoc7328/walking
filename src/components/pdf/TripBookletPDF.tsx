@@ -14,7 +14,7 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer';
-import type { Trip, DayPlan, Leg } from '../../types/trip';
+import type { Trip, DayPlan, Leg, NoteCard } from '../../types/trip';
 import {
   formatWithWeekday,
   formatStayDuration,
@@ -459,7 +459,54 @@ function buildCardStyles(scale: number) {
       fontSize: s(8),
       color: C.inkMuted,
     },
+    noteCardList: {
+      flexDirection: 'column',
+      gap: s(4),
+      marginTop: s(5),
+    },
+    noteCard: {
+      backgroundColor: C.bgCard,
+      border: `0.5pt solid ${C.borderSoft}`,
+      borderRadius: s(3),
+      paddingTop: s(6),
+      paddingBottom: s(6),
+      paddingLeft: s(8),
+      paddingRight: s(8),
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: s(6),
+    },
+    noteCardIcon: {
+      fontFamily: 'NotoSansTC',
+      fontSize: s(12),
+      lineHeight: 1,
+      width: s(16),
+      textAlign: 'center',
+    },
+    noteCardText: {
+      flex: 1,
+      fontFamily: 'NotoSansTC',
+      fontSize: s(9),
+      color: C.inkPrimary,
+      lineHeight: 1.45,
+    },
   });
+}
+
+/** 手冊版小卡片：無時間/地點，只有圖示（可選）＋ 自由文字（保留換行）。 */
+function NoteCardBlock({
+  card,
+  styles,
+}: {
+  card: NoteCard;
+  styles: ReturnType<typeof buildCardStyles>;
+}) {
+  return (
+    <View style={styles.noteCard}>
+      {card.iconEmoji ? <Text style={styles.noteCardIcon}>{card.iconEmoji}</Text> : null}
+      <Text style={styles.noteCardText}>{card.text}</Text>
+    </View>
+  );
 }
 
 function computeBookletScale(N: number): number {
@@ -538,12 +585,14 @@ function DayHalf({
   const mapHeight = computeBookletMapHeight(N);
   const baseNameSize = 10 * scale;
 
+  const cards = (day.cards ?? []).filter((c) => c.text.trim() !== '' || !!c.iconEmoji);
+
   const markers = day.items.map((it) => ({
     lat: it.place.coordinates.lat,
     lng: it.place.coordinates.lng,
   }));
   const path = day.items.map((it) => it.place.coordinates);
-  const dayMapUrl = hasApiKey()
+  const dayMapUrl = N > 0 && hasApiKey()
     ? buildStaticMapWithPath(markers, path, '500x300')
     : null;
 
@@ -607,13 +656,23 @@ function DayHalf({
             </View>
           );
         })}
+
+        {cards.length > 0 && (
+          <View style={styles.noteCardList}>
+            {cards.map((c) => (
+              <NoteCardBlock key={c.id} card={c} styles={styles} />
+            ))}
+          </View>
+        )}
       </View>
 
-      {/* 當日路線地圖 */}
-      <View style={dayMapStyle.wrap}>
-        <Text style={dayMapStyle.label}>當日路線　TODAY&apos;S ROUTE</Text>
-        {dayMapUrl && <Image src={dayMapUrl} style={[dayMapStyle.image, { height: mapHeight }]} />}
-      </View>
+      {/* 當日路線地圖（放空日沒有景點 → 不畫） */}
+      {N > 0 && (
+        <View style={dayMapStyle.wrap}>
+          <Text style={dayMapStyle.label}>當日路線　TODAY&apos;S ROUTE</Text>
+          {dayMapUrl && <Image src={dayMapUrl} style={[dayMapStyle.image, { height: mapHeight }]} />}
+        </View>
+      )}
 
       {/* Footer */}
       <View style={footerStyle.row}>
@@ -638,7 +697,10 @@ const sheetStyle = StyleSheet.create({
 export function TripBookletPDF({ trip }: { trip: Trip }) {
   const end = getEndDate(trip);
   const totalDays = diffDays(trip.startDate, end) + 1;
-  const daysWithItems = trip.days.filter((d) => d.items.length > 0);
+  // 有景點、或有意義的小卡片（放空日）都要收進手冊。
+  const daysWithItems = trip.days.filter(
+    (d) => d.items.length > 0 || (d.cards ?? []).some((c) => c.text.trim() !== '' || !!c.iconEmoji),
+  );
 
   // 1. 收集 logical pages（每個 = A5 內容元件）
   const logicalPages: React.ReactElement[] = [];
