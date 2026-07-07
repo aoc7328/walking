@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { Ledger, PaymentKind } from '../../types/ledger';
 import { EXPENSE_CATEGORIES, categoriesOf, categorySplit, DESTINATIONS } from '../../utils/ledger';
 import { formatAmount } from '../../utils/money';
-import { fileToScaledPngDataUrl } from '../../utils/image';
+import { fileToScaledPngDataUrl, tightenQrCardImage } from '../../utils/image';
 import { downloadVjwCardJpg, printVjwCards } from '../../services/vjwCard';
 import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, NumCell, SelectCell, DeleteCell } from './EditableCells';
@@ -29,8 +29,9 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
     setUploading(true);
     try {
       for (const f of Array.from(files)) {
-        const url = await fileToScaledPngDataUrl(f);
-        ed.addVjwEntry(url);
+        const scaled = await fileToScaledPngDataUrl(f, 1000);
+        const tight = await tightenQrCardImage(scaled); // 去掉 QR 與英文名之間的大留白
+        ed.addVjwEntry(tight);
       }
     } catch (err) {
       window.alert('上傳失敗：' + (err instanceof Error ? err.message : String(err)));
