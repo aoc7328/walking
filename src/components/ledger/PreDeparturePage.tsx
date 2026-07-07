@@ -56,7 +56,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
     { key: 'priceLocal', label: `總價 ${local}`, num: true, width: 92, render: (a) => <MoneyInput kind="local" amount={a.price} currency={a.currency} localCurrency={local} fxRate={fx} onChange={(amt, cur) => ed.patchAccommodation(a.id, { price: amt, currency: cur })} />, foot: formatAmount(locOf(accTotal)) },
     { key: 'meals', label: '附餐', width: 90, render: (a) => <TextCell value={a.meals} onChange={(v) => ed.patchAccommodation(a.id, { meals: v })} placeholder="附餐" /> },
     { key: 'platform', label: '平台', width: 90, render: (a) => <TextCell value={a.platform} onChange={(v) => ed.patchAccommodation(a.id, { platform: v })} placeholder="平台" /> },
-    { key: 'chargeDate', label: '付款日', width: 90, render: (a) => <TextCell value={a.chargeDate} onChange={(v) => ed.patchAccommodation(a.id, { chargeDate: v })} placeholder="付款日" /> },
+    { key: 'chargeDate', label: '免費取消日（含）', width: 120, render: (a) => <TextCell value={a.chargeDate} onChange={(v) => ed.patchAccommodation(a.id, { chargeDate: v })} placeholder="例：9/10" /> },
     { key: 'pay', label: '卡', width: 110, render: (a) => <SelectCell value={a.paymentMethodId ?? ''} onChange={(v) => ed.patchAccommodation(a.id, { paymentMethodId: v || undefined })} options={payOpts} /> },
     { key: 'del', label: '', width: 40, render: (a) => <DeleteCell onClick={() => ed.delAccommodation(a.id)} /> },
   ];

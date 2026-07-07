@@ -59,7 +59,7 @@ export interface Accommodation {
   meals?: string;
   /** 訂購平台 Agoda / Booking.com / hotels.com / 官網… */
   platform: string;
-  /** 刷卡日期或付款狀態註記（'已付款' / '現場付款' / 日期）。 */
+  /** 免費取消日（含）——這天(含)之前取消不收費。沿用舊 key `chargeDate` 以相容既有資料。 */
   chargeDate?: string;
   paymentMethodId?: string;
   note?: string;
