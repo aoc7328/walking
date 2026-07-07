@@ -17,6 +17,7 @@
     "@tanstack/react-virtual": "^3.10.8",
     "@vis.gl/react-google-maps": "^1.4.0",
     "dexie": "^4.0.8",
+    "jsqr": "^1.4.0",
     "lz-string": "^1.5.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
