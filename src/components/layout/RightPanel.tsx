@@ -11,8 +11,9 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import { formatWithWeekday } from '../../utils/date';
+import { dayNoteOf } from '../../utils/dayNote';
 import ItineraryCard from '../itinerary/ItineraryCard';
-import NoteCardItem from '../itinerary/NoteCardItem';
+import DayNoteEditor from '../itinerary/DayNoteEditor';
 import LegConnector from '../itinerary/LegConnector';
 import type { TransportMode } from '../../types/place';
 
@@ -25,11 +26,11 @@ export default function RightPanel() {
   const reorderItems = useTripStore((s) => s.reorderItems);
   const setLegMode = useTripStore((s) => s.setLegMode);
   const removeDay = useTripStore((s) => s.removeDay);
-  const addNoteCard = useTripStore((s) => s.addNoteCard);
-  const reorderNoteCards = useTripStore((s) => s.reorderNoteCards);
+  const setDayNote = useTripStore((s) => s.setDayNote);
   const refreshLegsForDay = useTripStore((s) => s.refreshLegsForDay);
 
   const day = trip?.days.find((d) => d.id === currentDayId) ?? null;
+  const dayNote = dayNoteOf(day);
 
   // 當日或行程任何 leg 缺少 duration 時，跟 Google 拿一次真實時間
   useEffect(() => {
@@ -71,17 +72,6 @@ export default function RightPanel() {
     setLegMode(day.id, legIdx, mode);
   }
 
-  function handleCardDragEnd(e: DragEndEvent) {
-    if (!day) return;
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const cards = day.cards ?? [];
-    const oldIndex = cards.findIndex((c) => c.id === active.id);
-    const newIndex = cards.findIndex((c) => c.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    reorderNoteCards(day.id, oldIndex, newIndex);
-  }
-
   return (
     <>
       <aside className={`right-panel${collapsed ? ' collapsed' : ''}`}>
@@ -121,8 +111,8 @@ export default function RightPanel() {
               </div>
             </div>
             <div className="right-panel-list thin-scroll">
-              {day.items.length === 0 && (day.cards?.length ?? 0) === 0 && (
-                <div className="empty-day">這天還沒安排　·　在上方搜尋加入地點，或在下方新增一張小卡片</div>
+              {day.items.length === 0 && !dayNote && (
+                <div className="empty-day">這天還沒安排　·　在上方搜尋加入地點，或在下方加上這天的備註</div>
               )}
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={day.items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
@@ -159,25 +149,17 @@ export default function RightPanel() {
                 </SortableContext>
               </DndContext>
 
-              {(day.cards?.length ?? 0) > 0 && (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCardDragEnd}>
-                  <SortableContext items={day.cards!.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                    <div className="note-card-list">
-                      {day.cards!.map((c) => (
-                        <NoteCardItem key={c.id} card={c} dayId={day.id} />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
+              {dayNote ? (
+                <DayNoteEditor note={dayNote} dayId={day.id} />
+              ) : (
+                <button
+                  className="add-note-card-btn"
+                  onClick={() => setDayNote(day.id, { text: '' })}
+                  title="加上這天的備註（無時間、無地點，適合放空日 / long stay）"
+                >
+                  ＋ 這天的備註
+                </button>
               )}
-
-              <button
-                className="add-note-card-btn"
-                onClick={() => addNoteCard(day.id)}
-                title="新增一張無時間、無地點的隨手小卡片（適合放空日 / long stay）"
-              >
-                ＋ 新增小卡片
-              </button>
             </div>
           </>
         )}

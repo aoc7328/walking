@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import type { Trip, DayPlan, ItineraryItem, Leg, DayMark, NoteCard } from '../types/trip';
+import type { Trip, DayPlan, ItineraryItem, Leg, DayMark, DayNote } from '../types/trip';
 import type { Ledger } from '../types/ledger';
 import type { Place, TransportMode } from '../types/place';
 import { emptyLedger } from '../utils/ledger';
 import { MOCK_TRIP } from '../db/mockData';
 import { uuid } from '../utils/format';
 import { addDays, addMinutesToTime } from '../utils/date';
+import { dayNoteOf } from '../utils/dayNote';
 import { findBestInsertPosition } from '../services/routing';
 import {
   setActiveTripId,
@@ -67,12 +68,10 @@ interface TripStore {
   /** 編輯帳本：以 mutator 改 ledger 並寫回（沒設過帳本會先補空的）。trip ref 變動 → 自動標 dirty。 */
   updateLedger: (mutate: (ledger: Ledger) => Ledger) => void;
 
-  /** 小卡片（無時間/地點的隨手備忘）：新增 / 編輯 / 刪除 / 排序 / 複製到某天。與 items 獨立，不動路線與時間鏈。 */
-  addNoteCard: (dayId: string) => void;
-  updateNoteCard: (dayId: string, cardId: string, patch: Partial<Pick<NoteCard, 'text' | 'iconEmoji'>>) => void;
-  removeNoteCard: (dayId: string, cardId: string) => void;
-  reorderNoteCards: (dayId: string, fromIndex: number, toIndex: number) => void;
-  copyNoteCardToDay: (dayId: string, cardId: string, destDayId: string) => void;
+  /** 這天的備註（單一，可帶圖示）：設定/更新 / 清除 / 套用到其他天。與 items 獨立，不動路線與時間鏈。 */
+  setDayNote: (dayId: string, patch: Partial<DayNote>) => void;
+  clearDayNote: (dayId: string) => void;
+  copyDayNoteToDay: (dayId: string, destDayId: string) => void;
 
   // 多 trip 管理
   createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
@@ -591,59 +590,45 @@ export const useTripStore = create<TripStore>((set, get) => ({
       return { trip: { ...state.trip, ledger, updatedAt: Date.now() } };
     }),
 
-  // 小卡片：只改該天的 cards 陣列，不碰 items/legs，因此不需 chainAll/withAutoFill。
-  addNoteCard: (dayId) =>
-    set((state) => {
-      if (!state.trip) return {};
-      const days = state.trip.days.map((d) =>
-        d.id === dayId ? { ...d, cards: [...(d.cards ?? []), { id: uuid(), text: '' }] } : d,
-      );
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
-    }),
-
-  updateNoteCard: (dayId, cardId, patch) =>
-    set((state) => {
-      if (!state.trip) return {};
-      const days = state.trip.days.map((d) =>
-        d.id === dayId
-          ? { ...d, cards: (d.cards ?? []).map((c) => (c.id === cardId ? { ...c, ...patch } : c)) }
-          : d,
-      );
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
-    }),
-
-  removeNoteCard: (dayId, cardId) =>
-    set((state) => {
-      if (!state.trip) return {};
-      const days = state.trip.days.map((d) =>
-        d.id === dayId ? { ...d, cards: (d.cards ?? []).filter((c) => c.id !== cardId) } : d,
-      );
-      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
-    }),
-
-  reorderNoteCards: (dayId, fromIndex, toIndex) =>
+  // 這天的備註：只改該天的 note，不碰 items/legs，因此不需 chainAll/withAutoFill。
+  // 讀取用 dayNoteOf 兼容舊版 cards[]；一經編輯/套用就寫成單一 note 並清掉 legacy cards。
+  setDayNote: (dayId, patch) =>
     set((state) => {
       if (!state.trip) return {};
       const days = state.trip.days.map((d) => {
         if (d.id !== dayId) return d;
-        const cards = [...(d.cards ?? [])];
-        const [moved] = cards.splice(fromIndex, 1);
-        if (!moved) return d;
-        cards.splice(toIndex, 0, moved);
-        return { ...d, cards };
+        const base = dayNoteOf(d) ?? { text: '' };
+        const next = { ...d, note: { ...base, ...patch } };
+        delete next.cards; // 遷移掉舊版多卡片
+        return next;
       });
       return { trip: { ...state.trip, days, updatedAt: Date.now() } };
     }),
 
-  copyNoteCardToDay: (dayId, cardId, destDayId) =>
+  clearDayNote: (dayId) =>
     set((state) => {
       if (!state.trip) return {};
-      const srcCard = state.trip.days.find((d) => d.id === dayId)?.cards?.find((c) => c.id === cardId);
-      if (!srcCard) return {};
-      const copy: NoteCard = { ...srcCard, id: uuid() };
-      const days = state.trip.days.map((d) =>
-        d.id === destDayId ? { ...d, cards: [...(d.cards ?? []), copy] } : d,
-      );
+      const days = state.trip.days.map((d) => {
+        if (d.id !== dayId) return d;
+        const next = { ...d };
+        delete next.note;
+        delete next.cards;
+        return next;
+      });
+      return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+    }),
+
+  copyDayNoteToDay: (dayId, destDayId) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const src = dayNoteOf(state.trip.days.find((d) => d.id === dayId));
+      if (!src) return {};
+      const days = state.trip.days.map((d) => {
+        if (d.id !== destDayId) return d;
+        const next = { ...d, note: { ...src } };
+        delete next.cards;
+        return next;
+      });
       return { trip: { ...state.trip, days, updatedAt: Date.now() } };
     }),
 

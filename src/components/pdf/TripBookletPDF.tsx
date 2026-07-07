@@ -14,7 +14,8 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer';
-import type { Trip, DayPlan, Leg, NoteCard } from '../../types/trip';
+import type { Trip, DayPlan, Leg, DayNote } from '../../types/trip';
+import { printableDayNote } from '../../utils/dayNote';
 import {
   formatWithWeekday,
   formatStayDuration,
@@ -493,18 +494,18 @@ function buildCardStyles(scale: number) {
   });
 }
 
-/** 手冊版小卡片：無時間/地點，只有圖示（可選）＋ 自由文字（保留換行）。 */
-function NoteCardBlock({
-  card,
+/** 手冊版這天的備註：無時間/地點，只有圖示（可選）＋ 自由文字（保留換行）。 */
+function NoteBlock({
+  note,
   styles,
 }: {
-  card: NoteCard;
+  note: DayNote;
   styles: ReturnType<typeof buildCardStyles>;
 }) {
   return (
     <View style={styles.noteCard}>
-      {card.iconEmoji ? <Text style={styles.noteCardIcon}>{card.iconEmoji}</Text> : null}
-      <Text style={styles.noteCardText}>{card.text}</Text>
+      {note.iconEmoji ? <Text style={styles.noteCardIcon}>{note.iconEmoji}</Text> : null}
+      <Text style={styles.noteCardText}>{note.text}</Text>
     </View>
   );
 }
@@ -585,7 +586,7 @@ function DayHalf({
   const mapHeight = computeBookletMapHeight(N);
   const baseNameSize = 10 * scale;
 
-  const cards = (day.cards ?? []).filter((c) => c.text.trim() !== '' || !!c.iconEmoji);
+  const note = printableDayNote(day);
 
   const markers = day.items.map((it) => ({
     lat: it.place.coordinates.lat,
@@ -657,11 +658,9 @@ function DayHalf({
           );
         })}
 
-        {cards.length > 0 && (
+        {note && (
           <View style={styles.noteCardList}>
-            {cards.map((c) => (
-              <NoteCardBlock key={c.id} card={c} styles={styles} />
-            ))}
+            <NoteBlock note={note} styles={styles} />
           </View>
         )}
       </View>
@@ -697,10 +696,8 @@ const sheetStyle = StyleSheet.create({
 export function TripBookletPDF({ trip }: { trip: Trip }) {
   const end = getEndDate(trip);
   const totalDays = diffDays(trip.startDate, end) + 1;
-  // 有景點、或有意義的小卡片（放空日）都要收進手冊。
-  const daysWithItems = trip.days.filter(
-    (d) => d.items.length > 0 || (d.cards ?? []).some((c) => c.text.trim() !== '' || !!c.iconEmoji),
-  );
+  // 有景點、或有備註（放空日）都要收進手冊。
+  const daysWithItems = trip.days.filter((d) => d.items.length > 0 || !!printableDayNote(d));
 
   // 1. 收集 logical pages（每個 = A5 內容元件）
   const logicalPages: React.ReactElement[] = [];

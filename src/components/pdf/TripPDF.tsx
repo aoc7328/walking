@@ -7,7 +7,8 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer';
-import type { Trip, DayPlan, ItineraryItem, Leg, NoteCard } from '../../types/trip';
+import type { Trip, DayPlan, ItineraryItem, Leg, DayNote } from '../../types/trip';
+import { printableDayNote } from '../../utils/dayNote';
 import {
   formatWithWeekday,
   formatStayDuration,
@@ -468,18 +469,18 @@ function buildCardStyles(scale: number) {
   });
 }
 
-/** PDF 版小卡片：無時間/地點，只有圖示（可選）＋ 自由文字（保留換行）。 */
-function NoteCardBlock({
-  card,
+/** PDF 版這天的備註：無時間/地點，只有圖示（可選）＋ 自由文字（保留換行）。 */
+function NoteBlock({
+  note,
   styles,
 }: {
-  card: NoteCard;
+  note: DayNote;
   styles: ReturnType<typeof buildCardStyles>;
 }) {
   return (
     <View style={styles.noteCard}>
-      {card.iconEmoji ? <Text style={styles.noteCardIcon}>{card.iconEmoji}</Text> : null}
-      <Text style={styles.noteCardText}>{card.text}</Text>
+      {note.iconEmoji ? <Text style={styles.noteCardIcon}>{note.iconEmoji}</Text> : null}
+      <Text style={styles.noteCardText}>{note.text}</Text>
     </View>
   );
 }
@@ -635,8 +636,8 @@ function DayPage({
     );
   }
 
-  // 只印有意義的小卡片（有文字或有圖示）。
-  const cards = (day.cards ?? []).filter((c) => c.text.trim() !== '' || !!c.iconEmoji);
+  // 這天的備註（有文字或圖示才印）。
+  const note = printableDayNote(day);
 
   const dayMap = buildDayMapData(day);
   // 改用接近 1.75:1 的 aspect，跟 PDF 顯示區（A4 內容寬 ~495pt / 高 280pt）對齊，
@@ -678,11 +679,9 @@ function DayPage({
           </View>
         )}
 
-        {cards.length > 0 && (
+        {note && (
           <View style={styles.noteCardList}>
-            {cards.map((c) => (
-              <NoteCardBlock key={c.id} card={c} styles={styles} />
-            ))}
+            <NoteBlock note={note} styles={styles} />
           </View>
         )}
       </View>
@@ -714,10 +713,8 @@ function DayPage({
 export function TripPDF({ trip }: { trip: Trip }) {
   const end = getEndDate(trip);
   const totalDays = diffDays(trip.startDate, end) + 1;
-  // 有景點、或有意義的小卡片（放空日）都要印；兩者皆空的天才略過。
-  const daysWithItems = trip.days.filter(
-    (d) => d.items.length > 0 || (d.cards ?? []).some((c) => c.text.trim() !== '' || !!c.iconEmoji),
-  );
+  // 有景點、或有備註（放空日）都要印；兩者皆空的天才略過。
+  const daysWithItems = trip.days.filter((d) => d.items.length > 0 || !!printableDayNote(d));
   void nonHotelCountInDay; // 給未來 layout 用，先消除未用警告
   void buildStaticMapUrl;
   return (

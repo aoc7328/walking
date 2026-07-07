@@ -46,15 +46,21 @@ export interface MarkLegendEntry {
 }
 
 /**
- * 小卡片：無時間、無地點、不進路線/地圖/時間鏈的隨手備忘。
- * 給「整天放空、想去再說」這類 long stay / 慢活日用——只有圖示與一段自由文字。
- * 刻意跟 ItineraryItem 分開存（DayPlan.cards），才不會被捲進點對點路線與時間計算。
+ * 這天的備註（單一）：無時間、無地點、不進路線/地圖/時間鏈的隨手文字，可帶一個圖示。
+ * 給「整天放空、想去再說」這類 long stay / 慢活日用——一天一則就夠。
+ * 刻意跟 ItineraryItem 分開存（DayPlan.note），才不會被捲進點對點路線與時間計算。
  */
+export interface DayNote {
+  /** 備註圖示 emoji（可無）。 */
+  iconEmoji?: string;
+  /** 備註內文（自由文字；UI 上文字方塊會自動長高完整顯示）。 */
+  text: string;
+}
+
+/** @deprecated 舊版「多張小卡片」。保留僅供讀取遷移成單一 note（見 utils/dayNote.ts）。 */
 export interface NoteCard {
   id: string;
-  /** 卡片圖示 emoji（可無）。 */
   iconEmoji?: string;
-  /** 卡片內文（自由文字；UI 上文字方塊會自動長高完整顯示）。 */
   text: string;
 }
 
@@ -67,7 +73,9 @@ export interface DayPlan {
   legs: Leg[];
   /** 這天被蓋上的標記符號（顯示在日期卡右上角）。 */
   marks?: DayMark[];
-  /** 這天的小卡片（無時間/地點的隨手備忘；與 items 完全獨立，不進路線/地圖/時間鏈）。 */
+  /** 這天的備註（單一，可帶圖示；與 items 完全獨立，不進路線/地圖/時間鏈）。取代舊的 cards[]。 */
+  note?: DayNote;
+  /** @deprecated 舊版多卡片；保留僅供讀取遷移，新程式一律用 note（見 utils/dayNote.ts）。 */
   cards?: NoteCard[];
 }
 
