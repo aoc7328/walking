@@ -71,6 +71,7 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
           <div className="led-block-head"><h3>Visit Japan Web 入境 QR</h3>
             <span className="led-muted">一人上傳一張截圖（含 QR＋英文名）；系統做成名片大小的卡片、加上中文姓名與行程名稱，可下載 JPG 存手機，或列印剪開塞護照</span>
           </div>
+          <div className="vjw-warn">⚠️ QR 圖不會存進雲端（檔案太大、也只是一次性）——請上傳後直接「下載 JPG」或「列印」；離開帳本或重新整理就會清空。</div>
           <div className="vjw-list">
             {vjw.length === 0 && <span className="led-muted">尚無——按下方「上傳 QR」加入第一個人</span>}
             {vjw.map((v) => (

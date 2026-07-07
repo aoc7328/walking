@@ -108,12 +108,24 @@ export async function persistTripImmediate(trip: Trip): Promise<void> {
   await putTripToKV(trip);
 }
 
+/**
+ * 寫進雲端 / 本地備份前，剝掉「不進持久化」的暫存欄位。
+ * 目前是 Visit Japan Web 入境 QR 圖：base64 很大（會撞後端 500KB 上限），且屬一次性
+ *（上傳 → 下載 JPG / 列印 → 用完即丟），刻意不存。記憶體裡的 trip 仍保留，當下照樣能下載/列印。
+ */
+function stripEphemeral(trip: Trip): Trip {
+  if (!trip.ledger || trip.ledger.vjw === undefined) return trip;
+  const ledger = { ...trip.ledger };
+  delete ledger.vjw;
+  return { ...trip, ledger };
+}
+
 async function putTripToKV(trip: Trip): Promise<void> {
   try {
     await apiFetch(`/${encodeURIComponent(trip.id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(trip),
+      body: JSON.stringify(stripEphemeral(trip)),
     });
   } catch (err) {
     console.error('[walking] 行程同步到 KV 失敗:', err);
@@ -220,15 +232,16 @@ const MAX_BACKUPS = 7;
 /** 本地備份（Dexie backups 表）仍然保留，作為災難復原用 */
 export async function recordDailyBackup(trip: Trip): Promise<void> {
   const today = toISODate(new Date());
+  const snap = stripEphemeral(trip); // 本地備份也不留暫存 QR，免得越積越大
   const existing = await db.backups.where({ tripId: trip.id, date: today }).first();
   if (existing) {
-    await db.backups.put({ ...existing, snapshot: trip, createdAt: Date.now() });
+    await db.backups.put({ ...existing, snapshot: snap, createdAt: Date.now() });
   } else {
     await db.backups.add({
       id: `${trip.id}-${today}`,
       tripId: trip.id,
       date: today,
-      snapshot: trip,
+      snapshot: snap,
       createdAt: Date.now(),
     });
   }

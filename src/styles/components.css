@@ -4164,6 +4164,17 @@
   color: var(--accent-warm);
 }
 
+.vjw-warn {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #9E6B1F;
+  background: var(--accent-warm-soft);
+  border: 0.5px solid var(--accent-warm);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  margin-bottom: 10px;
+}
+
 .empty-search {
   font-size: 16px;
   color: var(--ink-muted);
