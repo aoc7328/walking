@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Ledger, PaymentKind } from '../../types/ledger';
 import { EXPENSE_CATEGORIES, categoriesOf, categorySplit, DESTINATIONS } from '../../utils/ledger';
 import { formatAmount } from '../../utils/money';
+import { fileToScaledPngDataUrl } from '../../utils/image';
+import { downloadVjwCardJpg, printVjwCards } from '../../services/vjwCard';
 import { useLedgerEdit } from './useLedgerEdit';
 import { TextCell, NumCell, SelectCell, DeleteCell } from './EditableCells';
 
@@ -11,13 +13,32 @@ const kindOpts: { value: PaymentKind; label: string }[] = [
   { value: 'mobile', label: '行動支付' },
 ];
 
-export default function SettingsPage({ ledger }: { ledger: Ledger }) {
+export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tripName: string }) {
   const ed = useLedgerEdit();
   const [newChannel, setNewChannel] = useState('');
   const [newCategory, setNewCategory] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const cats = categoriesOf(ledger);
   const split = categorySplit(ledger);
   const isDefaultCat = (c: string) => (EXPENSE_CATEGORIES as string[]).includes(c);
+  const vjw = ledger.vjw ?? [];
+
+  async function handleVjwFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const f of Array.from(files)) {
+        const url = await fileToScaledPngDataUrl(f);
+        ed.addVjwEntry(url);
+      }
+    } catch (err) {
+      window.alert('上傳失敗：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
 
   return (
     <div className="led-page-cols">
@@ -42,6 +63,35 @@ export default function SettingsPage({ ledger }: { ledger: Ledger }) {
           </label>
         </div>
       </section>
+
+      {/* Visit Japan Web 入境 QR（只有目的地為日本時出現） */}
+      {ledger.destination === '日本' && (
+        <section className="led-block">
+          <div className="led-block-head"><h3>Visit Japan Web 入境 QR</h3>
+            <span className="led-muted">一人上傳一張截圖（含 QR＋英文名）；系統做成名片大小的卡片、加上中文姓名與行程名稱，可下載 JPG 存手機，或列印剪開塞護照</span>
+          </div>
+          <div className="vjw-list">
+            {vjw.length === 0 && <span className="led-muted">尚無——按下方「上傳 QR」加入第一個人</span>}
+            {vjw.map((v) => (
+              <div key={v.id} className="vjw-row">
+                <img className="vjw-thumb" src={v.image} alt="Visit Japan Web QR" />
+                <label className="vjw-name-field">中文姓名
+                  <input className="led-cell led-cell-boxed" value={v.nameZh ?? ''} onChange={(e) => ed.patchVjwEntry(v.id, { nameZh: e.target.value })} placeholder="例：張思齊" />
+                </label>
+                <button className="led-export-btn" onClick={() => { void downloadVjwCardJpg(v, tripName); }} title="下載這個人的資訊卡（JPG，存手機）">下載 JPG</button>
+                <button className="vjw-del" onClick={() => { if (window.confirm('刪除這張 QR？')) ed.delVjwEntry(v.id); }} aria-label="刪除" title="刪除">×</button>
+              </div>
+            ))}
+          </div>
+          <div className="led-settings-row" style={{ marginTop: 8 }}>
+            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void handleVjwFiles(e.target.files); }} />
+            <button className="led-add-btn" style={{ marginTop: 0 }} disabled={uploading} onClick={() => fileRef.current?.click()}>{uploading ? '處理中…' : '＋ 上傳 QR'}</button>
+            {vjw.length > 0 && (
+              <button className="led-export-btn" onClick={() => printVjwCards(vjw, tripName)} title="全部人排在同一張 A4，印出來自己剪開">🖨 列印全部（A4）</button>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* 支付方式 */}
       <section className="led-block">

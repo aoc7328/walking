@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import type {
-  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults,
+  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults, VjwEntry,
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
 import { toISODate, addDays } from '../../utils/date';
@@ -59,6 +59,12 @@ export function useLedgerEdit() {
           return { ...l, view: { ...v, hiddenCols: hc } };
         }),
       setReservation: (patch: Partial<ReservationDefaults>) => upd((l) => ({ ...l, reservation: { ...(l.reservation ?? {}), ...patch } })),
+
+      /** Visit Japan Web 入境 QR（一人一張）。image 為已縮圖的 data URL。 */
+      addVjwEntry: (image: string) => upd((l) => ({ ...l, vjw: [...(l.vjw ?? []), { id: uuid(), image } as VjwEntry] })),
+      patchVjwEntry: (id: string, patch: Partial<Pick<VjwEntry, 'nameZh'>>) =>
+        upd((l) => ({ ...l, vjw: (l.vjw ?? []).map((v) => (v.id === id ? { ...v, ...patch } : v)) })),
+      delVjwEntry: (id: string) => upd((l) => ({ ...l, vjw: (l.vjw ?? []).filter((v) => v.id !== id) })),
 
       /**
        * 新增住宿：有前一筆就沿用不常變的欄位當參考——

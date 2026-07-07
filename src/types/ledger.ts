@@ -129,6 +129,19 @@ export interface ReservationDefaults {
   dietaryNote?: string;
 }
 
+/**
+ * Visit Japan Web 入境 QR（僅目的地為日本時用）：一人一張卡。
+ * image 是使用者上傳的 Visit Japan Web 截圖（本身已含 QR＋英文名），縮圖後的 data URL。
+ * 私密——跟整本帳本一樣不會進公開分享連結。
+ */
+export interface VjwEntry {
+  id: string;
+  /** 中文姓名（顯示在卡片下方，英文名已在上傳圖裡）。 */
+  nameZh?: string;
+  /** 上傳的 QR 圖，縮圖後的 data URL（PNG，保留 QR 清晰）。 */
+  image: string;
+}
+
 export interface Ledger {
   /** 旅行目的地國家名稱（選了會自動帶幣別與語言）。 */
   destination?: string;
@@ -140,6 +153,8 @@ export interface Ledger {
   fxRate: number;
   /** 餐廳訂位全域預設（訂位人/主訂者/人數/聯絡）。 */
   reservation?: ReservationDefaults;
+  /** Visit Japan Web 入境 QR（一人一張；只有目的地為日本時才用得到）。 */
+  vjw?: VjwEntry[];
   /** 自訂類別清單（含預設五類）。未設時用預設五類。 */
   categories?: string[];
   /** 表格欄寬與隱藏欄設定。 */

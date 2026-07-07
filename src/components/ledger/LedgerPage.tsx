@@ -91,7 +91,7 @@ export default function LedgerPage() {
         {tab === 'pre' && <PreDeparturePage ledger={ledger} tripName={trip.name} />}
         {tab === 'during' && <DuringTripPage ledger={ledger} />}
         {tab === 'analysis' && <AnalysisPage ledger={ledger} trip={trip} />}
-        {tab === 'settings' && <SettingsPage ledger={ledger} />}
+        {tab === 'settings' && <SettingsPage ledger={ledger} tripName={trip.name} />}
       </div>
       <BackToTop />
     </div>

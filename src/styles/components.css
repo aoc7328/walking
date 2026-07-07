@@ -4108,6 +4108,62 @@
   background: var(--accent-warm-soft);
 }
 
+/* ========== Visit Japan Web 入境 QR ========== */
+.vjw-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vjw-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+}
+
+.vjw-thumb {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  background: #fff;
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.vjw-name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  color: var(--ink-secondary);
+  flex: 1;
+  min-width: 0;
+}
+
+.vjw-del {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--t-fast);
+}
+
+.vjw-del:hover {
+  background: var(--accent-warm-soft);
+  color: var(--accent-warm);
+}
+
 .empty-search {
   font-size: 16px;
   color: var(--ink-muted);
