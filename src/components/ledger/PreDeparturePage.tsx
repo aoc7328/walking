@@ -114,7 +114,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
             <button className="led-export-btn" onClick={importFromItinerary} title="掃描行程裡標為飯店的地點，自動帶入入住日與連住晚數">從行程帶入</button>
           </div>
         </div>
-        <LedgerTable tableId="acc" columns={accCols} rows={ledger.accommodations} rowKey={(a) => a.id} hidden={hiddenOf('acc')} widths={widthsOf('acc')} onResize={(k, w) => ed.setColWidth('acc', k, w)} footerLabel="小計" emptyText="尚無住宿" />
+        <LedgerTable tableId="acc" columns={accCols} rows={ledger.accommodations} rowKey={(a) => a.id} hidden={hiddenOf('acc')} widths={widthsOf('acc')} onResize={(k, w) => ed.setColWidth('acc', k, w)} draggable onReorder={(a, o) => ed.reorderAccommodations(a, o)} footerLabel="小計" emptyText="尚無住宿" />
       </section>
 
       {/* 餐廳預訂 */}
@@ -131,7 +131,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
             )}
           </div>
         </div>
-        <LedgerTable tableId="rest" columns={restCols} rows={ledger.restaurants} rowKey={(r) => r.id} hidden={hiddenOf('rest')} widths={widthsOf('rest')} onResize={(k, w) => ed.setColWidth('rest', k, w)} footerLabel="小計 · 吃飯" emptyText="尚無餐廳預訂" />
+        <LedgerTable tableId="rest" columns={restCols} rows={ledger.restaurants} rowKey={(r) => r.id} hidden={hiddenOf('rest')} widths={widthsOf('rest')} onResize={(k, w) => ed.setColWidth('rest', k, w)} draggable onReorder={(a, o) => ed.reorderRestaurants(a, o)} footerLabel="小計 · 吃飯" emptyText="尚無餐廳預訂" />
       </section>
 
       {/* 其他固定項 */}
@@ -140,7 +140,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
           <h3>其他固定項　<span className="led-muted">{pre.length} 筆</span></h3>
           <button className="led-add-btn" style={{ marginTop: 0 }} onClick={() => ed.addExpense('pre', local)}>＋ 新增固定項</button>
         </div>
-        <LedgerTable tableId="fixed" columns={fixedCols} rows={pre} rowKey={(e) => e.id} hidden={hiddenOf('fixed')} widths={widthsOf('fixed')} onResize={(k, w) => ed.setColWidth('fixed', k, w)} footerLabel="小計" emptyText="尚無固定項" />
+        <LedgerTable tableId="fixed" columns={fixedCols} rows={pre} rowKey={(e) => e.id} hidden={hiddenOf('fixed')} widths={widthsOf('fixed')} onResize={(k, w) => ed.setColWidth('fixed', k, w)} draggable onReorder={(a, o) => ed.reorderExpenses('pre', a, o)} footerLabel="小計" emptyText="尚無固定項" />
       </section>
     </div>
   );

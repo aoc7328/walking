@@ -25,6 +25,17 @@ function blankExpense(phase: ExpensePhase, localCurrency: string): Expense {
   };
 }
 
+/** 依 id 把陣列中的 activeId 移到 overId 的位置（回傳新陣列；無變動回原陣列）。 */
+function moveById<T extends { id: string }>(arr: T[], activeId: string, overId: string): T[] {
+  const from = arr.findIndex((x) => x.id === activeId);
+  const to = arr.findIndex((x) => x.id === overId);
+  if (from < 0 || to < 0 || from === to) return arr;
+  const next = [...arr];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved!);
+  return next;
+}
+
 /** 所有帳本編輯動作（新增 / 改某欄 / 刪除），都透過 updateLedger 寫回（自動標 dirty）。 */
 export function useLedgerEdit() {
   const updateLedger = useTripStore((s) => s.updateLedger);
@@ -101,11 +112,13 @@ export function useLedgerEdit() {
       patchAccommodation: (id: string, patch: Partial<Accommodation>) =>
         upd((l) => ({ ...l, accommodations: l.accommodations.map((a) => (a.id === id ? { ...a, ...patch } : a)) })),
       delAccommodation: (id: string) => upd((l) => ({ ...l, accommodations: l.accommodations.filter((a) => a.id !== id) })),
+      reorderAccommodations: (activeId: string, overId: string) => upd((l) => ({ ...l, accommodations: moveById(l.accommodations, activeId, overId) })),
 
       addRestaurant: (localCurrency: string) => upd((l) => ({ ...l, restaurants: [...l.restaurants, blankRestaurant(localCurrency)] })),
       patchRestaurant: (id: string, patch: Partial<Restaurant>) =>
         upd((l) => ({ ...l, restaurants: l.restaurants.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),
       delRestaurant: (id: string) => upd((l) => ({ ...l, restaurants: l.restaurants.filter((r) => r.id !== id) })),
+      reorderRestaurants: (activeId: string, overId: string) => upd((l) => ({ ...l, restaurants: moveById(l.restaurants, activeId, overId) })),
 
       addExpense: (phase: ExpensePhase, localCurrency: string) => upd((l) => ({ ...l, expenses: [...l.expenses, blankExpense(phase, localCurrency)] })),
       /** 用填好的值直接新增一筆流水帳（給上方快速輸入列用）。 */
@@ -114,6 +127,16 @@ export function useLedgerEdit() {
       patchExpense: (id: string, patch: Partial<Expense>) =>
         upd((l) => ({ ...l, expenses: l.expenses.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
       delExpense: (id: string) => upd((l) => ({ ...l, expenses: l.expenses.filter((e) => e.id !== id) })),
+      /** 只重排某 phase 的通用支出（固定項=pre），其餘 phase 的項目位置不動。 */
+      reorderExpenses: (phase: ExpensePhase, activeId: string, overId: string) =>
+        upd((l) => {
+          const phaseItems = l.expenses.filter((e) => e.phase === phase);
+          const moved = moveById(phaseItems, activeId, overId);
+          if (moved === phaseItems) return l;
+          let i = 0;
+          const expenses = l.expenses.map((e) => (e.phase === phase ? moved[i++]! : e));
+          return { ...l, expenses };
+        }),
 
       addPayment: () => upd((l) => ({ ...l, paymentMethods: [...l.paymentMethods, { id: uuid(), name: '', kind: 'card' as const }] })),
       patchPayment: (id: string, patch: Partial<PaymentMethod>) =>

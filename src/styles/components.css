@@ -4636,6 +4636,27 @@ input.led-cell.num { text-align: right; }
 .led-th-sort:hover { color: var(--accent-warm); }
 .led-sort-ind { color: var(--accent-warm); }
 
+/* 整列拖曳排序：最左把手欄 */
+.led-drag-th, .led-drag-cell { padding: 0 !important; text-align: center; overflow: visible !important; }
+.led-row-drag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: grab;
+  touch-action: none;
+  border-radius: var(--radius-sm);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.led-row-drag:hover { color: var(--ink-secondary); background: var(--bg-soft); }
+.led-row-drag:active { cursor: grabbing; color: var(--accent-primary); background: var(--accent-primary-soft); }
+.led-tr-dragging { opacity: 0.55; }
+
 .led-cols-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0 10px; font-size: 13px; }
 .led-cols-panel { position: relative; display: inline-block; }
 .led-cols-summary { cursor: pointer; font-family: var(--font-body); padding: 5px 11px; border: 0.5px solid var(--border-medium); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 13px; color: var(--ink-primary); }
