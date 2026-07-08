@@ -166,6 +166,13 @@ function DayBlock({
         </div>
       </header>
 
+      {day.nt && (
+        <div className="tv-day-note">
+          {day.nt.e && <span className="tv-day-note-icon" aria-hidden>{day.nt.e}</span>}
+          <span className="tv-day-note-text">{day.nt.t}</span>
+        </div>
+      )}
+
       {hasApiKey() && <ShareDayMap day={day} />}
 
       <div className="tv-items">

@@ -2,6 +2,7 @@
 import type { Place } from '../types/place';
 import { TRANSPORT_LABEL, formatDuration } from '../utils/format';
 import { formatWithWeekday, formatStayDuration } from '../utils/date';
+import { printableDayNote } from '../utils/dayNote';
 import { buildStaticMapUrl, hasApiKey } from './googleMaps';
 
 function download(filename: string, content: string, type: string): void {
@@ -86,6 +87,11 @@ function generateShareHTML(trip: Trip): string {
       });
       const staticUrl = showStatic ? buildStaticMapUrl(markers) : null;
 
+      const note = printableDayNote(day);
+      const noteHtml = note
+        ? `<div class="day-note">${note.iconEmoji ? `<span class="day-note-icon">${escapeHtml(note.iconEmoji)}</span>` : ''}<span class="day-note-text">${escapeHtml(note.text)}</span></div>`
+        : '';
+
       const itemsHtml = day.items
         .map((it, idx) => {
           const leg = idx > 0 ? day.legs[idx - 1] : null;
@@ -127,6 +133,7 @@ function generateShareHTML(trip: Trip): string {
       return `
         <section class="day">
           <h2>Day ${day.dayIndex}　·　${escapeHtml(formatWithWeekday(day.date))}${day.city ? `　·　${escapeHtml(day.city)}` : ''}</h2>
+          ${noteHtml}
           ${staticUrl ? `<img class="static-map" src="${staticUrl}" alt="Day ${day.dayIndex} 地圖"/>` : ''}
           ${itemsHtml}
         </section>
@@ -170,6 +177,9 @@ function generateShareHTML(trip: Trip): string {
   .addr { margin-top: 2px; }
   .notes { margin-top: 6px; padding-left: 16px; }
   .notes li { font-size: 16px; color: var(--ink-secondary); list-style: '• '; padding-left: 4px; }
+  .day-note { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; padding: 10px 14px; background: #FAEDE4; border: 0.5px solid var(--border-soft); border-radius: 6px; }
+  .day-note-icon { font-size: 18px; flex-shrink: 0; }
+  .day-note-text { font-size: 16px; color: var(--ink-primary); line-height: 1.6; white-space: pre-wrap; }
   .leg { font-size: 15px; color: var(--ink-muted); padding: 6px 0 6px 42px; }
   .nav-btn {
     display: inline-flex;

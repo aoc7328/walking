@@ -2,6 +2,7 @@ import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from
 import QRCode from 'qrcode';
 import type { Trip, DayPlan, ItineraryItem, Leg } from '../types/trip';
 import type { TransportMode } from '../types/place';
+import { printableDayNote } from '../utils/dayNote';
 
 /**
  * v2：把所有不重複地點抽到頂層 `p` 陣列（去重），items 只存 placeIdx 索引。
@@ -33,10 +34,17 @@ interface ShareLeg {
   t?: number;
 }
 
+/** 以日為單位的備註（DayPlan.note）：e=圖示 emoji（可無）、t=文字。 */
+interface ShareDayNote {
+  e?: string;
+  t: string;
+}
+
 interface ShareDayV2 {
   c?: string;
   i: ShareItemV2[];
   l: ShareLeg[];
+  nt?: ShareDayNote;
 }
 
 interface SharePayloadV2 {
@@ -99,6 +107,7 @@ export interface ShareDay {
   c?: string;
   i: ShareItem[];
   l: ShareLeg[];
+  nt?: ShareDayNote;
 }
 
 export interface ShareTrip {
@@ -166,6 +175,8 @@ function buildSharePayloadV2(trip: Trip): SharePayloadV2 {
     });
     const out: ShareDayV2 = { i: items, l: legs };
     if (d.city) out.c = d.city;
+    const note = printableDayNote(d);
+    if (note) out.nt = note.iconEmoji ? { e: note.iconEmoji, t: note.text } : { t: note.text };
     return out;
   });
 
@@ -290,6 +301,7 @@ function flatten(payload: SharePayload): ShareTrip {
           };
         }),
         l: d.l,
+        nt: d.nt,
       })),
     };
   }
