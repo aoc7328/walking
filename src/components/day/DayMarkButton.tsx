@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { DayMark } from '../../types/trip';
 import { useTripStore } from '../../stores/tripStore';
 import { MARK_GLYPHS, MARK_COLORS, markName } from '../../data/markPalette';
+import MarkGlyph from './MarkGlyph';
 import AnchoredPopover from '../common/AnchoredPopover';
 
 interface Props {
@@ -41,7 +42,7 @@ export default function DayMarkButton({ dayId, dayIndex, marks }: Props) {
           <>
             {marks.slice(0, 4).map((m, i) => (
               <span key={i} className="day-mark" style={{ color: m.color }}>
-                {m.glyph}
+                <MarkGlyph glyph={m.glyph} />
               </span>
             ))}
             {marks.length > 4 && <span className="day-tab-mark-more">+{marks.length - 4}</span>}
@@ -87,7 +88,7 @@ export default function DayMarkButton({ dayId, dayIndex, marks }: Props) {
                 title={`${markName(g.glyph, color)}${on ? '（已蓋上，點擊移除）' : ''}`}
                 onClick={() => toggleDayMark(dayId, { glyph: g.glyph, color })}
               >
-                {g.glyph}
+                <MarkGlyph glyph={g.glyph} />
               </button>
             );
           })}
@@ -106,7 +107,7 @@ export default function DayMarkButton({ dayId, dayIndex, marks }: Props) {
                   onClick={() => toggleDayMark(dayId, m)}
                 >
                   <span className="day-mark" style={{ color: m.color }}>
-                    {m.glyph}
+                    <MarkGlyph glyph={m.glyph} />
                   </span>
                   <span className="mark-current-x">×</span>
                 </button>

@@ -10,7 +10,13 @@ export interface ColorOption {
   name: string;
 }
 
-/** 形狀：全部選用單色文字字符（非彩色 emoji），這樣才能用 CSS color 自由上色。 */
+/** 車子符號的 sentinel（不是文字字符）：由 MarkGlyph 特判成可上色的 SVG 渲染。 */
+export const CAR_GLYPH = 'car';
+
+/**
+ * 形狀：文字字符用單色（非彩色 emoji）才能用 CSS color 自由上色；
+ * 車子（CAR_GLYPH）是例外——畫成 SVG（fill: currentColor），一樣吃選定顏色。
+ */
 export const MARK_GLYPHS: GlyphOption[] = [
   { glyph: '★', name: '五角星' },
   { glyph: '●', name: '圓點' },
@@ -20,6 +26,7 @@ export const MARK_GLYPHS: GlyphOption[] = [
   { glyph: '♥', name: '愛心' },
   { glyph: '✦', name: '星芒' },
   { glyph: '✓', name: '勾選' },
+  { glyph: CAR_GLYPH, name: '車子' },
 ];
 
 /** 顏色：與整體暖色系搭配但仍夠醒目的 8 色。 */

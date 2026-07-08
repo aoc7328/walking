@@ -3277,6 +3277,13 @@
   text-shadow: 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
+/* 車子標記：SVG 版，尺寸跟著所在情境的 font-size（1em），顏色吃父層 color。 */
+.mark-car-svg {
+  display: inline-block;
+  vertical-align: -0.15em;
+  filter: drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.85));
+}
+
 /* ========== 共用浮動面板 AnchoredPopover ========== */
 .anchored-popover {
   background: var(--bg-card);

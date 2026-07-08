@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import { markKey, markName } from '../../data/markPalette';
+import MarkGlyph from './MarkGlyph';
 import AnchoredPopover from '../common/AnchoredPopover';
 
 /** 工具列上的「圖例」鈕：列出所有用過的符號，讓使用者填寫每個符號代表的意思。 */
@@ -53,7 +54,7 @@ export default function MarkLegend() {
               return (
                 <div key={markKey(e.glyph, e.color)} className="mark-legend-row">
                   <span className="day-mark mark-legend-glyph" style={{ color: e.color }}>
-                    {e.glyph}
+                    <MarkGlyph glyph={e.glyph} />
                   </span>
                   <input
                     className="mark-legend-input"
