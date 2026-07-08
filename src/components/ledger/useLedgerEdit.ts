@@ -114,7 +114,13 @@ export function useLedgerEdit() {
       delAccommodation: (id: string) => upd((l) => ({ ...l, accommodations: l.accommodations.filter((a) => a.id !== id) })),
       reorderAccommodations: (activeId: string, overId: string) => upd((l) => ({ ...l, accommodations: moveById(l.accommodations, activeId, overId) })),
 
-      addRestaurant: (localCurrency: string) => upd((l) => ({ ...l, restaurants: [...l.restaurants, blankRestaurant(localCurrency)] })),
+      /** 新增餐廳：有前一筆就沿用它的日期與時間（同一天常一次訂好幾餐），其餘留空自己填。 */
+      addRestaurant: (localCurrency: string) => upd((l) => {
+        const prev = l.restaurants[l.restaurants.length - 1];
+        const base = blankRestaurant(localCurrency);
+        const next: Restaurant = prev ? { ...base, date: prev.date, time: prev.time } : base;
+        return { ...l, restaurants: [...l.restaurants, next] };
+      }),
       patchRestaurant: (id: string, patch: Partial<Restaurant>) =>
         upd((l) => ({ ...l, restaurants: l.restaurants.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),
       delRestaurant: (id: string) => upd((l) => ({ ...l, restaurants: l.restaurants.filter((r) => r.id !== id) })),
