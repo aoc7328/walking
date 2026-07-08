@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { DayMark } from '../../types/trip';
 import { useTripStore } from '../../stores/tripStore';
-import { MARK_GLYPHS, MARK_COLORS, markName } from '../../data/markPalette';
+import { MARK_GLYPHS, MARK_COLORS, markName, markKey } from '../../data/markPalette';
 import MarkGlyph from './MarkGlyph';
 import AnchoredPopover from '../common/AnchoredPopover';
 
@@ -17,6 +17,7 @@ export default function DayMarkButton({ dayId, dayIndex, marks }: Props) {
   const [color, setColor] = useState<string>(MARK_COLORS[0]!.color);
   const btnRef = useRef<HTMLButtonElement>(null);
   const toggleDayMark = useTripStore((s) => s.toggleDayMark);
+  const legend = useTripStore((s) => s.trip?.markLegend ?? []);
 
   const hasMarks = marks.length > 0;
   const applied = (glyph: string, c: string) =>
@@ -60,6 +61,32 @@ export default function DayMarkButton({ dayId, dayIndex, marks }: Props) {
         className="mark-picker"
       >
         <div className="mark-picker-head">Day {dayIndex}　標記</div>
+
+        {legend.length > 0 && (
+          <>
+            <div className="mark-picker-section-label">快速帶入（已建立的圖例）</div>
+            <div className="mark-quick-row">
+              {legend.map((e) => {
+                const on = applied(e.glyph, e.color);
+                return (
+                  <button
+                    key={markKey(e.glyph, e.color)}
+                    type="button"
+                    className={`mark-quick-chip${on ? ' applied' : ''}`}
+                    title={on ? '已在這天，點擊移除' : '點一下帶到這天'}
+                    onClick={() => toggleDayMark(dayId, { glyph: e.glyph, color: e.color })}
+                  >
+                    <span className="day-mark" style={{ color: e.color }}>
+                      <MarkGlyph glyph={e.glyph} />
+                    </span>
+                    <span className="mark-quick-label">{e.label.trim() || markName(e.glyph, e.color)}</span>
+                    {on && <span className="mark-quick-check">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         <div className="mark-picker-section-label">顏色</div>
         <div className="mark-color-row">
