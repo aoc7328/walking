@@ -4,6 +4,7 @@ import {
   accommodationTotalTWD, restaurantTotalsTWD, expensesTotalTWD,
   categoriesOf, RESERVATION_LABEL, extractStaysFromTrip,
 } from '../../utils/ledger';
+import { addDays, formatWithWeekday } from '../../utils/date';
 import { useTripStore } from '../../stores/tripStore';
 import { exportRestaurantsCSV } from '../../services/ledgerExport';
 import { printReservationCard } from '../../services/reservationCard';
@@ -51,6 +52,7 @@ export default function PreDeparturePage({ ledger, tripName }: { ledger: Ledger;
     { key: 'name', label: '飯店', width: 150, render: (a) => <TextCell value={a.name} onChange={(v) => ed.patchAccommodation(a.id, { name: v })} placeholder="飯店名稱" /> },
     { key: 'checkIn', label: '入住', width: 132, render: (a) => <DateCell value={a.checkIn} onChange={(v) => ed.patchAccommodation(a.id, { checkIn: v })} /> },
     { key: 'nights', label: '晚', num: true, width: 50, render: (a) => <NumCell value={a.nights} onChange={(v) => ed.patchAccommodation(a.id, { nights: v })} /> },
+    { key: 'checkOut', label: '退房', width: 100, render: (a) => <span className="led-muted">{a.checkIn ? formatWithWeekday(addDays(a.checkIn, a.nights)) : '—'}</span> },
     { key: 'perNight', label: '每晚', num: true, width: 78, render: (a) => <span className="led-muted">{a.nights > 0 ? formatAmount(toTWD(a.price, a.currency, fx) / a.nights) : 0}</span> },
     { key: 'priceTwd', label: '總價 NT$', num: true, width: 92, render: (a) => <MoneyInput kind="twd" amount={a.price} currency={a.currency} localCurrency={local} fxRate={fx} onChange={(amt, cur) => ed.patchAccommodation(a.id, { price: amt, currency: cur })} />, foot: <b className="led-strong">{formatAmount(accTotal)}</b> },
     { key: 'priceLocal', label: `總價 ${local}`, num: true, width: 92, render: (a) => <MoneyInput kind="local" amount={a.price} currency={a.currency} localCurrency={local} fxRate={fx} onChange={(amt, cur) => ed.patchAccommodation(a.id, { price: amt, currency: cur })} />, foot: formatAmount(locOf(accTotal)) },
