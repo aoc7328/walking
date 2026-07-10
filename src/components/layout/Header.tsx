@@ -63,6 +63,7 @@ export default function Header() {
   const openOverviewModal = useUIStore((s) => s.openOverviewModal);
   const openDownloadModal = useUIStore((s) => s.openDownloadModal);
   const openLedgerModal = useUIStore((s) => s.openLedgerModal);
+  const closeLedgerModal = useUIStore((s) => s.closeLedgerModal);
   const openNotesModal = useUIStore((s) => s.openNotesModal);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -103,18 +104,21 @@ export default function Header() {
           </span>
           <span className="brand-divider" />
           <div className="trip-info">
-            <EditableTripName name={trip.name} onSave={renameTrip} />
+            <div className="trip-name-row">
+              <EditableTripName name={trip.name} onSave={renameTrip} />
+              <TripSwitcher />
+            </div>
             <span className="trip-meta">{meta}</span>
           </div>
         </div>
         <div className="header-actions">
-          <button className="btn" onClick={openOverviewModal} title="打開整段行程的總覽地圖">總覽</button>
+          <button className="btn active" onClick={closeLedgerModal} title="排行程的頁面（目前所在）">行程</button>
           <button className="btn" onClick={openLedgerModal} title="這趟旅行的帳本：預訂、流水帳、預算與消費分析">帳本</button>
+          <button className="btn" onClick={openOverviewModal} title="打開整段行程的總覽地圖">總覽</button>
           <button className="btn btn-badge-host" onClick={openNotesModal} title="出發前待辦提醒（私人，不會分享也不會下載）">
             待辦
             {pendingTodos > 0 && <span className="todo-badge" aria-label={`${pendingTodos} 項未完成`}>{pendingTodos}</span>}
           </button>
-          <TripSwitcher />
           <button
             className={`btn${dirty ? ' btn-primary' : ''}`}
             onClick={handleSave}

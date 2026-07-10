@@ -8,7 +8,6 @@ import DuringTripPage from './DuringTripPage';
 import AnalysisPage from './AnalysisPage';
 import SettingsPage from './SettingsPage';
 import { BackToTop } from './LedgerNav';
-import TripSwitcher from '../layout/TripSwitcher';
 
 type Tab = 'pre' | 'during' | 'analysis' | 'settings';
 
@@ -59,9 +58,6 @@ export default function LedgerPage() {
   return (
     <div className="ledger-page">
       <div className="ledger-page-bar">
-        <button className="ledger-page-back" onClick={close} title="回到行程地圖">
-          ← 返回行程
-        </button>
         <div className="ledger-page-heading">
           <span className="ledger-page-title">帳本</span>
           <span className="ledger-page-meta">
@@ -69,12 +65,13 @@ export default function LedgerPage() {
           </span>
         </div>
         <div className="ledger-page-bar-actions">
+          <button className="btn" onClick={close} title="回到排行程的頁面">行程</button>
+          <button className="btn active" title="帳本（目前所在）">帳本</button>
           <button className="btn" onClick={openOverviewModal} title="整段行程總覽地圖">總覽</button>
           <button className="btn btn-badge-host" onClick={openNotesModal} title="出發前待辦提醒（私人）">
             待辦
             {pendingTodos > 0 && <span className="todo-badge" aria-label={`${pendingTodos} 項未完成`}>{pendingTodos}</span>}
           </button>
-          <TripSwitcher />
           <button className="btn" onClick={() => printLedgerReport(trip, ledger)} title="列印整本帳結算單（可存成 PDF）">列印 / PDF</button>
           <button className="btn" onClick={openDownloadModal} title="下載 PDF（普通版 / 騎馬釘小冊子）">下載</button>
           <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結">分享</button>

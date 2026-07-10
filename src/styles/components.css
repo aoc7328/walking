@@ -306,32 +306,38 @@
   position: relative;
 }
 
-.trip-switcher-trigger {
-  font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 400;
-  color: var(--ink-secondary);
-  background: transparent;
-  border: 0.5px solid var(--border-medium);
-  padding: 5px 12px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--t-fast);
-  display: inline-flex;
+.trip-name-row {
+  display: flex;
   align-items: center;
   gap: 6px;
-  letter-spacing: 0.01em;
+}
+
+.trip-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 0.5px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  flex-shrink: 0;
 }
 
 .trip-switcher-trigger:hover {
   background: var(--bg-soft);
-  color: var(--ink-primary);
+  color: var(--accent-primary);
   border-color: var(--ink-faint);
 }
 
 .trip-switcher-arrow {
-  font-size: 12px;
-  color: var(--ink-muted);
+  font-size: 11px;
+  color: inherit;
+  line-height: 1;
 }
 
 .trip-switcher-dropdown {
@@ -528,6 +534,14 @@
   background: var(--bg-soft);
   color: var(--ink-primary);
   border-color: var(--ink-faint);
+}
+
+/* 分頁作用中（目前所在頁面：行程 / 帳本） */
+.btn.active {
+  color: var(--accent-primary);
+  background: var(--accent-primary-soft);
+  border-color: var(--accent-primary);
+  font-weight: 500;
 }
 
 .btn-primary {
@@ -3589,9 +3603,9 @@
 }
 
 .expand-right {
-  top: 50%;
+  /* 跟「收合右欄」鈕同一處(面板 header 那一列)拉開/推回，像抽屜；不再垂直置中 */
+  top: 40px;
   right: 0;
-  transform: translateY(-50%);
   width: 18px;
   height: 36px;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
