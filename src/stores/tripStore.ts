@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Trip, DayPlan, ItineraryItem, Leg, DayMark, DayNote } from '../types/trip';
+import type { Trip, DayPlan, ItineraryItem, Leg, DayMark, DayNote, TodoItem } from '../types/trip';
 import type { Ledger } from '../types/ledger';
 import type { Place, TransportMode } from '../types/place';
 import { emptyLedger } from '../utils/ledger';
@@ -72,6 +72,12 @@ interface TripStore {
   setDayNote: (dayId: string, patch: Partial<DayNote>) => void;
   clearDayNote: (dayId: string) => void;
   copyDayNoteToDay: (dayId: string, destDayId: string) => void;
+
+  /** 待辦清單（筆記提醒）：新增 / 編輯 / 刪除 / 拖曳排序。私人，不進分享/匯出。 */
+  addTodo: () => void;
+  patchTodo: (id: string, patch: Partial<Pick<TodoItem, 'done' | 'text' | 'note'>>) => void;
+  removeTodo: (id: string) => void;
+  reorderTodos: (activeId: string, overId: string) => void;
 
   // 多 trip 管理
   createNewTrip: (name: string, startDate: string, dayCount: number) => Promise<string>;
@@ -630,6 +636,40 @@ export const useTripStore = create<TripStore>((set, get) => ({
         return next;
       });
       return { trip: { ...state.trip, days, updatedAt: Date.now() } };
+    }),
+
+  // 待辦清單：只改 trip.todos，不碰 days/items。
+  addTodo: () =>
+    set((state) => {
+      if (!state.trip) return {};
+      const todos: TodoItem[] = [...(state.trip.todos ?? []), { id: uuid(), done: false, text: '' }];
+      return { trip: { ...state.trip, todos, updatedAt: Date.now() } };
+    }),
+
+  patchTodo: (id, patch) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const todos = (state.trip.todos ?? []).map((t) => (t.id === id ? { ...t, ...patch } : t));
+      return { trip: { ...state.trip, todos, updatedAt: Date.now() } };
+    }),
+
+  removeTodo: (id) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const todos = (state.trip.todos ?? []).filter((t) => t.id !== id);
+      return { trip: { ...state.trip, todos, updatedAt: Date.now() } };
+    }),
+
+  reorderTodos: (activeId, overId) =>
+    set((state) => {
+      if (!state.trip) return {};
+      const todos = [...(state.trip.todos ?? [])];
+      const from = todos.findIndex((t) => t.id === activeId);
+      const to = todos.findIndex((t) => t.id === overId);
+      if (from < 0 || to < 0 || from === to) return {};
+      const [moved] = todos.splice(from, 1);
+      todos.splice(to, 0, moved!);
+      return { trip: { ...state.trip, todos, updatedAt: Date.now() } };
     }),
 
   refreshLegsForDay: async (dayId) => {

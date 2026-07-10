@@ -4177,6 +4177,29 @@
   background: var(--accent-warm-soft);
 }
 
+/* ========== 筆記 · 待辦彈窗 ========== */
+.notes-modal { max-width: 560px; }
+.notes-modal-body { padding: 22px 24px 18px; display: flex; flex-direction: column; }
+.notes-modal-head { margin-bottom: 12px; }
+.notes-modal-sub { display: block; font-size: 13px; color: var(--ink-muted); margin-top: 4px; line-height: 1.5; }
+.notes-list { max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.notes-empty { font-size: 14px; color: var(--ink-muted); font-style: italic; text-align: center; padding: 24px 12px; border: 1px dashed var(--border-medium); border-radius: var(--radius-md); }
+.todo-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--bg-card); border: 0.5px solid var(--border-soft); border-radius: var(--radius-md); }
+.todo-row.dragging { opacity: 0.5; }
+.todo-drag { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 26px; flex-shrink: 0; padding: 0; border: none; background: transparent; color: var(--ink-faint); cursor: grab; touch-action: none; transition: color var(--t-fast); }
+.todo-drag:hover { color: var(--ink-secondary); }
+.todo-drag:active { cursor: grabbing; color: var(--accent-primary); }
+.todo-check { width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; accent-color: var(--accent-primary); }
+.todo-text { flex: 2; min-width: 0; border: none; background: transparent; font-family: var(--font-body); font-size: 15px; color: var(--ink-primary); padding: 4px 2px; }
+.todo-note { flex: 1; min-width: 0; border: none; background: transparent; font-family: var(--font-body); font-size: 13px; color: var(--ink-secondary); padding: 4px 2px 4px 8px; border-left: 0.5px solid var(--border-soft); }
+.todo-text:focus, .todo-note:focus { outline: none; }
+.todo-text::placeholder, .todo-note::placeholder { color: var(--ink-muted); }
+.todo-row.done .todo-text { text-decoration: line-through; color: var(--ink-muted); }
+.todo-del { width: 24px; height: 24px; flex-shrink: 0; border: none; background: transparent; color: var(--ink-muted); font-size: 18px; line-height: 1; cursor: pointer; border-radius: var(--radius-sm); transition: all var(--t-fast); }
+.todo-del:hover { background: var(--accent-warm-soft); color: var(--accent-warm); }
+.notes-add-btn { margin-top: 10px; padding: 9px 12px; border: 1px dashed var(--border-medium); border-radius: var(--radius-md); background: transparent; color: var(--ink-secondary); font-family: var(--font-body); font-size: 14px; cursor: pointer; transition: all var(--t-fast); }
+.notes-add-btn:hover { border-color: var(--accent-warm); color: var(--accent-warm); background: var(--accent-warm-soft); }
+
 /* ========== Visit Japan Web 入境 QR ========== */
 .vjw-list {
   display: flex;

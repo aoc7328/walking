@@ -79,12 +79,24 @@ export interface DayPlan {
   cards?: NoteCard[];
 }
 
+/** 出發前待辦提醒（私人，刻意不進分享連結／匯出）：核取方塊 + 項目 + 備註。 */
+export interface TodoItem {
+  id: string;
+  done: boolean;
+  /** 項目（例：eSIM 還沒買）。 */
+  text: string;
+  /** 備註（可無）。 */
+  note?: string;
+}
+
 export interface Trip {
   id: string;
   name: string;
   startDate: string;
   days: DayPlan[];
   favorites: Place[];
+  /** 待辦清單（筆記提醒；跟 trip 一起存，但不分享/不下載）。 */
+  todos?: TodoItem[];
   /** 標記符號的說明（圖例）。每個符號用 glyph+color 當鍵。 */
   markLegend?: MarkLegendEntry[];
   /** 旅遊帳本（出發前預訂/出發後流水帳/預算/消費分析）。舊行程為 undefined，讀寫時 fallback 空帳本。 */
