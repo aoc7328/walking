@@ -13,12 +13,18 @@ import type { TodoItem } from '../../types/trip';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 
+function normalizeUrl(u: string): string {
+  const t = u.trim();
+  return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+}
+
 function TodoRow({ todo }: { todo: TodoItem }) {
   const patchTodo = useTripStore((s) => s.patchTodo);
   const removeTodo = useTripStore((s) => s.removeTodo);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: todo.id });
   const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition };
+  const hasUrl = !!(todo.url && todo.url.trim());
 
   return (
     <div ref={setNodeRef} style={style} className={`todo-row${todo.done ? ' done' : ''}${isDragging ? ' dragging' : ''}`}>
@@ -44,18 +50,42 @@ function TodoRow({ todo }: { todo: TodoItem }) {
         onChange={(e) => patchTodo(todo.id, { done: e.target.checked })}
         title={todo.done ? '標記為未完成' : '標記為完成'}
       />
-      <input
-        className="todo-text"
-        value={todo.text}
-        onChange={(e) => patchTodo(todo.id, { text: e.target.value })}
-        placeholder="待辦項目…例：eSIM 還沒買"
-      />
-      <input
-        className="todo-note"
-        value={todo.note ?? ''}
-        onChange={(e) => patchTodo(todo.id, { note: e.target.value })}
-        placeholder="備註…"
-      />
+      <div className="todo-fields">
+        <input
+          className="todo-text"
+          value={todo.text}
+          onChange={(e) => patchTodo(todo.id, { text: e.target.value })}
+          placeholder="待辦項目…例：eSIM 還沒買"
+        />
+        <div className="todo-sub">
+          <input
+            className="todo-note"
+            value={todo.note ?? ''}
+            onChange={(e) => patchTodo(todo.id, { note: e.target.value })}
+            placeholder="備註…"
+          />
+          <div className="todo-url-wrap">
+            <input
+              className="todo-url"
+              value={todo.url ?? ''}
+              onChange={(e) => patchTodo(todo.id, { url: e.target.value })}
+              placeholder="網址…（可貼連結）"
+            />
+            {hasUrl && (
+              <a className="todo-url-open" href={normalizeUrl(todo.url!)} target="_blank" rel="noreferrer" title="開啟連結">↗</a>
+            )}
+          </div>
+          <input
+            className="todo-amount"
+            type="number"
+            inputMode="decimal"
+            value={todo.amount ?? ''}
+            onChange={(e) => patchTodo(todo.id, { amount: e.target.value === '' ? undefined : Number(e.target.value) })}
+            placeholder="預估 $"
+            title="預估金額（純記錄，不計入預算）"
+          />
+        </div>
+      </div>
       <button className="todo-del" onClick={() => removeTodo(todo.id)} title="刪除這項" aria-label="刪除">×</button>
     </div>
   );

@@ -8,6 +8,7 @@ import DuringTripPage from './DuringTripPage';
 import AnalysisPage from './AnalysisPage';
 import SettingsPage from './SettingsPage';
 import { BackToTop } from './LedgerNav';
+import TripSwitcher from '../layout/TripSwitcher';
 
 type Tab = 'pre' | 'during' | 'analysis' | 'settings';
 
@@ -21,6 +22,10 @@ const TABS: { key: Tab; label: string }[] = [
 export default function LedgerPage() {
   const open = useUIStore((s) => s.ledgerModalOpen);
   const close = useUIStore((s) => s.closeLedgerModal);
+  const openOverviewModal = useUIStore((s) => s.openOverviewModal);
+  const openNotesModal = useUIStore((s) => s.openNotesModal);
+  const openDownloadModal = useUIStore((s) => s.openDownloadModal);
+  const openShareModal = useUIStore((s) => s.openShareModal);
   const trip = useTripStore((s) => s.trip);
   const dirty = useTripStore((s) => s.dirty);
   const saveTrip = useTripStore((s) => s.saveTrip);
@@ -32,6 +37,7 @@ export default function LedgerPage() {
   if (!open || !trip) return null;
 
   const ledger = getLedger(trip);
+  const pendingTodos = trip.todos?.filter((t) => !t.done && t.text.trim() !== '').length ?? 0;
 
   async function handleSave() {
     if (saving) return;
@@ -63,7 +69,15 @@ export default function LedgerPage() {
           </span>
         </div>
         <div className="ledger-page-bar-actions">
+          <button className="btn" onClick={openOverviewModal} title="整段行程總覽地圖">總覽</button>
+          <button className="btn btn-badge-host" onClick={openNotesModal} title="出發前待辦提醒（私人）">
+            待辦
+            {pendingTodos > 0 && <span className="todo-badge" aria-label={`${pendingTodos} 項未完成`}>{pendingTodos}</span>}
+          </button>
+          <TripSwitcher />
           <button className="btn" onClick={() => printLedgerReport(trip, ledger)} title="列印整本帳結算單（可存成 PDF）">列印 / PDF</button>
+          <button className="btn" onClick={openDownloadModal} title="下載 PDF（普通版 / 騎馬釘小冊子）">下載</button>
+          <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結">分享</button>
           <button
             className={`btn${dirty || !persisted ? ' btn-primary' : ''}`}
             onClick={handleSave}

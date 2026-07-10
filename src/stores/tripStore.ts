@@ -75,7 +75,7 @@ interface TripStore {
 
   /** 待辦清單（筆記提醒）：新增 / 編輯 / 刪除 / 拖曳排序。私人，不進分享/匯出。 */
   addTodo: () => void;
-  patchTodo: (id: string, patch: Partial<Pick<TodoItem, 'done' | 'text' | 'note'>>) => void;
+  patchTodo: (id: string, patch: Partial<Pick<TodoItem, 'done' | 'text' | 'note' | 'url' | 'amount'>>) => void;
   removeTodo: (id: string) => void;
   reorderTodos: (activeId: string, overId: string) => void;
 

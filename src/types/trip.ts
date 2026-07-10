@@ -79,7 +79,7 @@ export interface DayPlan {
   cards?: NoteCard[];
 }
 
-/** 出發前待辦提醒（私人，刻意不進分享連結／匯出）：核取方塊 + 項目 + 備註。 */
+/** 出發前待辦提醒（私人，刻意不進分享連結／匯出）：核取方塊 + 項目 + 備註 + 網址 + 預估金額。 */
 export interface TodoItem {
   id: string;
   done: boolean;
@@ -87,6 +87,10 @@ export interface TodoItem {
   text: string;
   /** 備註（可無）。 */
   note?: string;
+  /** 相關網址（可點開；純記錄）。 */
+  url?: string;
+  /** 預估金額（純記錄，不計入任何預算）。 */
+  amount?: number;
 }
 
 export interface Trip {
