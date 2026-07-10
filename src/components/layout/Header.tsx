@@ -72,6 +72,8 @@ export default function Header() {
   const endDate = addDays(trip.startDate, trip.days.length - 1);
   const totalDays = diffDays(trip.startDate, endDate) + 1;
   const meta = `${formatRange(trip.startDate, endDate)}　·　${totalDays} 天`;
+  // 未完成（未打勾且有填內容）的待辦數量 → 首頁按鈕上顯示未讀徽章
+  const pendingTodos = trip.todos?.filter((t) => !t.done && t.text.trim() !== '').length ?? 0;
 
   async function handleSave() {
     if (saving) return;
@@ -108,7 +110,10 @@ export default function Header() {
         <div className="header-actions">
           <button className="btn" onClick={openOverviewModal} title="打開整段行程的總覽地圖">總覽</button>
           <button className="btn" onClick={openLedgerModal} title="這趟旅行的帳本：預訂、流水帳、預算與消費分析">帳本</button>
-          <button className="btn" onClick={openNotesModal} title="出發前待辦提醒（私人，不會分享也不會下載）">筆記</button>
+          <button className="btn btn-badge-host" onClick={openNotesModal} title="出發前待辦提醒（私人，不會分享也不會下載）">
+            待辦
+            {pendingTodos > 0 && <span className="todo-badge" aria-label={`${pendingTodos} 項未完成`}>{pendingTodos}</span>}
+          </button>
           <TripSwitcher />
           <button
             className={`btn${dirty ? ' btn-primary' : ''}`}

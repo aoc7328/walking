@@ -94,7 +94,7 @@ export default function NotesModal() {
       <div className="modal notes-modal">
         <div className="notes-modal-body">
           <div className="notes-modal-head">
-            <h2 className="modal-title">筆記 · 待辦</h2>
+            <h2 className="modal-title">待辦</h2>
             <span className="notes-modal-sub">
               出發前提醒自己的事（私人，不會分享也不會匯出）
               {todos.length > 0 ? `　·　${doneCount}/${todos.length} 完成` : ''}
