@@ -16,7 +16,7 @@ import NotesModal from '../notes/NotesModal';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
-import { loadActiveTrip, recordDailyBackup, migrateAccountData } from '../../db/repository';
+import { loadActiveTrip, recordDailyBackup, migrateAccountData, persistTripKeepalive } from '../../db/repository';
 
 export default function AppShell() {
   const trip = useTripStore((s) => s.trip);
@@ -78,6 +78,33 @@ export default function AppShell() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchResults.length, searchQuery, trip?.favorites.length]);
+
+  // 關閉分頁 / 離開頁面時的存檔保險（解決「忘了按儲存就關分頁，變更丟掉」）。
+  // 事件當下才用 getState() 取最新狀態，所以這個監聽只需掛一次。
+  // - 已存過的行程有未存變更 → keepalive 靜默把最新內容送回 KV，不打擾。
+  // - 只有 mock 範例被改過（沒有可覆寫的目標，必須先取名另存）→ 跳瀏覽器原生「尚未儲存」確認框攔一下。
+  //   註：beforeunload 的提示文字由瀏覽器決定，無法自訂（安全限制）。
+  useEffect(() => {
+    function flush() {
+      const { trip: t, dirty, persisted } = useTripStore.getState();
+      if (t && dirty && persisted) {
+        persistTripKeepalive(t);
+      }
+    }
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      const { dirty, persisted } = useTripStore.getState();
+      if (dirty && !persisted) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, []);
 
   // ESC 關閉 modal
   useEffect(() => {

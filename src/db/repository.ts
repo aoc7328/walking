@@ -109,6 +109,27 @@ export async function persistTripImmediate(trip: Trip): Promise<void> {
 }
 
 /**
+ * 「臨別一存」：關閉分頁 / 離開頁面（pagehide）時呼叫。
+ * 用 keepalive fetch —— 瀏覽器即使正在銷毀這個頁面，仍保證把這個 PUT 送完；
+ * 一般的 fetch 會被中止。刻意不 await（頁面正在消失，等不到回應），盡力而為。
+ * keepalive 的請求體上限約 64KB，剝掉暫存 QR 後的 trip 通常遠低於此。
+ */
+export function persistTripKeepalive(trip: Trip): void {
+  try {
+    void fetch(apiUrl(`/${encodeURIComponent(trip.id)}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(stripEphemeral(trip)),
+      keepalive: true,
+    }).catch(() => {
+      // 頁面即將關閉，錯誤無法通知使用者；未存狀態靠 dirty 下次進來時的畫面提示
+    });
+  } catch {
+    // ignore
+  }
+}
+
+/**
  * 寫進雲端 / 本地備份前，剝掉「不進持久化」的暫存欄位。
  * 目前是 Visit Japan Web 入境 QR 圖：base64 很大（會撞後端 500KB 上限），且屬一次性
  *（上傳 → 下載 JPG / 列印 → 用完即丟），刻意不存。記憶體裡的 trip 仍保留，當下照樣能下載/列印。
