@@ -7,7 +7,13 @@ interface LegResult {
   distanceMeters: number;
 }
 
-const cache = new Map<string, LegResult>();
+// 成功「和失敗」都要記。
+// 失敗也記的原因：Google 對某些 leg 永遠算不出路線（最常見的是偏遠地區選「大眾運輸」），
+// 每次回 null。而呼叫端（RightPanel）是「這天還有 leg 沒時間就重抓」，
+// 只要不記住失敗，行程每動一次就會再打一次 Directions——在備註欄打字是逐字寫進 store 的，
+// 等於打一個字送一次請求。負快取把「問過、Google 說沒有」也算數。
+// 快取只存在記憶體，重新整理頁面就會再試一次，所以暫時性的網路失敗不會被永久記住。
+const cache = new Map<string, LegResult | null>();
 const inflight = new Map<string, Promise<LegResult | null>>();
 
 function cacheKey(o: LatLng, d: LatLng, mode: TransportMode): string {
@@ -40,7 +46,7 @@ export async function fetchLegDuration(
 ): Promise<LegResult | null> {
   if (!hasApiKey()) return null;
   const key = cacheKey(origin, destination, mode);
-  if (cache.has(key)) return cache.get(key)!;
+  if (cache.has(key)) return cache.get(key) ?? null;
   const pending = inflight.get(key);
   if (pending) return pending;
 
@@ -54,7 +60,10 @@ export async function fetchLegDuration(
         travelMode: getTravelMode(mode),
       });
       const leg = result.routes[0]?.legs[0];
-      if (!leg || !leg.duration) return null;
+      if (!leg || !leg.duration) {
+        cache.set(key, null);
+        return null;
+      }
       const value: LegResult = {
         durationMinutes: Math.max(1, Math.round(leg.duration.value / 60)),
         distanceMeters: leg.distance?.value ?? 0,
@@ -63,6 +72,7 @@ export async function fetchLegDuration(
       return value;
     } catch (err) {
       console.warn('[walking] fetchLegDuration 失敗：', err);
+      cache.set(key, null);
       return null;
     } finally {
       inflight.delete(key);

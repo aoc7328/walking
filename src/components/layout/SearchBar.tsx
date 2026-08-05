@@ -37,11 +37,18 @@ export default function SearchBar() {
   const biasRef = useRef(biasCenter);
   biasRef.current = biasCenter;
 
-  // 打字 400ms 後自動搜尋。但若輸入看起來是座標，不自動觸發
+  // 打字停 900ms 後自動搜尋。但若輸入看起來是座標，不自動觸發
   //（否則打字打到一半就跳 prompt 很煩）——等使用者按 Enter 再處理。
+  //
+  // 為什麼是 900ms 而不是原本的 400ms：每次自動搜尋都是一次計費請求，400ms 太短，
+  // 打「京都清水寺」中間停頓兩次就送三次。900ms 大約等於「真的停下來了」。
+  // 一個字不自動送（單字查詢幾乎都還在打）——想用一個字搜就按 Enter，手動那條路不受限制。
+  //
+  // ⚠️ 依賴刻意不放 currentDayId：地理偏好是從 biasRef 讀的（每次 render 都會更新），
+  // 放進依賴的唯一效果是「搜尋框有字時切換天數 → 整個重搜一次」，純浪費。
   useEffect(() => {
     const q = query.trim();
-    if (!q) return;
+    if (q.length < 2) return;
     if (parseLatLng(q)) return;
     if (skipNextRef.current === q) {
       // 這次是剛剛手動搜尋過的字串，別再自動搜一次
@@ -50,11 +57,11 @@ export default function SearchBar() {
     }
     debounceRef.current = setTimeout(() => {
       runSearch(q, biasRef.current);
-    }, 400);
+    }, 900);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, currentDayId, runSearch]);
+  }, [query, runSearch]);
 
   function triggerSearch(q: string) {
     const trimmed = q.trim();

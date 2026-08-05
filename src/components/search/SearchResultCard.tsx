@@ -2,6 +2,9 @@ import type { Place } from '../../types/place';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
 
+/** 清單中最多幾筆載縮圖（每張縮圖 = 一次計費的 Place Photo 請求）。 */
+export const THUMB_LIMIT = 5;
+
 const TYPE_LABELS: Record<string, string> = {
   lodging: '住宿',
   restaurant: '餐廳',
@@ -27,7 +30,20 @@ function translateType(types: string[]): string | null {
   return null;
 }
 
-export default function SearchResultCard({ place, dayIndex }: { place: Place; dayIndex: number | null }) {
+/**
+ * showThumb：是否載入縮圖。預設 true。
+ * 每一張縮圖 = 一次獨立計費的 Place Photo 請求，所以清單只讓前幾筆載圖（見 THUMB_LIMIT），
+ * 其餘留白。收藏清單尤其重要——它每次開 app 都會重畫一次。
+ */
+export default function SearchResultCard({
+  place,
+  dayIndex,
+  showThumb = true,
+}: {
+  place: Place;
+  dayIndex: number | null;
+  showThumb?: boolean;
+}) {
   const addToDay = useTripStore((s) => s.addItemToDay);
   const toggleFavorite = useTripStore((s) => s.toggleFavorite);
   const isFavorited = useTripStore((s) => s.isFavorited);
@@ -35,7 +51,7 @@ export default function SearchResultCard({ place, dayIndex }: { place: Place; da
   const openDetail = useUIStore((s) => s.openDetail);
 
   const fav = isFavorited(place.placeId);
-  const photoUrl = place.photoUrls?.[0];
+  const photoUrl = showThumb ? place.photoUrls?.[0] : undefined;
   const typeLabel = translateType(place.types);
 
   function handleAdd(e: React.MouseEvent) {

@@ -32,13 +32,21 @@ export default function RightPanel() {
   const day = trip?.days.find((d) => d.id === currentDayId) ?? null;
   const dayNote = dayNoteOf(day);
 
-  // 當日或行程任何 leg 缺少 duration 時，跟 Google 拿一次真實時間
+  // 當日還有幾段沒有交通時間。
+  // ⚠️ 依賴一定要用「數字」，不能用 day / day.legs 物件：trip 只要有任何變動就會產生
+  // 全新的 day 物件（連在備註欄打一個字都會），物件當依賴等於每次變動都重跑這個 effect，
+  // 對 Google 算不出路線的 leg 就變成「打一個字送一次 Directions 請求」。
+  // 用數量當依賴後：換交通方式（時間被清掉 → 數量變多）才會重抓，其他編輯一律不動。
+  const dayId = day?.id ?? null;
+  const pendingLegCount =
+    day && day.items.length >= 2
+      ? day.legs.filter((l) => l.durationMinutes === undefined).length
+      : 0;
+
   useEffect(() => {
-    if (!day) return;
-    const needsFetch = day.items.length >= 2 && day.legs.some((l) => l.durationMinutes === undefined);
-    if (!needsFetch) return;
-    void refreshLegsForDay(day.id);
-  }, [day?.id, day?.items.length, day?.legs, refreshLegsForDay, day]);
+    if (!dayId || pendingLegCount === 0) return;
+    void refreshLegsForDay(dayId);
+  }, [dayId, pendingLegCount, refreshLegsForDay]);
 
   function handleDeleteDay() {
     if (!day || !trip) return;

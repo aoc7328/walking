@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
-import SearchResultCard from '../search/SearchResultCard';
+import SearchResultCard, { THUMB_LIMIT } from '../search/SearchResultCard';
 
 export default function LeftPanel() {
   const collapsed = useUIStore((s) => s.collapse.leftPanel);
@@ -60,8 +60,13 @@ export default function LeftPanel() {
               {isSearching ? '沒有結果' : '還沒有收藏的地點　·　點搜尋結果上的 ♡ 來收藏'}
             </div>
           )}
-          {listData.map((place) => (
-            <SearchResultCard key={place.id} place={place} dayIndex={currentDay?.dayIndex ?? null} />
+          {listData.map((place, idx) => (
+            <SearchResultCard
+              key={place.id}
+              place={place}
+              dayIndex={currentDay?.dayIndex ?? null}
+              showThumb={idx < THUMB_LIMIT}
+            />
           ))}
         </div>
       </aside>

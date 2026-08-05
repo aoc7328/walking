@@ -110,16 +110,18 @@ function placeToInternal(p: PlaceLite): Place | null {
   };
 }
 
+// 清單用欄位：刻意「只到 Pro 級」。
+// Google 的計價層是由欄位決定的：rating / userRatingCount / priceLevel 都屬於 Enterprise 欄位，
+// 只要帶其中任何一個，整次 Text Search / Nearby Search 就會跳到 Enterprise（$35/1000，每月免費額度
+// 只有 1,000 次）。拿掉它們之後落在 Pro（$32/1000，免費額度 5,000 次）——單價差不多，但免費額度 5 倍。
+// 代價：搜尋列表不顯示星等，要點進詳細視窗才看得到（詳細視窗本來就是 Enterprise 級）。
 const PLACE_LIST_FIELDS = [
   'id',
   'displayName',
   'formattedAddress',
   'location',
-  'rating',
-  'userRatingCount',
   'types',
   'photos',
-  'priceLevel',
 ];
 
 const PLACE_DETAIL_FIELDS = [
@@ -149,7 +151,9 @@ export async function textSearch(
     textQuery: query,
     fields: PLACE_LIST_FIELDS,
     language: 'zh-TW',
-    maxResultCount: 20,
+    // 20 → 10：每一筆結果的縮圖都是一次獨立計費的 Place Photo 請求，
+    // 結果數直接等於照片請求數的上限。10 筆對挑地點已經夠用。
+    maxResultCount: 10,
   };
   // 軟性地理偏好：把目前行程區域附近的結果往前排，但「不」排除其他地方的結果。
   // 刻意不再寫死 region:'TW'、也不把城市塞進查詢字串——那兩者會讓海外或冷門的小店／民宿搜不到。
@@ -209,10 +213,34 @@ export async function searchNearby(
   }
 }
 
+// Place Details 是最貴的一檔（Enterprise + Atmosphere，$25/1000，每月免費額度 1,000 次），
+// 而原本完全沒有快取：同一個地點今天點開五次就是五次請求，分享時的補電話（enrich.ts）
+// 也是每分享一次就把所有沒電話的點重問一次。
+// 這裡用 session 級快取擋掉重複：成功的結果記住，同一個 placeId 之後直接回本地資料。
+// 失敗不記（可能只是暫時的網路問題，下次應該要能再試）。inflight 則是擋同時發出的重複請求。
+const detailCache = new Map<string, Partial<Place>>();
+const detailInflight = new Map<string, Promise<Partial<Place> | null>>();
+
 export async function fetchPlaceDetails(placeId: string): Promise<Partial<Place> | null> {
   if (!hasApiKey()) return null;
   // 手動座標點（manual- 前綴）不是真的 Google placeId，跳過抓取，避免 INVALID_ARGUMENT 報錯
   if (placeId.startsWith('manual-')) return null;
+  const cached = detailCache.get(placeId);
+  if (cached) return cached;
+  const pending = detailInflight.get(placeId);
+  if (pending) return pending;
+  const promise = fetchPlaceDetailsUncached(placeId);
+  detailInflight.set(placeId, promise);
+  try {
+    const result = await promise;
+    if (result) detailCache.set(placeId, result);
+    return result;
+  } finally {
+    detailInflight.delete(placeId);
+  }
+}
+
+async function fetchPlaceDetailsUncached(placeId: string): Promise<Partial<Place> | null> {
   try {
     await loadGoogleMaps();
     const PlaceCls = (google.maps as any).places.Place;
