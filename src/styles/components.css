@@ -3054,6 +3054,11 @@
   border-style: solid;
 }
 
+/* 大眾運輸那顆是 <a>（開 Google Maps），不是 <button> */
+.leg-preview.is-external {
+  text-decoration: none;
+}
+
 .leg-preview.is-loading {
   color: var(--ink-muted);
   border-style: solid;

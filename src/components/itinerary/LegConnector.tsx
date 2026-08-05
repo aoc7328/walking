@@ -4,6 +4,7 @@ import type { TransportMode } from '../../types/place';
 import type { LatLng } from '../../utils/geo';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
 import { fetchDirectionsPath } from '../../services/directions';
+import { getGoogleMapsDirectionsUrl } from '../../services/googleMaps';
 import {
   useRoutePreviewStore,
   routeKey,
@@ -34,6 +35,9 @@ export default function LegConnector({
   const setLoading = useRoutePreviewStore((s) => s.setLoading);
   const setReady = useRoutePreviewStore((s) => s.setReady);
   const setError = useRoutePreviewStore((s) => s.setError);
+
+  // 大眾運輸不自己算（Google 對很多地區沒資料，查不到照樣計費）→ 直接開 Google Maps。
+  const isTransit = leg.mode === 'transit';
 
   const handlePreview = useCallback(async () => {
     // loading 中不重複觸發
@@ -89,15 +93,29 @@ export default function LegConnector({
       </select>
       <span className="leg-divider">·</span>
       <span>{formatDuration(leg.durationMinutes)}</span>
-      <button
-        type="button"
-        className={previewClass}
-        onClick={handlePreview}
-        title={previewTitle}
-        aria-label={previewTitle}
-      >
-        {isLoading ? '⋯' : isReady ? '✓' : '🗺'}
-      </button>
+      {isTransit ? (
+        <a
+          className="leg-preview is-external"
+          href={getGoogleMapsDirectionsUrl(fromCoord, toCoord, 'transit')}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title="大眾運輸不自動計算（Google 對很多地區沒有資料，而且查不到一樣算錢）。點這裡用 Google Maps 查，時間再自己填。"
+          aria-label="用 Google Maps 查大眾運輸路線"
+        >
+          ↗
+        </a>
+      ) : (
+        <button
+          type="button"
+          className={previewClass}
+          onClick={handlePreview}
+          title={previewTitle}
+          aria-label={previewTitle}
+        >
+          {isLoading ? '⋯' : isReady ? '✓' : '🗺'}
+        </button>
+      )}
     </div>
   );
 }

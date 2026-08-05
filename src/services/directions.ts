@@ -45,6 +45,12 @@ export async function fetchLegDuration(
   mode: TransportMode,
 ): Promise<LegResult | null> {
   if (!hasApiKey()) return null;
+  // 大眾運輸一律不問 Google。
+  // 原因：紐西蘭、北海道這類地區 Google 根本沒有大眾運輸資料，每次都回「算不出來」——
+  // 但查不到一樣計費，而且算得出來的那些準不準也無從驗證。
+  // 想查大眾運輸就按預覽鈕，那顆會直接開 Google Maps（見 LegConnector）。
+  // 時間可以自己填（setLegDuration），填了就會納入當天的時間鏈。
+  if (mode === 'transit') return null;
   const key = cacheKey(origin, destination, mode);
   if (cache.has(key)) return cache.get(key) ?? null;
   const pending = inflight.get(key);
@@ -82,6 +88,14 @@ export async function fetchLegDuration(
   return promise;
 }
 
+// 預覽路線的「路徑幾何」快取。
+// 鍵是「起點座標 + 終點座標 + 交通方式」，不是行程卡片的 id——
+// 所以調整過行程卡片、順序又變回同樣兩個點時，按下去是直接從記憶體拿，不會再打一次 API。
+// 只記成功的：失敗不記，按鈕上的「點擊重試」才有意義。
+// 跟上面的 cache 分開放，因為存的東西不一樣（那個是時間/距離，這個是整條路徑）。
+const pathCache = new Map<string, LatLng[]>();
+const pathInflight = new Map<string, Promise<LatLng[]>>();
+
 /**
  * 取得「實際路線幾何」用來在地圖上畫真實的路徑（不是直線）。
  * 給「預覽路線」按鈕用。
@@ -95,6 +109,31 @@ export async function fetchDirectionsPath(
   mode: TransportMode,
 ): Promise<LatLng[]> {
   if (!hasApiKey()) throw new Error('未設定 Google Maps API Key');
+  // 大眾運輸不走這條（UI 會直接給 Google Maps 連結）。這裡只是防呆。
+  if (mode === 'transit') throw new Error('大眾運輸請用 Google Maps 查看');
+
+  const key = cacheKey(origin, destination, mode);
+  const cached = pathCache.get(key);
+  if (cached) return cached;
+  const pending = pathInflight.get(key);
+  if (pending) return pending;
+
+  const promise = fetchDirectionsPathUncached(origin, destination, mode);
+  pathInflight.set(key, promise);
+  try {
+    const path = await promise;
+    pathCache.set(key, path);
+    return path;
+  } finally {
+    pathInflight.delete(key);
+  }
+}
+
+async function fetchDirectionsPathUncached(
+  origin: LatLng,
+  destination: LatLng,
+  mode: TransportMode,
+): Promise<LatLng[]> {
   await loadGoogleMaps();
   const svc = getService();
 

@@ -314,6 +314,24 @@ export function getGoogleMapsReviewsUrl(placeId: string): string {
   return `https://search.google.com/local/reviews?placeid=${placeId}`;
 }
 
+/**
+ * 產生 Google Maps 導航連結。只是組字串，不會打 API、不計費。
+ * 給「大眾運輸」用：那個模式我們不自己算（見 directions.ts 的說明），直接把使用者送去 Google Maps。
+ */
+export function getGoogleMapsDirectionsUrl(
+  origin: { lat: number; lng: number },
+  destination: { lat: number; lng: number },
+  mode: string,
+): string {
+  const params = new URLSearchParams({
+    api: '1',
+    origin: `${origin.lat},${origin.lng}`,
+    destination: `${destination.lat},${destination.lng}`,
+    travelmode: mode,
+  });
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
 const STATIC_MAP_BASE = 'https://maps.googleapis.com/maps/api/staticmap';
 
 // Static Maps marker + 路線顏色：品牌橘 (--accent-warm, #D85A30)。
