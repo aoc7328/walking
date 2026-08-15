@@ -4,8 +4,10 @@ import { EXPENSE_CATEGORIES, categoriesOf, categorySplit, DESTINATIONS } from '.
 import { formatAmount } from '../../utils/money';
 import { fileToScaledPngDataUrl, tightenQrCardImage } from '../../utils/image';
 import { downloadVjwCardJpg, printVjwCards } from '../../services/vjwCard';
+import { dataUrlToBlob, imageSrc, uploadAsset } from '../../services/assets';
+import { useTripStore } from '../../stores/tripStore';
 import { useLedgerEdit } from './useLedgerEdit';
-import { TextCell, NumCell, SelectCell, DeleteCell } from './EditableCells';
+import { TextCell, DateCell, NumCell, SelectCell, DeleteCell } from './EditableCells';
 
 const kindOpts: { value: PaymentKind; label: string }[] = [
   { value: 'card', label: '信用卡' },
@@ -18,11 +20,15 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
   const [newChannel, setNewChannel] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [ticketUploading, setTicketUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const ticketRef = useRef<HTMLInputElement>(null);
+  const tripId = useTripStore((s) => s.trip?.id ?? '');
   const cats = categoriesOf(ledger);
   const split = categorySplit(ledger);
   const isDefaultCat = (c: string) => (EXPENSE_CATEGORIES as string[]).includes(c);
   const vjw = ledger.vjw ?? [];
+  const tickets = ledger.tickets ?? [];
 
   async function handleVjwFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -31,13 +37,32 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
       for (const f of Array.from(files)) {
         const scaled = await fileToScaledPngDataUrl(f, 1000);
         const tight = await tightenQrCardImage(scaled); // 去掉 QR 與英文名之間的大留白
-        ed.addVjwEntry(tight);
+        const key = await uploadAsset(dataUrlToBlob(tight), tripId);
+        ed.addVjwEntry(key);
       }
     } catch (err) {
       window.alert('上傳失敗：' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  /** 票券 / 訂位截圖：原圖縮到 1400px（QR 要掃得到）後上傳 R2，標題預設用檔名。 */
+  async function handleTicketFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setTicketUploading(true);
+    try {
+      for (const f of Array.from(files)) {
+        const scaled = await fileToScaledPngDataUrl(f, 1400);
+        const key = await uploadAsset(dataUrlToBlob(scaled), tripId);
+        ed.addTicket({ title: f.name.replace(/\.[^.]+$/, '').slice(0, 40), imageKey: key });
+      }
+    } catch (err) {
+      window.alert('上傳失敗：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setTicketUploading(false);
+      if (ticketRef.current) ticketRef.current.value = '';
     }
   }
 
@@ -69,14 +94,13 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
       {ledger.destination === '日本' && (
         <section className="led-block">
           <div className="led-block-head"><h3>Visit Japan Web 入境 QR</h3>
-            <span className="led-muted">一人上傳一張截圖（含 QR＋英文名）；系統做成名片大小的卡片、加上中文姓名與行程名稱，可下載 JPG 存手機，或列印剪開塞護照</span>
+            <span className="led-muted">一人上傳一張截圖（含 QR＋英文名）；圖存雲端，手機版「手牌」分頁可直接出示，也能下載 JPG 或列印剪開塞護照</span>
           </div>
-          <div className="vjw-warn">⚠️ QR 圖不會存進雲端（檔案太大、也只是一次性）——請上傳後直接「下載 JPG」或「列印」；離開帳本或重新整理就會清空。</div>
           <div className="vjw-list">
             {vjw.length === 0 && <span className="led-muted">尚無——按下方「上傳 QR」加入第一個人</span>}
             {vjw.map((v) => (
               <div key={v.id} className="vjw-row">
-                <img className="vjw-thumb" src={v.image} alt="Visit Japan Web QR" />
+                <img className="vjw-thumb" src={imageSrc(v)} alt="Visit Japan Web QR" />
                 <label className="vjw-name-field">中文姓名
                   <input className="led-cell led-cell-boxed" value={v.nameZh ?? ''} onChange={(e) => ed.patchVjwEntry(v.id, { nameZh: e.target.value })} placeholder="例：張思齊" />
                 </label>
@@ -94,6 +118,40 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
           </div>
         </section>
       )}
+
+      {/* 票券 / 訂位截圖 */}
+      <section className="led-block">
+        <div className="led-block-head"><h3>票券 · 訂位截圖　<span className="led-muted">{tickets.length}</span></h3>
+          <span className="led-muted">入場券、KKday 憑證、租車確認信、車票 QR…上傳圖片就好；手機版「手牌」分頁可全螢幕出示</span>
+        </div>
+        <div className="tk-list">
+          {tickets.length === 0 && <span className="led-muted">尚無——按下方「上傳票券圖」加入</span>}
+          {tickets.map((t) => (
+            <div key={t.id} className="tk-row">
+              <a href={imageSrc(t)} target="_blank" rel="noreferrer" title="開新分頁看原圖">
+                <img className="tk-thumb" src={imageSrc(t)} alt={t.title} />
+              </a>
+              <div className="tk-fields">
+                <label className="tk-field">標題
+                  <TextCell value={t.title} onChange={(v) => ed.patchTicket(t.id, { title: v })} placeholder="例：環球影城 快速通關" />
+                </label>
+                <label className="tk-field tk-field-date">使用日期
+                  <DateCell value={t.date} onChange={(v) => ed.patchTicket(t.id, { date: v })} />
+                </label>
+                <label className="tk-field tk-field-note">備註
+                  <TextCell value={t.note} onChange={(v) => ed.patchTicket(t.id, { note: v })} placeholder="座位 / 取票方式 / 注意事項" />
+                </label>
+              </div>
+              <button className="vjw-del" onClick={() => { if (window.confirm(`刪除「${t.title || '這張票券'}」？`)) ed.delTicket(t.id); }} aria-label="刪除" title="刪除">×</button>
+            </div>
+          ))}
+        </div>
+        <div className="led-settings-row" style={{ marginTop: 8 }}>
+          <input ref={ticketRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void handleTicketFiles(e.target.files); }} />
+          <button className="led-add-btn" style={{ marginTop: 0 }} disabled={ticketUploading} onClick={() => ticketRef.current?.click()}>{ticketUploading ? '上傳中…' : '＋ 上傳票券圖'}</button>
+          <span className="led-muted">單張上限 5MB，可一次選多張</span>
+        </div>
+      </section>
 
       {/* 支付方式 */}
       <section className="led-block">

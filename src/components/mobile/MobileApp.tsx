@@ -6,19 +6,21 @@ import { addDays, formatRange, toISODate } from '../../utils/date';
 import { setUIMode } from '../../utils/device';
 import MobileItinerary from './MobileItinerary';
 import MobileLedger from './MobileLedger';
-import MobileReservations from './MobileReservations';
+import MobileCards from './MobileCards';
+import MobileInfo from './MobileInfo';
 
 /**
  * 手機版外殼。
  *
- * 定位：手機進來只做三件事——看行程（然後開 Google 導航）、現場出示訂位手牌、記流水帳。
+ * 定位：手機進來做四件事——看行程（然後開 Google 導航）、現場出示手牌（入境 QR /
+ * 票券 / 餐廳訂位牌）、查住宿與固定支出這類「不常看但需要時一定要看得到」的資料、記流水帳。
  * 排行程一律回電腦版，所以這裡刻意沒有任何編輯行程的入口，也不載 Google Maps SDK
  * （不畫地圖 = 不產生 Maps API 費用；導航是丟給手機上的 Google Maps App 處理）。
  *
  * 寫入方面只有記帳會寫 KV，而且是「按一次『記一筆』才寫一次」，不是每打一個字寫一次。
  */
 
-type Tab = 'trip' | 'resv' | 'ledger';
+type Tab = 'trip' | 'cards' | 'info' | 'ledger';
 type LoadState = 'loading' | 'ready' | 'error';
 
 /** 離線快取：只留「目前這一份」行程，出國沒訊號時至少看得到。 */
@@ -228,7 +230,8 @@ export default function MobileApp() {
             onToast={showToast}
           />
         )}
-        {tab === 'resv' && <MobileReservations trip={trip} />}
+        {tab === 'cards' && <MobileCards trip={trip} />}
+        {tab === 'info' && <MobileInfo trip={trip} />}
         {tab === 'ledger' && (
           <MobileLedger trip={trip} onTripChange={(t) => applyTrip(t, { keepDay: true })} onToast={showToast} />
         )}
@@ -245,13 +248,22 @@ export default function MobileApp() {
           <span>行程</span>
         </button>
         <button
-          className={`mv-tab${tab === 'resv' ? ' active' : ''}`}
-          onClick={() => setTab('resv')}
+          className={`mv-tab${tab === 'cards' ? ' active' : ''}`}
+          onClick={() => setTab('cards')}
         >
           <span className="mv-tab-icon" aria-hidden>
             🪪
           </span>
-          <span>訂位</span>
+          <span>手牌</span>
+        </button>
+        <button
+          className={`mv-tab${tab === 'info' ? ' active' : ''}`}
+          onClick={() => setTab('info')}
+        >
+          <span className="mv-tab-icon" aria-hidden>
+            🏨
+          </span>
+          <span>資料</span>
         </button>
         <button
           className={`mv-tab${tab === 'ledger' ? ' active' : ''}`}

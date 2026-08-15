@@ -131,14 +131,20 @@ export function persistTripKeepalive(trip: Trip): void {
 
 /**
  * 寫進雲端 / 本地備份前，剝掉「不進持久化」的暫存欄位。
- * 目前是 Visit Japan Web 入境 QR 圖：base64 很大（會撞後端 500KB 上限），且屬一次性
- *（上傳 → 下載 JPG / 列印 → 用完即丟），刻意不存。記憶體裡的 trip 仍保留，當下照樣能下載/列印。
+ *
+ * 圖片改存 R2 之後，入境 QR / 票券在 trip 裡只剩一個 key，可以（也應該）跟著存進雲端，
+ * 所以不再整批丟掉 vjw。這裡只剝舊版遺留的 base64 `image` 欄位——那個又肥又會撞
+ * 後端 500KB 上限，正是當年被迫「重整就消失」的原因。
  */
 function stripEphemeral(trip: Trip): Trip {
-  if (!trip.ledger || trip.ledger.vjw === undefined) return trip;
-  const ledger = { ...trip.ledger };
-  delete ledger.vjw;
-  return { ...trip, ledger };
+  const vjw = trip.ledger?.vjw;
+  if (!vjw || !vjw.some((v) => v.image)) return trip;
+  const slim = vjw.map((v) => {
+    if (!v.image) return v;
+    const { image: _drop, ...rest } = v;
+    return rest;
+  });
+  return { ...trip, ledger: { ...trip.ledger!, vjw: slim } };
 }
 
 async function putTripToKV(trip: Trip): Promise<void> {

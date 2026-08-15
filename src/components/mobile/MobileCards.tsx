@@ -1,0 +1,292 @@
+import { useEffect, useState } from 'react';
+import type { Trip } from '../../types/trip';
+import type { Ledger, Restaurant, Ticket, VjwEntry } from '../../types/ledger';
+import { buildReservationCard, type ReservationCardData } from '../../services/reservationCard';
+import { imageSrc } from '../../services/assets';
+import { getLedger, RESERVATION_LABEL } from '../../utils/ledger';
+import { formatWithWeekday, toISODate } from '../../utils/date';
+import { placeUrl } from '../../utils/gmaps';
+
+/**
+ * 手機版「手牌」：所有現場要出示的東西都在這一頁。
+ * 1. 入境 QR（Visit Japan Web）
+ * 2. 票券 / 訂位截圖
+ * 3. 餐廳訂位牌（翻成當地語言的文字牌）
+ *
+ * 圖都在 R2，點下去全螢幕放大給對方看／掃。餐廳牌的內容跟電腦版列印的完全一致。
+ */
+
+interface Props {
+  trip: Trip;
+}
+
+/** 目前打開的全螢幕內容：圖片或餐廳文字牌。 */
+type Showing =
+  | { kind: 'image'; title: string; sub?: string; src: string }
+  | { kind: 'reservation'; restaurant: Restaurant };
+
+function sortKey(r: Restaurant): string {
+  return `${r.date ?? '9999-99-99'} ${r.time ?? '99:99'}`;
+}
+
+/** 全螢幕圖：入境 QR / 票券。純白底、圖盡量大，方便對方掃。 */
+function ImageView({ item, onClose }: { item: Extract<Showing, { kind: 'image' }>; onClose: () => void }) {
+  return (
+    <div className="mv-cardview image" onClick={onClose}>
+      <div className="mv-cardview-inner" onClick={(e) => e.stopPropagation()}>
+        <div className="mv-cardview-heading">{item.title}</div>
+        {item.sub && <div className="mv-cardview-sub">{item.sub}</div>}
+        <img className="mv-cardview-img" src={item.src} alt={item.title} />
+        <button className="mv-cardview-close" onClick={onClose}>
+          關閉
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 全螢幕餐廳訂位牌（已翻成目的地語言）。 */
+function ReservationView({
+  restaurant,
+  ledger,
+  onClose,
+}: {
+  restaurant: Restaurant;
+  ledger: Ledger;
+  onClose: () => void;
+}) {
+  const [data, setData] = useState<ReservationCardData | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  // ⚠️ 依賴只放 restaurant.id：ledger / restaurant 物件每次 render 都是新的，
+  // 拿物件當依賴等於每次重繪都去打一次翻譯 API。
+  useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setFailed(false);
+    buildReservationCard(restaurant, ledger)
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurant.id]);
+
+  return (
+    <div className="mv-cardview" onClick={onClose}>
+      <div className="mv-cardview-inner" onClick={(e) => e.stopPropagation()}>
+        {!data && !failed && <div className="mv-cardview-loading">翻訳中… / 翻譯中…</div>}
+        {failed && <div className="mv-cardview-loading">產生失敗，請關掉重開</div>}
+        {data && (
+          <>
+            <div className="mv-cardview-heading">{data.heading}</div>
+            <dl className="mv-cardview-rows">
+              {data.rows.map((row, i) => (
+                <div key={i} className="mv-cardview-row">
+                  <dt>{row.label}</dt>
+                  <dd className={row.multiline ? 'multiline' : undefined}>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </>
+        )}
+        <button className="mv-cardview-close" onClick={onClose}>
+          關閉
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function VjwRow({ v, onShow }: { v: VjwEntry; onShow: () => void }) {
+  const src = imageSrc(v);
+  return (
+    <button className="mv-tk-row" onClick={onShow}>
+      {src ? <img className="mv-tk-thumb" src={src} alt="入境 QR" /> : <div className="mv-tk-thumb empty">—</div>}
+      <div className="mv-tk-main">
+        <div className="mv-tk-title">{v.nameZh?.trim() || '（未填姓名）'}</div>
+        <div className="mv-tk-sub">Visit Japan Web 入境 QR</div>
+      </div>
+      <span className="mv-tk-go" aria-hidden>
+        出示 ›
+      </span>
+    </button>
+  );
+}
+
+function TicketRow({ t, today, onShow }: { t: Ticket; today: string; onShow: () => void }) {
+  return (
+    <button className={`mv-tk-row${t.date === today ? ' today' : ''}`} onClick={onShow}>
+      <img className="mv-tk-thumb" src={imageSrc(t)} alt={t.title} />
+      <div className="mv-tk-main">
+        <div className="mv-tk-title">
+          {t.title || '（未命名票券）'}
+          {t.date === today && <span className="mv-resv-today-tag">今天</span>}
+        </div>
+        <div className="mv-tk-sub">
+          {t.date ? formatWithWeekday(t.date) : '未指定日期'}
+          {t.note ? `　·　${t.note}` : ''}
+        </div>
+      </div>
+      <span className="mv-tk-go" aria-hidden>
+        出示 ›
+      </span>
+    </button>
+  );
+}
+
+function ReservationRow({
+  r,
+  today,
+  onShow,
+}: {
+  r: Restaurant;
+  today: string;
+  onShow: () => void;
+}) {
+  const mapUrl = placeUrl(undefined, r.name);
+  return (
+    <div className={`mv-resv-row${r.date === today ? ' today' : ''}`}>
+      <div className="mv-resv-when">
+        <span className="mv-resv-date">{r.date ? formatWithWeekday(r.date) : '未定日期'}</span>
+        <span className="mv-resv-time">{r.time || '—'}</span>
+      </div>
+      <div className="mv-resv-main">
+        <div className="mv-resv-name">
+          {r.name || '（未命名餐廳）'}
+          {r.date === today && <span className="mv-resv-today-tag">今天</span>}
+        </div>
+        <div className="mv-resv-sub">
+          <span className={`mv-resv-status s-${r.status}`}>{RESERVATION_LABEL[r.status]}</span>
+          {r.cuisine && <span>{r.cuisine}</span>}
+          {r.partySize !== undefined && <span>{r.partySize} 位</span>}
+        </div>
+        {/* 自用備忘，只有自己看得到；出示給店家的牌上刻意不放 */}
+        {r.note && <div className="mv-resv-note">{r.note}</div>}
+        <div className="mv-resv-actions">
+          <button className="mv-resv-show" onClick={onShow}>
+            <span aria-hidden>🪪</span> 出示手牌
+          </button>
+          {mapUrl && (
+            <a className="mv-resv-map" href={mapUrl} target="_blank" rel="noreferrer">
+              找這家店 ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function MobileCards({ trip }: Props) {
+  const ledger = getLedger(trip);
+  const [showing, setShowing] = useState<Showing | null>(null);
+
+  const today = toISODate(new Date());
+  const vjw = ledger.vjw ?? [];
+  const tickets = [...(ledger.tickets ?? [])].sort((a, b) =>
+    (a.date ?? '9999-99-99').localeCompare(b.date ?? '9999-99-99'),
+  );
+  const active = ledger.restaurants.filter((r) => r.status !== 'cancelled');
+  const upcoming = active
+    .filter((r) => (r.date ?? '9999-99-99') >= today)
+    .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  const past = active
+    .filter((r) => (r.date ?? '9999-99-99') < today)
+    .sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+
+  const nothing = vjw.length === 0 && tickets.length === 0 && active.length === 0;
+
+  return (
+    <div className="mv-resv">
+      {nothing && (
+        <div className="mv-empty">
+          這趟還沒有可出示的東西。
+          <br />
+          入境 QR、票券圖、餐廳訂位都在電腦版的帳本建立。
+        </div>
+      )}
+
+      {vjw.length > 0 && (
+        <>
+          <div className="mv-section-head">入境 QR</div>
+          {vjw.map((v) => (
+            <VjwRow
+              key={v.id}
+              v={v}
+              onShow={() =>
+                setShowing({
+                  kind: 'image',
+                  title: v.nameZh?.trim() || 'Visit Japan Web',
+                  sub: 'Visit Japan Web 入境 QR',
+                  src: imageSrc(v),
+                })
+              }
+            />
+          ))}
+        </>
+      )}
+
+      {tickets.length > 0 && (
+        <>
+          <div className="mv-section-head">票券</div>
+          {tickets.map((t) => (
+            <TicketRow
+              key={t.id}
+              t={t}
+              today={today}
+              onShow={() =>
+                setShowing({
+                  kind: 'image',
+                  title: t.title || '票券',
+                  sub: [t.date ? formatWithWeekday(t.date) : '', t.note ?? ''].filter(Boolean).join('　·　'),
+                  src: imageSrc(t),
+                })
+              }
+            />
+          ))}
+        </>
+      )}
+
+      {upcoming.length > 0 && (
+        <>
+          <div className="mv-section-head">餐廳訂位　·　接下來</div>
+          {upcoming.map((r) => (
+            <ReservationRow
+              key={r.id}
+              r={r}
+              today={today}
+              onShow={() => setShowing({ kind: 'reservation', restaurant: r })}
+            />
+          ))}
+        </>
+      )}
+
+      {past.length > 0 && (
+        <>
+          <div className="mv-section-head">餐廳訂位　·　已過去</div>
+          <div className="mv-resv-past">
+            {past.map((r) => (
+              <ReservationRow
+                key={r.id}
+                r={r}
+                today={today}
+                onShow={() => setShowing({ kind: 'reservation', restaurant: r })}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {showing?.kind === 'image' && <ImageView item={showing} onClose={() => setShowing(null)} />}
+      {showing?.kind === 'reservation' && (
+        <ReservationView restaurant={showing.restaurant} ledger={ledger} onClose={() => setShowing(null)} />
+      )}
+    </div>
+  );
+}

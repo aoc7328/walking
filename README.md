@@ -36,3 +36,22 @@ VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
 3. Build command: `npm run build`
 4. Build output: `dist`
 5. 環境變數：`VITE_GOOGLE_MAPS_API_KEY`
+6. 綁定（Settings → Bindings，Production 與 Preview 都要）：
+
+| 變數名稱 | 型別 | 資源 | 用途 |
+|---|---|---|---|
+| `TRIPS` | KV namespace | （既有） | 行程 JSON、分享連結 |
+| `MEDIA` | R2 bucket | `walking-media` | 票券 / 入境 QR 圖片 |
+
+沒綁 `MEDIA` 的話，上傳圖片會回 500「R2 未設定」，其餘功能不受影響。
+
+### 本地測 Functions（含 KV / R2）
+
+`npm run dev` 只跑前端，`/api/*` 不存在。要連後端一起測：
+
+```bash
+npm run build
+npx wrangler pages dev dist --kv TRIPS --r2 MEDIA
+```
+
+KV 與 R2 都是本地模擬，不會碰到線上資料。

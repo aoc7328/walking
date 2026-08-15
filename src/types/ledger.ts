@@ -131,15 +131,33 @@ export interface ReservationDefaults {
 
 /**
  * Visit Japan Web 入境 QR（僅目的地為日本時用）：一人一張卡。
- * image 是使用者上傳的 Visit Japan Web 截圖（本身已含 QR＋英文名），縮圖後的 data URL。
+ * 使用者上傳的 Visit Japan Web 截圖（本身已含 QR＋英文名），存在 R2。
  * 私密——跟整本帳本一樣不會進公開分享連結。
  */
 export interface VjwEntry {
   id: string;
   /** 中文姓名（顯示在卡片下方，英文名已在上傳圖裡）。 */
   nameZh?: string;
-  /** 上傳的 QR 圖，縮圖後的 data URL（PNG，保留 QR 清晰）。 */
-  image: string;
+  /** R2 物件 key。 */
+  imageKey?: string;
+  /** @deprecated 舊版 base64 data URL；當年因為太大存不進 KV，重整就沒了。新資料一律用 imageKey。 */
+  image?: string;
+}
+
+/**
+ * 票券 / 訂位截圖：一張圖 + 標題，現場直接出示（環球影城入場券、KKday 憑證、租車確認信…）。
+ * 圖存 R2，這裡只留 key。私密，不進分享連結。
+ */
+export interface Ticket {
+  id: string;
+  /** 標題，例：「環球影城 快速通關」。 */
+  title: string;
+  /** 使用日期 YYYY-MM-DD（可空；有填就會依日期排序、當天標「今天」）。 */
+  date?: string;
+  /** 備註（座位、取票方式、注意事項…）。 */
+  note?: string;
+  /** R2 物件 key。 */
+  imageKey: string;
 }
 
 export interface Ledger {
@@ -155,6 +173,8 @@ export interface Ledger {
   reservation?: ReservationDefaults;
   /** Visit Japan Web 入境 QR（一人一張；只有目的地為日本時才用得到）。 */
   vjw?: VjwEntry[];
+  /** 票券 / 訂位截圖（現場出示用，圖存 R2）。 */
+  tickets?: Ticket[];
   /** 自訂類別清單（含預設五類）。未設時用預設五類。 */
   categories?: string[];
   /** 表格欄寬與隱藏欄設定。 */

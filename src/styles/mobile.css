@@ -1010,6 +1010,73 @@
   opacity: 0.55;
 }
 
+/* 入境 QR / 票券的列（整列可點，點了全螢幕出示） */
+.mv-tk-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mv-tk-row.today {
+  border-color: var(--accent-warm);
+}
+
+.mv-tk-thumb {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  background: #fff;
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+
+.mv-tk-thumb.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+}
+
+.mv-tk-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mv-tk-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.mv-tk-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  word-break: break-word;
+}
+
+.mv-tk-go {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--accent-primary);
+}
+
 /* 全螢幕手牌：給店員看的那一面，刻意純白高對比、字大 */
 .mv-cardview {
   position: fixed;
@@ -1050,6 +1117,30 @@
   font-size: 19px;
   letter-spacing: 0.12em;
   color: var(--accent-primary);
+}
+
+.mv-cardview-sub {
+  margin: -6px 0 12px;
+  font-size: 13px;
+  color: #777;
+  word-break: break-word;
+}
+
+/* 票券 / 入境 QR 的圖：盡量大，對方要掃得到 */
+.mv-cardview.image {
+  padding: 8px;
+}
+
+.mv-cardview.image .mv-cardview-inner {
+  padding: 16px 12px calc(14px + env(safe-area-inset-bottom));
+}
+
+.mv-cardview-img {
+  display: block;
+  width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  background: #fff;
 }
 
 .mv-cardview-rows {
@@ -1102,6 +1193,143 @@
   font-size: 15px;
   color: #555;
   cursor: pointer;
+}
+
+/* ---------- 資料（住宿 / 固定支出） ---------- */
+
+.mv-info {
+  padding: 14px 14px 28px;
+}
+
+.mv-info-card {
+  padding: 13px 14px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.mv-info-card.now {
+  border-color: var(--accent-warm);
+}
+
+.mv-info-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.mv-info-sub {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-kv {
+  margin: 10px 0 0;
+}
+
+.mv-kv > div {
+  display: flex;
+  gap: 10px;
+  padding: 5px 0;
+  border-top: 0.5px solid var(--border-soft);
+}
+
+.mv-kv dt {
+  flex-shrink: 0;
+  width: 76px;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.mv-kv dd {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.mv-kv dd.multiline {
+  white-space: pre-wrap;
+}
+
+.mv-paid,
+.mv-unpaid {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.mv-paid {
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
+}
+
+.mv-unpaid {
+  background: var(--accent-warm-soft);
+  color: var(--accent-warm);
+}
+
+.mv-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  margin-bottom: 7px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+}
+
+.mv-info-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mv-info-row-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14.5px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.mv-info-row-sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-info-row-note {
+  margin-top: 4px;
+  padding-left: 9px;
+  border-left: 2px solid var(--border-soft);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-secondary);
+  word-break: break-word;
+}
+
+.mv-info-hint {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--bg-softer);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  color: var(--ink-secondary);
 }
 
 /* ---------- 共用小元件 ---------- */

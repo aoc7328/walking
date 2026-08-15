@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import type {
-  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults, VjwEntry,
+  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults, VjwEntry, Ticket,
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
 import { toISODate, addDays } from '../../utils/date';
@@ -71,11 +71,18 @@ export function useLedgerEdit() {
         }),
       setReservation: (patch: Partial<ReservationDefaults>) => upd((l) => ({ ...l, reservation: { ...(l.reservation ?? {}), ...patch } })),
 
-      /** Visit Japan Web 入境 QR（一人一張）。image 為已縮圖的 data URL。 */
-      addVjwEntry: (image: string) => upd((l) => ({ ...l, vjw: [...(l.vjw ?? []), { id: uuid(), image } as VjwEntry] })),
+      /** Visit Japan Web 入境 QR（一人一張）。imageKey 是已上傳到 R2 的物件 key。 */
+      addVjwEntry: (imageKey: string) => upd((l) => ({ ...l, vjw: [...(l.vjw ?? []), { id: uuid(), imageKey } as VjwEntry] })),
       patchVjwEntry: (id: string, patch: Partial<Pick<VjwEntry, 'nameZh'>>) =>
         upd((l) => ({ ...l, vjw: (l.vjw ?? []).map((v) => (v.id === id ? { ...v, ...patch } : v)) })),
       delVjwEntry: (id: string) => upd((l) => ({ ...l, vjw: (l.vjw ?? []).filter((v) => v.id !== id) })),
+
+      /** 票券 / 訂位截圖（圖已上傳 R2，這裡只記 key）。 */
+      addTicket: (t: { title: string; imageKey: string; date?: string; note?: string }) =>
+        upd((l) => ({ ...l, tickets: [...(l.tickets ?? []), { id: uuid(), ...t }] })),
+      patchTicket: (id: string, patch: Partial<Omit<Ticket, 'id'>>) =>
+        upd((l) => ({ ...l, tickets: (l.tickets ?? []).map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+      delTicket: (id: string) => upd((l) => ({ ...l, tickets: (l.tickets ?? []).filter((t) => t.id !== id) })),
 
       /**
        * 新增住宿：有前一筆就沿用不常變的欄位當參考——

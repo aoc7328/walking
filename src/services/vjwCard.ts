@@ -1,4 +1,5 @@
 import type { VjwEntry } from '../types/ledger';
+import { imageSrc } from './assets';
 
 /**
  * Visit Japan Web 入境資訊卡：直式名片 54×86mm。
@@ -22,7 +23,7 @@ const CARD_H = 86 * PXMM;
 
 /** 把一張卡畫進 canvas（白底、上圖下名）。 */
 async function renderCardCanvas(entry: VjwEntry, tripName: string): Promise<HTMLCanvasElement> {
-  const img = await loadImage(entry.image);
+  const img = await loadImage(imageSrc(entry));
   const canvas = document.createElement('canvas');
   canvas.width = CARD_W;
   canvas.height = CARD_H;
@@ -92,7 +93,7 @@ function esc(s: string): string {
 function cardHtml(entry: VjwEntry, tripName: string): string {
   const zh = entry.nameZh && entry.nameZh.trim() ? `<div class="zh">${esc(entry.nameZh.trim())}</div>` : '';
   return `<div class="card">
-    <img class="qr" src="${entry.image}" alt="QR" />
+    <img class="qr" src="${imageSrc(entry)}" alt="QR" />
     ${zh}
     <div class="trip">${esc(tripName)}</div>
     <div class="tag">Visit Japan Web</div>
