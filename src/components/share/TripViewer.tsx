@@ -4,71 +4,10 @@ import { readShareHash, fetchTripById, type ShareTrip, type ShareDay, type Share
 import { addDays, formatRange, formatWithWeekday, formatStayDuration } from '../../utils/date';
 import { TRANSPORT_LABEL, formatDuration } from '../../utils/format';
 import { hasApiKey } from '../../services/googleMaps';
+import { directionsUrl, placeUrl } from '../../utils/gmaps';
+import { copyToClipboard } from '../../utils/clipboard';
 import ShareDayMap from './ShareDayMap';
 import ShareOverviewMap from './ShareOverviewMap';
-
-/** 嘗試把字串塞進剪貼簿。失敗回 false（給 caller 顯示 fallback）。 */
-async function copyToClipboard(text: string): Promise<boolean> {
-  if (navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      // fall through
-    }
-  }
-  // Fallback：用 textarea + execCommand
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 開到 Google Maps 的地點頁面。
- *
- * Google 把舊格式 `?q=place_id:xxx` 廢了，現在會被當字面字串去搜，結果是「找不到結果，
- * 改用 Google 搜尋」。改用官方文件的格式：
- *
- *   https://www.google.com/maps/search/?api=1&query=<name>&query_place_id=<id>
- *
- * `query` 給名字當顯示與 fallback，`query_place_id` 才是真正的 place 對應依據。
- */
-function placeUrl(placeId?: string, name?: string, lat?: number, lng?: number): string | null {
-  if (name) {
-    const params = new URLSearchParams({ api: '1', query: name });
-    if (placeId) params.set('query_place_id', placeId);
-    return `https://www.google.com/maps/search/?${params.toString()}`;
-  }
-  if (lat !== undefined && lng !== undefined) {
-    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-  }
-  return null;
-}
-
-function directionsUrl(
-  origin: { la: number; lo: number },
-  dest: { la: number; lo: number; p?: string },
-  mode: string,
-): string {
-  const params = new URLSearchParams({
-    api: '1',
-    origin: `${origin.la},${origin.lo}`,
-    destination: `${dest.la},${dest.lo}`,
-    travelmode: mode,
-  });
-  if (dest.p) params.set('destination_place_id', dest.p);
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
-}
 
 /**
  * 整段行程總覽 Modal。
