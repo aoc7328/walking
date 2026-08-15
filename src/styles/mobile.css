@@ -783,7 +783,9 @@
   margin-bottom: 8px;
 }
 
+/* 整列可點＝開修改抽屜 */
 .mv-entry {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -792,6 +794,11 @@
   border: 0.5px solid var(--border-soft);
   border-radius: var(--radius-md);
   margin-bottom: 7px;
+  font-family: var(--font-body);
+  color: var(--ink-primary);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mv-entry.unsent {
@@ -854,17 +861,34 @@
   color: var(--ink-muted);
 }
 
-.mv-entry-del {
+.mv-entry-edit {
   flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 999px;
-  background: none;
+  width: 22px;
+  text-align: center;
   color: var(--ink-faint);
-  font-size: 19px;
-  line-height: 1;
-  cursor: pointer;
+  font-size: 15px;
+}
+
+/* 修改抽屜底部：刪除（次要）＋ 儲存（主要） */
+.mv-edit-foot {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.mv-edit-foot .mv-btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.mv-edit-save {
+  flex: 1;
+  margin-top: 0;
+}
+
+.mv-btn-danger {
+  border-color: var(--accent-warm);
+  color: var(--accent-warm);
 }
 
 /* ---------- 訂位 / 出示手牌 ---------- */
