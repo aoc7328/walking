@@ -166,6 +166,18 @@ function chainAll(days: DayPlan[]): DayPlan[] {
   return days.map(recomputeChain);
 }
 
+/**
+ * 「拿出來顯示之前」的正規化：補空白天的銜接點 + 重算時間鏈。
+ *
+ * ⚠️ KV 裡存的 arrivalTime 不一定等於實際要顯示的時間——電腦版一律在 setTrip
+ * 時重算過才畫。任何**另一個**要顯示同一份行程的畫面（手機版）都必須套同一支，
+ * 否則兩邊時間會對不起來（2026-08-15 手機版就是漏了這步，整排時間看起來全錯）。
+ * 純函數、可重複套用，只影響顯示，不寫回雲端。
+ */
+export function normalizeDaysForView(days: DayPlan[]): DayPlan[] {
+  return chainAll(withAutoFill(days));
+}
+
 function reindexDays(days: DayPlan[], startDate: string): DayPlan[] {
   return days.map((d, idx) => ({
     ...d,
@@ -264,7 +276,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   setTrip: (trip) => {
     setActiveTripId(trip.id);
     set({
-      trip: { ...trip, days: chainAll(withAutoFill(trip.days)) },
+      trip: { ...trip, days: normalizeDaysForView(trip.days) },
       persisted: true,
       dirty: false,
     });
@@ -274,7 +286,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
     set({
       trip: {
         ...MOCK_TRIP,
-        days: chainAll(withAutoFill(MOCK_TRIP.days)),
+        days: normalizeDaysForView(MOCK_TRIP.days),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },

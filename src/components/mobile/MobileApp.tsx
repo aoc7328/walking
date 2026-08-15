@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Trip } from '../../types/trip';
 import { listAllTrips, loadActiveTrip, loadTripById, setActiveTripId } from '../../db/repository';
+import { normalizeDaysForView } from '../../stores/tripStore';
 import { addDays, formatRange, toISODate } from '../../utils/date';
 import { setUIMode } from '../../utils/device';
 import MobileItinerary from './MobileItinerary';
@@ -78,11 +79,18 @@ export default function MobileApp() {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
   }, []);
 
-  /** 套用一份行程：更新畫面 + 寫離線快取 + 把日期挪到今天。 */
+  /**
+   * 套用一份行程：正規化 → 更新畫面 + 寫離線快取 + 把日期挪到今天。
+   *
+   * 一定要先過 normalizeDaysForView：KV 存的抵達時間是「還沒重算」的原始值，
+   * 電腦版載入時也會重算一次才畫。少了這步手機上每一站的時間都會跟電腦版對不起來。
+   * 只影響顯示，不會把重算結果寫回雲端。
+   */
   const applyTrip = useCallback((t: Trip, opts?: { keepDay?: boolean }) => {
-    setTrip(t);
-    writeCache(t);
-    if (!opts?.keepDay) setDayIdx(defaultDayIndex(t));
+    const normalized: Trip = { ...t, days: normalizeDaysForView(t.days) };
+    setTrip(normalized);
+    writeCache(normalized);
+    if (!opts?.keepDay) setDayIdx(defaultDayIndex(normalized));
   }, []);
 
   // 開場載入：跟 KV 拿目前這份行程；拿不到就退到離線快取
