@@ -6,18 +6,19 @@ import { addDays, formatRange, toISODate } from '../../utils/date';
 import { setUIMode } from '../../utils/device';
 import MobileItinerary from './MobileItinerary';
 import MobileLedger from './MobileLedger';
+import MobileReservations from './MobileReservations';
 
 /**
  * 手機版外殼。
  *
- * 定位：手機進來只做兩件事——看行程（然後開 Google 導航）、記流水帳。
+ * 定位：手機進來只做三件事——看行程（然後開 Google 導航）、現場出示訂位手牌、記流水帳。
  * 排行程一律回電腦版，所以這裡刻意沒有任何編輯行程的入口，也不載 Google Maps SDK
  * （不畫地圖 = 不產生 Maps API 費用；導航是丟給手機上的 Google Maps App 處理）。
  *
  * 寫入方面只有記帳會寫 KV，而且是「按一次『記一筆』才寫一次」，不是每打一個字寫一次。
  */
 
-type Tab = 'trip' | 'ledger';
+type Tab = 'trip' | 'resv' | 'ledger';
 type LoadState = 'loading' | 'ready' | 'error';
 
 /** 離線快取：只留「目前這一份」行程，出國沒訊號時至少看得到。 */
@@ -219,14 +220,16 @@ export default function MobileApp() {
       </header>
 
       <div className="mv-scroll">
-        {tab === 'trip' ? (
+        {tab === 'trip' && (
           <MobileItinerary
             trip={trip}
             dayIdx={dayIdx}
             onSelectDay={setDayIdx}
             onToast={showToast}
           />
-        ) : (
+        )}
+        {tab === 'resv' && <MobileReservations trip={trip} />}
+        {tab === 'ledger' && (
           <MobileLedger trip={trip} onTripChange={(t) => applyTrip(t, { keepDay: true })} onToast={showToast} />
         )}
       </div>
@@ -240,6 +243,15 @@ export default function MobileApp() {
             🧭
           </span>
           <span>行程</span>
+        </button>
+        <button
+          className={`mv-tab${tab === 'resv' ? ' active' : ''}`}
+          onClick={() => setTab('resv')}
+        >
+          <span className="mv-tab-icon" aria-hidden>
+            🪪
+          </span>
+          <span>訂位</span>
         </button>
         <button
           className={`mv-tab${tab === 'ledger' ? ' active' : ''}`}

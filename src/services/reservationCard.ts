@@ -34,10 +34,47 @@ function langForCurrency(currency: string): Lang {
 
 const cache = new Map<string, string>();
 
+/**
+ * 翻譯結果存進 localStorage：手機在餐廳現場常常沒訊號，
+ * 只要這張牌在有網路時開過一次，之後離線出示仍是翻好的內容。
+ */
+const TR_CACHE_KEY = 'walking.trCache';
+const TR_CACHE_MAX = 400;
+let cacheLoaded = false;
+
+function ensureCacheLoaded(): void {
+  if (cacheLoaded) return;
+  cacheLoaded = true;
+  try {
+    const raw = localStorage.getItem(TR_CACHE_KEY);
+    if (!raw) return;
+    for (const [k, v] of Object.entries(JSON.parse(raw) as Record<string, unknown>)) {
+      if (typeof v === 'string') cache.set(k, v);
+    }
+  } catch {
+    // 壞掉的快取直接無視
+  }
+}
+
+function persistCache(): void {
+  try {
+    const obj: Record<string, string> = {};
+    let n = 0;
+    for (const [k, v] of cache) {
+      if (n++ >= TR_CACHE_MAX) break;
+      obj[k] = v;
+    }
+    localStorage.setItem(TR_CACHE_KEY, JSON.stringify(obj));
+  } catch {
+    // 配額滿 / 無痕模式：純快取，失敗不影響功能
+  }
+}
+
 /** 用 MyMemory 免費翻譯（zh-TW → 目的地語言）。失敗或警示就回原文。 */
 async function mm(text: string, target: 'ja' | 'en'): Promise<string> {
   const t = text.trim();
   if (!t) return '';
+  ensureCacheLoaded();
   const key = `${target}:${t}`;
   if (cache.has(key)) return cache.get(key)!;
   try {
@@ -46,9 +83,12 @@ async function mm(text: string, target: 'ja' | 'en'): Promise<string> {
     const data = await res.json();
     const out = data?.responseData?.translatedText;
     const ok = typeof out === 'string' && out && !/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(out);
-    const result = ok ? out : text;
-    cache.set(key, result);
-    return result;
+    // 只快取「真的翻成功」的；失敗時回原文但不寫進快取，
+    // 否則一次額度用盡就把未翻譯的中文永久留在快取裡。
+    if (!ok) return text;
+    cache.set(key, out);
+    persistCache();
+    return out;
   } catch {
     return text;
   }
@@ -80,8 +120,8 @@ function rowMultiline(label: string, value: string): string {
   return `<tr><td class="k">${esc(label)}</td><td class="v">${esc(value).replace(/\n/g, '<br>')}</td></tr>`;
 }
 
-function shell(L: Labels, inner: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(L.heading)}</title>
+function shell(heading: string, inner: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(heading)}</title>
 <style>
   body { font-family: 'Noto Sans JP','Noto Sans TC',-apple-system,sans-serif; margin: 0; padding: 24px; color: #1a1a1a; }
   .card { max-width: 440px; margin: 0 auto; border: 1.5px solid #2C4A3D; border-radius: 12px; padding: 22px 26px; }
@@ -95,7 +135,30 @@ function shell(L: Labels, inner: string): string {
 </style></head><body>${inner}</body></html>`;
 }
 
-async function buildHtml(r: Restaurant, ledger: Ledger, L: Labels, lang: Lang): Promise<string> {
+/** 訂位牌的一列（label 與 value 都已經是目的地語言）。 */
+export interface ReservationCardRow {
+  label: string;
+  value: string;
+  /** 值含換行（備考欄），呈現時要保留斷行。 */
+  multiline?: boolean;
+}
+
+export interface ReservationCardData {
+  heading: string;
+  lang: Lang;
+  rows: ReservationCardRow[];
+}
+
+/**
+ * 產一張訂位牌的內容（已翻成目的地語言）。
+ * 電腦版列印與手機版全螢幕出示共用這一份，兩邊內容必然一致。
+ *
+ * 備考只放 `ledger.reservation.dietaryNote`（設計上就是要給店家看的飲食/語言需求）；
+ * 每家店自己的 `restaurant.note` 刻意不放——那是自用備忘，可能寫著不適合給店家看的東西。
+ */
+export async function buildReservationCard(r: Restaurant, ledger: Ledger): Promise<ReservationCardData> {
+  const lang = (ledger.language as Lang) ?? langForCurrency(ledger.localCurrency);
+  const L = LABELS[lang] ?? LABELS.en;
   const res = ledger.reservation ?? {};
   const target: 'ja' | 'en' | null = lang === 'ja' ? 'ja' : lang === 'en' ? 'en' : null;
   const tr = (text: string) => (target ? mm(text, target) : Promise.resolve(text));
@@ -107,26 +170,38 @@ async function buildHtml(r: Restaurant, ledger: Ledger, L: Labels, lang: Lang): 
   const dietaryRaw = (res.dietaryNote ?? '').trim();
   const dietary = dietaryRaw ? (target ? await mmLines(dietaryRaw, target) : dietaryRaw) : '';
 
-  const booker = r.bookingName || res.bookingName || '';  // 專有名詞，不翻
+  const booker = r.bookingName || res.bookingName || ''; // 專有名詞，不翻
   const contact = r.contact || res.contact || '';
-  const email = res.email || '';  // Email 位址，不翻
+  const email = res.email || ''; // Email 位址，不翻
   const party = r.partySize ?? res.partySize;
   const partyStr = party !== undefined ? `${party} ${L.unit}` : '';
 
-  const body = [
-    row(L.name, r.name + (cuisine ? `（${cuisine}）` : '')),
-    row(L.datetime, dt),
-    row(L.booker, booker),
-    row(L.party, partyStr),
-    row(L.contact, contact),
-    row(L.email, email),
-    row(L.channel, channel),
-    row(L.ref, r.bookingRef ?? ''),
-    rowMultiline(L.notes, dietary),
-  ].join('');
+  const rows: ReservationCardRow[] = [
+    { label: L.name, value: r.name + (cuisine ? `（${cuisine}）` : '') },
+    { label: L.datetime, value: dt },
+    { label: L.booker, value: booker },
+    { label: L.party, value: partyStr },
+    { label: L.contact, value: contact },
+    { label: L.email, value: email },
+    { label: L.channel, value: channel },
+    { label: L.ref, value: r.bookingRef ?? '' },
+    { label: L.notes, value: dietary, multiline: true },
+  ].filter((x) => x.value);
 
-  return shell(L, `<div class="card"><h1>${esc(L.heading)}</h1><table>${body}</table></div>
-<script>setTimeout(function(){window.print();},250);</script>`);
+  return { heading: L.heading, lang, rows };
+}
+
+async function buildHtml(r: Restaurant, ledger: Ledger): Promise<string> {
+  const card = await buildReservationCard(r, ledger);
+  const body = card.rows
+    .map((x) => (x.multiline ? rowMultiline(x.label, x.value) : row(x.label, x.value)))
+    .join('');
+
+  return shell(
+    card.heading,
+    `<div class="card"><h1>${esc(card.heading)}</h1><table>${body}</table></div>
+<script>setTimeout(function(){window.print();},250);</script>`,
+  );
 }
 
 /** 開新視窗印出餐廳預訂牌，整張轉成目的地語言（先開視窗顯示「翻譯中」，翻好再寫入）。 */
@@ -136,9 +211,9 @@ export function printReservationCard(r: Restaurant, ledger: Ledger): void {
   const w = window.open('', '_blank', 'width=480,height=680');
   if (!w) { window.alert('瀏覽器擋掉了彈出視窗，請允許彈出視窗後再試。'); return; }
   w.document.open();
-  w.document.write(shell(L, '<div class="loading">翻訳中… / 翻譯中…</div>'));
+  w.document.write(shell(L.heading, '<div class="loading">翻訳中… / 翻譯中…</div>'));
   w.document.close();
-  buildHtml(r, ledger, L, lang).then((html) => {
+  buildHtml(r, ledger).then((html) => {
     try {
       if (w.closed) return;
       w.document.open();
