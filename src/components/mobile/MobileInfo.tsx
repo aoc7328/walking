@@ -3,6 +3,7 @@ import { getLedger, formatStayRange, RESERVATION_LABEL } from '../../utils/ledge
 import { formatAmount, formatMoney, toTWD } from '../../utils/money';
 import { formatWithWeekday, toISODate } from '../../utils/date';
 import { placeUrl } from '../../utils/gmaps';
+import MobileSection from './MobileSection';
 
 /**
  * 手機版「資料」：出國時偶爾要查、但每次都不能沒有的東西。
@@ -36,9 +37,18 @@ export default function MobileInfo({ trip }: Props) {
     return checkIn <= today && today < toISODate(out);
   }
 
+  // 今晚住哪預設展開，其餘收起來
+  const tonightCount = stays.filter((a) => isTonight(a.checkIn, a.nights)).length;
+
   return (
     <div className="mv-info">
-      <div className="mv-section-head">住宿　·　{stays.length} 筆</div>
+      <MobileSection
+        id="stays"
+        title="住宿"
+        count={stays.length}
+        defaultOpen={tonightCount > 0}
+        badge={tonightCount > 0 ? '今晚' : undefined}
+      >
       {stays.length === 0 && <div className="mv-empty">還沒有住宿資料</div>}
       {stays.map((a) => {
         const tonight = isTonight(a.checkIn, a.nights);
@@ -101,10 +111,14 @@ export default function MobileInfo({ trip }: Props) {
           </div>
         );
       })}
+      </MobileSection>
 
-      <div className="mv-section-head">
-        固定項目支出　·　{fixed.length} 筆　·　合計 {formatMoney(fixedTotal, 'TWD')}
-      </div>
+      <MobileSection
+        id="fixed"
+        title="固定項目支出"
+        count={fixed.length}
+        badge={`合計 ${formatMoney(fixedTotal, 'TWD')}`}
+      >
       {fixed.length === 0 && <div className="mv-empty">還沒有固定項目（機票 / 行程 / 租車…）</div>}
       {fixed.map((e) => (
         <div key={e.id} className="mv-info-row">
@@ -128,6 +142,7 @@ export default function MobileInfo({ trip }: Props) {
           </div>
         </div>
       ))}
+      </MobileSection>
 
       {/* 餐廳的錢與訂位狀態在「手牌」分頁，這裡只補一句指路，免得以為漏了 */}
       {ledger.restaurants.length > 0 && (

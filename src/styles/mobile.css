@@ -880,6 +880,90 @@
   color: var(--ink-muted);
 }
 
+/* ---------- 可收合區塊 ---------- */
+
+.mv-sec {
+  margin-bottom: 10px;
+}
+
+.mv-sec-head {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  background: var(--bg-softer);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mv-sec-head.open {
+  background: var(--accent-primary-soft);
+  border-color: var(--accent-primary);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.mv-sec-caret {
+  flex-shrink: 0;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--ink-muted);
+  transition: transform var(--t-fast);
+}
+
+.mv-sec-head.open .mv-sec-caret {
+  transform: rotate(90deg);
+  color: var(--accent-primary);
+}
+
+.mv-sec-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-primary);
+}
+
+.mv-sec-head.open .mv-sec-title {
+  color: var(--accent-primary);
+}
+
+.mv-sec-count {
+  flex-shrink: 0;
+  min-width: 22px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  font-size: 12px;
+  color: var(--ink-secondary);
+  text-align: center;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* 收起來時也要看得到「今天有東西」，不然等於把當天要用的藏起來 */
+.mv-sec-badge {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--accent-warm);
+  color: #fff;
+  font-size: 11px;
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-sec-body {
+  padding: 10px 10px 2px;
+  border: 0.5px solid var(--accent-primary);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
 .mv-resv-row {
   display: flex;
   gap: 12px;

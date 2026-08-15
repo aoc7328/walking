@@ -6,6 +6,7 @@ import { imageSrc } from '../../services/assets';
 import { getLedger, RESERVATION_LABEL } from '../../utils/ledger';
 import { formatWithWeekday, toISODate } from '../../utils/date';
 import { placeUrl } from '../../utils/gmaps';
+import MobileSection from './MobileSection';
 
 /**
  * 手機版「手牌」：所有現場要出示的東西都在這一頁。
@@ -200,6 +201,10 @@ export default function MobileCards({ trip }: Props) {
     .filter((r) => (r.date ?? '9999-99-99') < today)
     .sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
 
+  // 「今天要用的」預設展開，其餘一律收起來——不然東西一多整頁都在捲
+  const ticketsToday = tickets.filter((t) => t.date === today).length;
+  const resvToday = upcoming.filter((r) => r.date === today).length;
+
   const nothing = vjw.length === 0 && tickets.length === 0 && active.length === 0;
 
   return (
@@ -213,8 +218,7 @@ export default function MobileCards({ trip }: Props) {
       )}
 
       {vjw.length > 0 && (
-        <>
-          <div className="mv-section-head">入境 QR</div>
+        <MobileSection id="vjw" title="入境 QR" count={vjw.length}>
           {vjw.map((v) => (
             <VjwRow
               key={v.id}
@@ -229,12 +233,17 @@ export default function MobileCards({ trip }: Props) {
               }
             />
           ))}
-        </>
+        </MobileSection>
       )}
 
       {tickets.length > 0 && (
-        <>
-          <div className="mv-section-head">票券</div>
+        <MobileSection
+          id="tickets"
+          title="票券"
+          count={tickets.length}
+          defaultOpen={ticketsToday > 0}
+          badge={ticketsToday > 0 ? `今天 ${ticketsToday}` : undefined}
+        >
           {tickets.map((t) => (
             <TicketRow
               key={t.id}
@@ -250,12 +259,17 @@ export default function MobileCards({ trip }: Props) {
               }
             />
           ))}
-        </>
+        </MobileSection>
       )}
 
       {upcoming.length > 0 && (
-        <>
-          <div className="mv-section-head">餐廳訂位　·　接下來</div>
+        <MobileSection
+          id="resv-upcoming"
+          title="餐廳訂位"
+          count={upcoming.length}
+          defaultOpen={resvToday > 0}
+          badge={resvToday > 0 ? `今天 ${resvToday}` : undefined}
+        >
           {upcoming.map((r) => (
             <ReservationRow
               key={r.id}
@@ -264,12 +278,11 @@ export default function MobileCards({ trip }: Props) {
               onShow={() => setShowing({ kind: 'reservation', restaurant: r })}
             />
           ))}
-        </>
+        </MobileSection>
       )}
 
       {past.length > 0 && (
-        <>
-          <div className="mv-section-head">餐廳訂位　·　已過去</div>
+        <MobileSection id="resv-past" title="已過去的訂位" count={past.length}>
           <div className="mv-resv-past">
             {past.map((r) => (
               <ReservationRow
@@ -280,7 +293,7 @@ export default function MobileCards({ trip }: Props) {
               />
             ))}
           </div>
-        </>
+        </MobileSection>
       )}
 
       {showing?.kind === 'image' && <ImageView item={showing} onClose={() => setShowing(null)} />}
