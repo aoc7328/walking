@@ -136,8 +136,10 @@ export interface ReservationDefaults {
  */
 export interface VjwEntry {
   id: string;
-  /** 中文姓名（顯示在卡片下方，英文名已在上傳圖裡）。 */
+  /** 中文姓名（顯示在卡片下方）。 */
   nameZh?: string;
+  /** 護照上的英文姓名（顯示在中文名下方，一律轉大寫，跟護照一致）。 */
+  nameEn?: string;
   /** R2 物件 key。 */
   imageKey?: string;
   /** @deprecated 舊版 base64 data URL；當年因為太大存不進 KV，重整就沒了。新資料一律用 imageKey。 */

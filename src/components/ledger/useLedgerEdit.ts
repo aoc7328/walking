@@ -73,7 +73,7 @@ export function useLedgerEdit() {
 
       /** Visit Japan Web 入境 QR（一人一張）。imageKey 是已上傳到 R2 的物件 key。 */
       addVjwEntry: (imageKey: string) => upd((l) => ({ ...l, vjw: [...(l.vjw ?? []), { id: uuid(), imageKey } as VjwEntry] })),
-      patchVjwEntry: (id: string, patch: Partial<Pick<VjwEntry, 'nameZh'>>) =>
+      patchVjwEntry: (id: string, patch: Partial<Pick<VjwEntry, 'nameZh' | 'nameEn'>>) =>
         upd((l) => ({ ...l, vjw: (l.vjw ?? []).map((v) => (v.id === id ? { ...v, ...patch } : v)) })),
       delVjwEntry: (id: string) => upd((l) => ({ ...l, vjw: (l.vjw ?? []).filter((v) => v.id !== id) })),
 

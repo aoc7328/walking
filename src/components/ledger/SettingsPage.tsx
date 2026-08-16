@@ -94,7 +94,7 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
       {ledger.destination === '日本' && (
         <section className="led-block">
           <div className="led-block-head"><h3>Visit Japan Web 入境 QR</h3>
-            <span className="led-muted">一人上傳一張截圖（含 QR＋英文名）；圖存雲端，手機版「手牌」分頁可直接出示，也能下載 JPG 或列印剪開塞護照</span>
+            <span className="led-muted">一人上傳一張 QR 截圖，填中文姓名與護照英文姓名；圖存雲端，手機版「手牌」分頁可直接出示，也能下載 JPG 或列印剪開塞護照</span>
           </div>
           <div className="vjw-list">
             {vjw.length === 0 && <span className="led-muted">尚無——按下方「上傳 QR」加入第一個人</span>}
@@ -103,6 +103,9 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
                 <img className="vjw-thumb" src={imageSrc(v)} alt="Visit Japan Web QR" />
                 <label className="vjw-name-field">中文姓名
                   <input className="led-cell led-cell-boxed" value={v.nameZh ?? ''} onChange={(e) => ed.patchVjwEntry(v.id, { nameZh: e.target.value })} placeholder="例：張思齊" />
+                </label>
+                <label className="vjw-name-field">英文姓名（護照）
+                  <input className="led-cell led-cell-boxed" value={v.nameEn ?? ''} onChange={(e) => ed.patchVjwEntry(v.id, { nameEn: e.target.value })} placeholder="例：CHANG, SSU-CHI" />
                 </label>
                 <button className="led-export-btn" onClick={() => { void downloadVjwCardJpg(v, tripName); }} title="下載這個人的資訊卡（JPG，存手機）">下載 JPG</button>
                 <button className="vjw-del" onClick={() => { if (window.confirm('刪除這張 QR？')) ed.delVjwEntry(v.id); }} aria-label="刪除" title="刪除">×</button>

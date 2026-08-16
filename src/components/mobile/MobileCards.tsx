@@ -110,8 +110,10 @@ function VjwRow({ v, onShow }: { v: VjwEntry; onShow: () => void }) {
     <button className="mv-tk-row" onClick={onShow}>
       {src ? <img className="mv-tk-thumb" src={src} alt="入境 QR" /> : <div className="mv-tk-thumb empty">—</div>}
       <div className="mv-tk-main">
-        <div className="mv-tk-title">{v.nameZh?.trim() || '（未填姓名）'}</div>
-        <div className="mv-tk-sub">Visit Japan Web 入境 QR</div>
+        <div className="mv-tk-title">{v.nameZh?.trim() || v.nameEn?.trim() || '（未填姓名）'}</div>
+        <div className="mv-tk-sub">
+          {v.nameEn?.trim() ? `${v.nameEn.trim().toUpperCase()}　·　` : ''}Visit Japan Web
+        </div>
       </div>
       <span className="mv-tk-go" aria-hidden>
         出示 ›
@@ -226,8 +228,10 @@ export default function MobileCards({ trip }: Props) {
               onShow={() =>
                 setShowing({
                   kind: 'image',
-                  title: v.nameZh?.trim() || 'Visit Japan Web',
-                  sub: 'Visit Japan Web 入境 QR',
+                  title: v.nameZh?.trim() || v.nameEn?.trim().toUpperCase() || 'Visit Japan Web',
+                  sub: [v.nameZh?.trim() ? v.nameEn?.trim().toUpperCase() : '', 'Visit Japan Web 入境 QR']
+                    .filter(Boolean)
+                    .join('　·　'),
                   src: imageSrc(v),
                 })
               }
