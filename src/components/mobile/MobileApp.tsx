@@ -96,6 +96,34 @@ export default function MobileApp() {
     if (!opts?.keepDay) setDayIdx(defaultDayIndex(normalized));
   }, []);
 
+  /**
+   * 跨日自動跳到新的「今天」。
+   *
+   * 預設落在哪一天是「開啟當下」算的：行程期間＝當天，行程前/後＝Day 1。
+   * 但手機通常整趟不會關掉——放口袋過一夜，隔天早上打開還會停在昨天。
+   * 所以回到前景時，只要日期真的翻過去、而且新的今天落在行程內，就跳過去；
+   * 行程還沒開始或已經結束時不動使用者選的那一天（維持自由點擊）。
+   * 純畫面狀態，不重抓資料也不寫 KV。
+   */
+  const tripRef = useRef<Trip | null>(null);
+  tripRef.current = trip;
+  const lastSeenDateRef = useRef<string>(toISODate(new Date()));
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return;
+      const today = toISODate(new Date());
+      if (today === lastSeenDateRef.current) return;
+      lastSeenDateRef.current = today;
+      const t = tripRef.current;
+      if (!t) return;
+      const i = t.days.findIndex((d) => d.date === today);
+      if (i >= 0) setDayIdx(i);
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   // 開場載入：跟 KV 拿目前這份行程；拿不到就退到離線快取
   useEffect(() => {
     let cancelled = false;

@@ -1,7 +1,7 @@
 import type { Trip } from '../../types/trip';
 import { getLedger, formatStayRange, RESERVATION_LABEL } from '../../utils/ledger';
 import { formatAmount, formatMoney, toTWD } from '../../utils/money';
-import { formatWithWeekday, toISODate } from '../../utils/date';
+import { toISODate } from '../../utils/date';
 import { placeUrl } from '../../utils/gmaps';
 import MobileSection from './MobileSection';
 
@@ -90,12 +90,9 @@ export default function MobileInfo({ trip }: Props) {
                   <dd>{a.meals}</dd>
                 </div>
               )}
-              {a.chargeDate && (
-                <div>
-                  <dt>免費取消至</dt>
-                  <dd>{formatWithWeekday(a.chargeDate)}</dd>
-                </div>
-              )}
+              {/* 免費取消日刻意不顯示：實務上出發前早就過了免費取消期，
+                  舊資料的 chargeDate 語意也不一致（見 types/ledger 的註解），顯示反而誤導。
+                  電腦版帳本的住宿表仍保留這一欄。 */}
               {a.note && (
                 <div>
                   <dt>備註</dt>
