@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Trip } from '../../types/trip';
 import type { Ledger, Restaurant, Ticket, VjwEntry } from '../../types/ledger';
 import { buildReservationCard, type ReservationCardData } from '../../services/reservationCard';
@@ -300,10 +301,15 @@ export default function MobileCards({ trip }: Props) {
         </MobileSection>
       )}
 
-      {showing?.kind === 'image' && <ImageView item={showing} onClose={() => setShowing(null)} />}
-      {showing?.kind === 'reservation' && (
-        <ReservationView restaurant={showing.restaurant} ledger={ledger} onClose={() => setShowing(null)} />
-      )}
+      {/* 掛到 body：全螢幕出示原本畫在可捲區裡，iOS Safari 會把捲動容器變成獨立的
+          堆疊環境，底部分頁列會壓在上面（關閉鈕被蓋住）。 */}
+      {showing?.kind === 'image' &&
+        createPortal(<ImageView item={showing} onClose={() => setShowing(null)} />, document.body)}
+      {showing?.kind === 'reservation' &&
+        createPortal(
+          <ReservationView restaurant={showing.restaurant} ledger={ledger} onClose={() => setShowing(null)} />,
+          document.body,
+        )}
     </div>
   );
 }

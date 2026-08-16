@@ -508,6 +508,9 @@
   border-top: 0.5px solid var(--border-soft);
   background: var(--bg-card);
   padding-bottom: env(safe-area-inset-bottom);
+  /* 明確排序：分頁列在內容之上、但一定在全螢幕遮罩（z-index 100+）之下 */
+  position: relative;
+  z-index: 20;
 }
 
 .mv-tab {
@@ -876,7 +879,10 @@
   align-items: center;
 }
 
-.mv-edit-foot .mv-btn {
+/* 用 .mv-sheet-foot.mv-edit-foot 提高優先權：
+   後面的 `.mv-sheet-foot .mv-btn { width: 100% }` 同分且寫在更後面，
+   會把刪除鈕撐成整列寬、把「儲存修改」擠出畫面外。 */
+.mv-sheet-foot.mv-edit-foot .mv-btn {
   width: auto;
   flex: 0 0 auto;
 }
@@ -1189,7 +1195,7 @@
 .mv-cardview {
   position: fixed;
   inset: 0;
-  z-index: 70;
+  z-index: 110;
   background: rgba(44, 38, 32, 0.55);
   display: flex;
   align-items: center;
@@ -1499,7 +1505,7 @@
   left: 50%;
   bottom: calc(84px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  z-index: 60;
+  z-index: 130;
   max-width: 84vw;
   padding: 10px 18px;
   border-radius: 999px;
@@ -1515,7 +1521,7 @@
 .mv-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 100;
   background: rgba(44, 38, 32, 0.4);
   display: flex;
   align-items: flex-end;
@@ -1524,7 +1530,9 @@
 
 .mv-sheet {
   width: 100%;
+  /* 用 dvh：iOS 網址列收合時 vh 不會跟著變，抽屜會比實際可視範圍高 */
   max-height: 78vh;
+  max-height: 78dvh;
   display: flex;
   flex-direction: column;
   background: var(--bg-page);
@@ -1557,6 +1565,9 @@
 
 .mv-sheet-body {
   flex: 1;
+  /* min-height:0 不可省：flex item 預設 min-height:auto，內容再高也不會縮，
+     於是整個抽屜被撐超過 max-height，底部那排按鈕就被推出畫面外。 */
+  min-height: 0;
   overflow-y: auto;
   padding: 8px 12px;
 }

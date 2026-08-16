@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Trip } from '../../types/trip';
 import type { Expense, Ledger } from '../../types/ledger';
 import { loadTripById, persistTripImmediate } from '../../db/repository';
@@ -484,7 +485,9 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
         </MobileSection>
       ))}
 
-      {editing && (
+      {/* 掛到 body：這個抽屜原本畫在可捲區裡，iOS Safari 會把捲動容器變成獨立的
+          堆疊環境，z-index 再高也蓋不過外面的底部分頁列（分頁列會壓在刪除鈕上）。 */}
+      {editing && createPortal(
         <div
           className="mv-sheet-backdrop"
           onClick={(ev) => {
@@ -517,7 +520,8 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
