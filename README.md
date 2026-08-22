@@ -55,3 +55,16 @@ npx wrangler pages dev dist --kv TRIPS --r2 MEDIA
 ```
 
 KV 與 R2 都是本地模擬，不會碰到線上資料。
+
+## 密碼
+
+單人使用，只有密碼、沒有帳號。密碼本身不在程式裡，存的是 PBKDF2 雜湊
+（`src/services/auth.ts` 的 `PASSWORD_HASH`）。解鎖過的裝置會記在 localStorage，
+下次開不用再打；驗證純在本機算，不打後端，所以離線也解得開。
+
+資料的 KV key 是 `src/services/identity.ts` 裡那組固定值，**跟密碼無關**。
+要換密碼就重算雜湊換掉 `PASSWORD_HASH`，行程資料一筆都不會動到：
+
+```bash
+node -e "const c=require('crypto');console.log(c.pbkdf2Sync('新密碼','walking:gate',100000,32,'sha256').toString('hex'))"
+```

@@ -1,22 +1,25 @@
 /**
- * 帳號雜湊：username + password → PBKDF2(100k iter SHA-256) → 64 字元 hex。
- * 結果直接當 KV namespace key 用，沒有伺服器端的「帳號表」需要維護。
+ * 純密碼解鎖。單人使用，沒有帳號這回事。
  *
- * 安全特性：
- * - 100k 迭代讓暴力破解成本高（每次猜測都要算 100k 次 HMAC-SHA-256）
- * - salt 用 username 確保不同帳號相同密碼會出不同 hash
- * - 'walking:' prefix 防止跨 app rainbow table
+ * 程式裡不存密碼本身，存的是 PBKDF2(密碼, 'walking:gate', 100k 次) 的結果。
+ * 驗證就是把輸入的密碼照樣算一次，跟 PASSWORD_HASH 比對。
  *
- * 風險：使用者忘記密碼 = 永久失去資料（沒有 reset 機制）
+ * 重要：資料的 KV key 是 services/identity.ts 裡那組固定值，跟密碼「完全無關」。
+ * 所以之後要改密碼，只要換掉 PASSWORD_HASH 就好，行程資料一筆都不會動到。
+ *
+ * 這是「門檻」不是加密 —— KV key 編在前端 bundle 裡，
+ * 真的有心人翻 JS 還是繞得過去。它擋的是路過亂點的人。
+ *
+ * 好處是驗證純在本機算，不打後端，所以離線也能解鎖（出國沒網路照樣進得去）。
  */
 
-const ACCOUNT_HASH_KEY = 'walking.accountHash';
-const USERNAME_KEY = 'walking.username';
-const PREVIOUS_USER_ID_KEY = 'walking.userId'; // 舊版自動 UUID
-const MIGRATED_TO_ACCOUNT_KEY = 'walking.migratedToAccount';
+/** PBKDF2('194k0039', 'walking:gate', 100000, SHA-256) */
+const PASSWORD_HASH = 'a03cb21425c195762c2a13bda4b26a7613e6693b8121fd26f1fa82540fe85f8f';
 
+const SALT = 'walking:gate';
 const PBKDF2_ITERATIONS = 100_000;
 const HASH_BITS = 256;
+const UNLOCKED_KEY = 'walking.unlocked';
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
@@ -24,102 +27,59 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
-/** PBKDF2(password, walking:username, 100k) → 64-char hex */
-export async function hashCredentials(username: string, password: string): Promise<string> {
-  const u = username.trim().toLowerCase();
-  if (!u) throw new Error('帳號不能為空');
-  if (!password) throw new Error('密碼不能為空');
+/** 大小寫不拘：手機鍵盤很愛自己亂跳大寫，在國外被鎖在外面太蠢了 */
+async function hashPassword(password: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
-    enc.encode(password),
+    enc.encode(password.trim().toLowerCase()),
     { name: 'PBKDF2' },
     false,
     ['deriveBits'],
   );
   const bits = await crypto.subtle.deriveBits(
-    {
-      name: 'PBKDF2',
-      hash: 'SHA-256',
-      salt: enc.encode(`walking:${u}`),
-      iterations: PBKDF2_ITERATIONS,
-    },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(SALT), iterations: PBKDF2_ITERATIONS },
     key,
     HASH_BITS,
   );
   return bytesToHex(new Uint8Array(bits));
 }
 
-export function getAccountHash(): string | null {
-  try {
-    return localStorage.getItem(ACCOUNT_HASH_KEY);
-  } catch {
-    return null;
+/** 長度固定，比對時不因為前幾個字元就提早跳出 */
+function sameHash(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
+  return diff === 0;
 }
 
-export function getUsername(): string | null {
+export async function verifyPassword(password: string): Promise<boolean> {
+  if (!password.trim()) return false;
+  return sameHash(await hashPassword(password), PASSWORD_HASH);
+}
+
+export function isUnlocked(): boolean {
   try {
-    return localStorage.getItem(USERNAME_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function isLoggedIn(): boolean {
-  return !!getAccountHash();
-}
-
-export function saveSession(username: string, hash: string): void {
-  localStorage.setItem(ACCOUNT_HASH_KEY, hash);
-  localStorage.setItem(USERNAME_KEY, username.trim());
-}
-
-export function logout(): void {
-  localStorage.removeItem(ACCOUNT_HASH_KEY);
-  localStorage.removeItem(USERNAME_KEY);
-  // 注意：不清 walking.userId（舊 UUID 是另一回事），也不清 trips 快取
-}
-
-/** 後端「這個 hash 對應的帳號是否存在」檢查 */
-export async function checkAccountExists(hash: string): Promise<boolean> {
-  try {
-    const res = await fetch(`/api/auth/check?u=${encodeURIComponent(hash)}`);
-    if (!res.ok) return false;
-    const body = (await res.json()) as { exists?: boolean };
-    return body.exists === true;
+    return localStorage.getItem(UNLOCKED_KEY) === PASSWORD_HASH;
   } catch {
     return false;
   }
 }
 
-/** 建立帳號（在 KV 寫一個 marker 表示此帳號已存在） */
-export async function registerAccount(hash: string): Promise<void> {
-  const res = await fetch(`/api/auth/register?u=${encodeURIComponent(hash)}`, {
-    method: 'POST',
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? '註冊失敗');
-  }
-}
-
-/** 取舊版 UUID（純自動產生那種），用於資料遷移 */
-export function getLegacyUserId(): string | null {
+/** 記住這台裝置已解鎖，之後開就不用再打 */
+export function saveUnlock(): void {
   try {
-    return localStorage.getItem(PREVIOUS_USER_ID_KEY);
+    localStorage.setItem(UNLOCKED_KEY, PASSWORD_HASH);
   } catch {
-    return null;
+    // 無痕模式之類的，記不住就每次打一次
   }
 }
 
-export function isAccountMigrationDone(): boolean {
-  return !!localStorage.getItem(MIGRATED_TO_ACCOUNT_KEY);
-}
-
-export function markAccountMigrationDone(): void {
+export function lock(): void {
   try {
-    localStorage.setItem(MIGRATED_TO_ACCOUNT_KEY, String(Date.now()));
+    localStorage.removeItem(UNLOCKED_KEY);
   } catch {
     // ignore
   }

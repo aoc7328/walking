@@ -2,13 +2,35 @@ import { db, ACTIVE_TRIP_ID_KEY } from './schema';
 import type { Trip } from '../types/trip';
 import { toISODate } from '../utils/date';
 import { getUserId } from '../services/identity';
-import { isAccountMigrationDone, markAccountMigrationDone, getLegacyUserId } from '../services/auth';
 
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingWrite: Trip | null = null;
 const DEBOUNCE_MS = 1000;
 
 const MIGRATION_FLAG_KEY = 'walking.migratedToKV';
+const ACCOUNT_MIGRATION_FLAG_KEY = 'walking.migratedToAccount';
+const LEGACY_USER_ID_KEY = 'walking.userId'; // 更早以前自動產生的 UUID
+
+/** 取舊版 UUID（純自動產生那種），用於資料遷移 */
+function getLegacyUserId(): string | null {
+  try {
+    return localStorage.getItem(LEGACY_USER_ID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function isAccountMigrationDone(): boolean {
+  return !!localStorage.getItem(ACCOUNT_MIGRATION_FLAG_KEY);
+}
+
+function markAccountMigrationDone(): void {
+  try {
+    localStorage.setItem(ACCOUNT_MIGRATION_FLAG_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
 
 export function getActiveTripId(): string | null {
   try {
