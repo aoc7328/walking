@@ -137,21 +137,51 @@ export function expensesTotalTWD(l: Ledger, phase: 'pre' | 'during'): number {
     .reduce((s, e) => s + toTWD(e.amount, e.currency, l.fxRate), 0);
 }
 
-type CatSplit = Record<string, { pre: number; during: number }>;
+type CatSplit = Record<string, { pre: number; during: number; planned: number }>;
 
 /**
- * 各類別實際花費（台幣），拆 pre（出發前已知/預訂）與 during（流水帳）。
- * 住宿表→住宿pre；餐廳實際→飲食pre（預訂的視為已承諾）；通用支出依自己的 phase/category。
+ * 各類別金額（台幣），三條線：
+ * - pre     出發前「實際」已花：住宿房價、餐廳實際開銷、pre 的通用支出
+ * - during  出發後流水帳
+ * - planned 出發前「已知/已訂」：給預估欄與預算的「已知/已訂」用
+ *
+ * planned 跟 pre 的差別只在餐廳：餐廳優先取「預估費用」，沒填才退回實際開銷。
+ * 這樣才對得起設定頁寫的「已知/已訂自動帶入（機票・租車・已訂餐廳…）」——
+ * 出發前訂好餐廳、只填了預估金額的情況，本來整筆都不會被算進去。
+ *
  * 動態類別：用到才建鍵。
  */
 export function categorySplit(l: Ledger): CatSplit {
   const out: CatSplit = {};
-  const bucket = (c: string) => (out[c] ??= { pre: 0, during: 0 });
-  for (const a of l.accommodations) bucket('住宿').pre += toTWD(a.price, a.currency, l.fxRate);
-  for (const r of l.restaurants) if (r.amount) bucket('飲食').pre += toTWD(r.amount, r.currency ?? 'TWD', l.fxRate);
-  for (const e of l.expenses) bucket(e.category)[e.phase] += toTWD(e.amount, e.currency, l.fxRate);
+  const bucket = (c: string) => (out[c] ??= { pre: 0, during: 0, planned: 0 });
+
+  for (const a of l.accommodations) {
+    const twd = toTWD(a.price, a.currency, l.fxRate);
+    const b = bucket('住宿');
+    b.pre += twd;
+    b.planned += twd;
+  }
+
+  for (const r of l.restaurants) {
+    const actual = r.amount ? toTWD(r.amount, r.currency ?? 'TWD', l.fxRate) : 0;
+    const estimated = r.estimated ? toTWD(r.estimated, r.estimatedCurrency ?? 'TWD', l.fxRate) : 0;
+    const b = bucket('飲食');
+    b.pre += actual;
+    // 已取消的訂位不列入計畫（真的付了取消費才用實際數字）
+    b.planned += r.status === 'cancelled' ? actual : estimated || actual;
+  }
+
+  for (const e of l.expenses) {
+    const twd = toTWD(e.amount, e.currency, l.fxRate);
+    const b = bucket(e.category);
+    b[e.phase] += twd;
+    if (e.phase === 'pre') b.planned += twd;
+  }
+
   return out;
 }
+
+const EMPTY_SPLIT = { pre: 0, during: 0, planned: 0 };
 
 export interface CategoryTotal {
   category: ExpenseCategory;
@@ -165,7 +195,7 @@ export interface CategoryTotal {
 export function categoryTotals(l: Ledger): { rows: CategoryTotal[]; grand: number } {
   const split = categorySplit(l);
   const rows0 = categoriesOf(l).map((category) => {
-    const { pre, during } = split[category] ?? { pre: 0, during: 0 };
+    const { pre, during } = split[category] ?? EMPTY_SPLIT;
     return { category, pre, during, total: pre + during, pct: 0 };
   });
   const grand = rows0.reduce((s, r) => s + r.total, 0);
@@ -177,7 +207,7 @@ export interface BudgetRow {
   category: ExpenseCategory;
   extra: number; // 使用者額外抓的零星預估
   budget: number; // 有效總預算 = committed + extra
-  committed: number; // 出發前已預訂/已承諾（pre，自動算入）
+  committed: number; // 出發前已知/已訂（planned，自動算入）
   during: number; // 現場已花
   remaining: number; // 剩餘可花 = extra − during（可為負＝超支）
 }
@@ -190,8 +220,8 @@ export interface BudgetRow {
 export function budgetBreakdown(l: Ledger): BudgetRow[] {
   const split = categorySplit(l);
   return l.budgets.map((b) => {
-    const s = split[b.category] ?? { pre: 0, during: 0 };
-    return { category: b.category, extra: b.amount, budget: s.pre + b.amount, committed: s.pre, during: s.during, remaining: b.amount - s.during };
+    const s = split[b.category] ?? EMPTY_SPLIT;
+    return { category: b.category, extra: b.amount, budget: s.planned + b.amount, committed: s.planned, during: s.during, remaining: b.amount - s.during };
   });
 }
 
@@ -228,15 +258,16 @@ export interface PlanActualRow { category: ExpenseCategory; estimate: number; ac
 
 /**
  * 各類別「預估 vs 實際」。
- * 預估 = 已知/已訂(committed) + 額外預估(budget extra)；實際 = committed + during；差距 = 實際 − 預估。
+ * 預估 = 已知/已訂(planned) + 額外預估(budget extra)；實際 = 出發前實際(pre) + 流水帳(during)。
+ * 差距 = 實際 − 預估。餐廳只填預估、還沒去吃的情況：預估有數字、實際為 0，差距顯示結餘。
  */
 export function planVsActual(l: Ledger): { rows: PlanActualRow[]; estTotal: number; actTotal: number; diff: number } {
   const split = categorySplit(l);
   const budMap = new Map(l.budgets.map((b) => [b.category, b.amount]));
   const rows = categoriesOf(l).map((category) => {
-    const s = split[category] ?? { pre: 0, during: 0 };
+    const s = split[category] ?? EMPTY_SPLIT;
     const extra = budMap.get(category) ?? 0;
-    const estimate = s.pre + extra;
+    const estimate = s.planned + extra;
     const actual = s.pre + s.during;
     return { category, estimate, actual, diff: actual - estimate };
   });

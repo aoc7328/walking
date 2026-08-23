@@ -230,7 +230,7 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
             <tbody>
               {cats.map((cat) => {
                 const b = ledger.budgets.find((x) => x.category === cat);
-                const committed = Math.round(split[cat]?.pre ?? 0);
+                const committed = Math.round(split[cat]?.planned ?? 0);
                 const extra = b?.amount ?? 0;
                 return (
                   <tr key={cat}>
