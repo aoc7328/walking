@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppShell from './components/layout/AppShell';
 import MobileApp from './components/mobile/MobileApp';
 import LoginScreen from './components/auth/LoginScreen';
@@ -6,9 +6,16 @@ import { isUnlocked } from './services/auth';
 import { isMobileUI, isTouchDevice, setUIMode } from './utils/device';
 
 export default function App() {
-  const [unlocked, setUnlocked] = useState<boolean>(() => isUnlocked());
+  const [unlocked, setUnlocked] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   // 只在啟動時判斷一次：正在排行程時把視窗拉窄，不該整個介面換掉
   const [mobile, setMobile] = useState<boolean>(() => isMobileUI());
+
+  useEffect(() => {
+    void isUnlocked().then(setUnlocked).finally(() => setCheckingSession(false));
+  }, []);
+
+  if (checkingSession) return null;
 
   if (!unlocked) {
     return <LoginScreen onSuccess={() => setUnlocked(true)} />;

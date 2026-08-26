@@ -1,4 +1,4 @@
-// GET / DELETE /api/asset/<key>?u=<userId>
+// GET / DELETE /api/asset/<key>（只允許已登入的同源 session）
 // 取回或刪除 R2 上的圖。
 //
 // 授權跟本專案其他 API 同一套：靠網址上的帳號雜湊 u。
@@ -16,9 +16,9 @@ interface R2Bucket {
   delete(key: string): Promise<void>;
 }
 
-interface Env {
-  MEDIA?: R2Bucket;
-}
+import { requirePrivateAccess, privateJson, type AuthEnv } from '../../_lib/auth';
+
+interface Env extends AuthEnv { MEDIA?: R2Bucket; }
 
 type PagesContext = {
   request: Request;
@@ -26,38 +26,24 @@ type PagesContext = {
   params: { path?: string | string[] };
 };
 
-const USER_ID_RE = /^[a-f0-9]{16,64}$/i;
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-  });
-}
-
-/** 解析出 (key, userId)，並確認這個 key 屬於這個帳號。不合法一律回 null。 */
-function resolve(context: PagesContext): { key: string; userId: string } | null {
-  const url = new URL(context.request.url);
-  const u = (url.searchParams.get('u') ?? '').toLowerCase();
-  if (!USER_ID_RE.test(u)) return null;
-
+/** 確認物件 key 屬於伺服器端資料命名空間。 */
+function resolve(context: PagesContext, dataNamespaceId: string): { key: string } | null {
   const raw = context.params.path;
   const key = (Array.isArray(raw) ? raw.join('/') : raw ?? '').trim();
   if (!key || key.includes('..')) return null;
-  if (!key.startsWith(`u/${u}/`)) return null;
-  return { key, userId: u };
+  if (!key.startsWith(`u/${dataNamespaceId}/`)) return null;
+  return { key };
 }
 
 export async function onRequestGet(context: PagesContext): Promise<Response> {
-  const r = resolve(context);
-  if (!r) return jsonResponse({ error: '無效的圖片位址' }, 400);
-  if (!context.env.MEDIA) return jsonResponse({ error: 'R2 未設定（Pages 專案要綁 MEDIA）' }, 500);
+  const access = await requirePrivateAccess(context.request, context.env);
+  if (access instanceof Response) return access;
+  const r = resolve(context, access.dataNamespaceId);
+  if (!r) return privateJson({ error: '無效的圖片位址' }, 400);
+  if (!context.env.MEDIA) return privateJson({ error: '圖片服務暫時無法使用' }, 503);
 
   const obj = await context.env.MEDIA.get(r.key);
-  if (!obj) return jsonResponse({ error: '找不到圖片' }, 404);
+  if (!obj) return privateJson({ error: '找不到圖片' }, 404);
 
   return new Response(obj.body, {
     status: 200,
@@ -65,26 +51,18 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       'Content-Type': obj.httpMetadata?.contentType ?? 'application/octet-stream',
       // key 帶 uuid，內容永不覆寫 → 讓瀏覽器盡量長期快取，出國沒訊號也還看得到
       'Cache-Control': 'private, max-age=31536000, immutable',
+      'Vary': 'Cookie',
     },
   });
 }
 
 export async function onRequestDelete(context: PagesContext): Promise<Response> {
-  const r = resolve(context);
-  if (!r) return jsonResponse({ error: '無效的圖片位址' }, 400);
-  if (!context.env.MEDIA) return jsonResponse({ error: 'R2 未設定（Pages 專案要綁 MEDIA）' }, 500);
+  const access = await requirePrivateAccess(context.request, context.env);
+  if (access instanceof Response) return access;
+  const r = resolve(context, access.dataNamespaceId);
+  if (!r) return privateJson({ error: '無效的圖片位址' }, 400);
+  if (!context.env.MEDIA) return privateJson({ error: '圖片服務暫時無法使用' }, 503);
 
   await context.env.MEDIA.delete(r.key);
-  return jsonResponse({ ok: true });
-}
-
-export async function onRequestOptions(): Promise<Response> {
-  return new Response(null, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
+  return privateJson({ ok: true });
 }

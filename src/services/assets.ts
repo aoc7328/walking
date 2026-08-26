@@ -1,5 +1,3 @@
-import { getUserId } from './identity';
-
 /**
  * 圖片資產（票券 QR、Visit Japan Web 入境 QR、訂位截圖）存 R2。
  *
@@ -19,8 +17,7 @@ export function dataUrlToBlob(dataUrl: string): Blob {
 
 /** 上傳一張圖，回傳 R2 物件 key。失敗丟例外（訊息可直接給使用者看）。 */
 export async function uploadAsset(blob: Blob, tripId: string): Promise<string> {
-  const u = getUserId();
-  const res = await fetch(`/api/asset?u=${encodeURIComponent(u)}&trip=${encodeURIComponent(tripId)}`, {
+  const res = await fetch(`/api/asset?trip=${encodeURIComponent(tripId)}`, {
     method: 'POST',
     headers: { 'Content-Type': blob.type || 'image/png' },
     body: blob,
@@ -38,8 +35,7 @@ export async function uploadAsset(blob: Blob, tripId: string): Promise<string> {
  * 刻意回絕對網址：列印用的新視窗是 about:blank，相對路徑在那裡解不出來。
  */
 export function assetUrl(key: string): string {
-  const u = getUserId();
-  return `${window.location.origin}/api/asset/${key}?u=${encodeURIComponent(u)}`;
+  return `${window.location.origin}/api/asset/${key}`;
 }
 
 /**

@@ -87,6 +87,7 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
-    sourcemap: true,
+    // 正式站不提供原始碼地圖；除錯請在本機或受保護的 CI 產出，避免公開還原前端原始碼。
+    sourcemap: false,
   },
 });

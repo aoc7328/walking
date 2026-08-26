@@ -1,7 +1,6 @@
 import { db, ACTIVE_TRIP_ID_KEY } from './schema';
 import type { Trip } from '../types/trip';
 import { toISODate } from '../utils/date';
-import { getUserId } from '../services/identity';
 
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingWrite: Trip | null = null;
@@ -9,17 +8,6 @@ const DEBOUNCE_MS = 1000;
 
 const MIGRATION_FLAG_KEY = 'walking.migratedToKV';
 const ACCOUNT_MIGRATION_FLAG_KEY = 'walking.migratedToAccount';
-const LEGACY_USER_ID_KEY = 'walking.userId'; // 更早以前自動產生的 UUID
-
-/** 取舊版 UUID（純自動產生那種），用於資料遷移 */
-function getLegacyUserId(): string | null {
-  try {
-    return localStorage.getItem(LEGACY_USER_ID_KEY);
-  } catch {
-    return null;
-  }
-}
-
 function isAccountMigrationDone(): boolean {
   return !!localStorage.getItem(ACCOUNT_MIGRATION_FLAG_KEY);
 }
@@ -49,9 +37,7 @@ export function setActiveTripId(id: string): void {
 }
 
 function apiUrl(path: string): string {
-  const userId = getUserId();
-  const sep = path.includes('?') ? '&' : '?';
-  return `/api/trips${path}${sep}u=${userId}`;
+  return `/api/trips${path}`;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -231,30 +217,8 @@ export async function migrateAccountData(): Promise<{ migrated: number; failed: 
     existingIds = new Set();
   }
 
-  // (a) 從舊 UUID 命名空間搬資料
-  const oldUserId = getLegacyUserId();
-  if (oldUserId && /^[a-f0-9]{16,40}$/i.test(oldUserId)) {
-    try {
-      const res = await fetch(`/api/trips?u=${encodeURIComponent(oldUserId)}`);
-      if (res.ok) {
-        const trips = (await res.json()) as Trip[];
-        for (const trip of trips) {
-          if (existingIds.has(trip.id)) continue;
-          try {
-            await putTripToKV(trip);
-            existingIds.add(trip.id);
-            migrated += 1;
-          } catch {
-            failed += 1;
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // (b) 從本地 Dexie 補搬（如果還有沒上 KV 過的）
+  // 從本地 Dexie 補搬（如果還有沒上 KV 過的）。舊 KV 命名空間由後端的
+  // DATA_NAMESPACE_ID 直接接手，不能再把識別碼放到瀏覽器當作授權憑證。
   try {
     const localTrips = await db.trips.toArray();
     for (const trip of localTrips) {

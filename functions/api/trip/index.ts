@@ -15,9 +15,12 @@ interface Env {
   TRIPS?: KVNamespace;
 }
 
+import { requirePrivateAccess, type AuthEnv } from '../../_lib/auth';
+type SecureEnv = Env & AuthEnv;
+
 type PagesContext = {
   request: Request;
-  env: Env;
+  env: SecureEnv;
 };
 
 const MAX_SIZE = 200 * 1024; // 200KB 行程上限
@@ -35,6 +38,8 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 export async function onRequestPost(context: PagesContext): Promise<Response> {
   const { request, env } = context;
+  const access = await requirePrivateAccess(request, env);
+  if (access instanceof Response) return access;
 
   if (!env.TRIPS) {
     return jsonResponse({ error: 'KV namespace 未設定，請到 Cloudflare 控制台綁定 TRIPS' }, 500);
@@ -52,8 +57,8 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return jsonResponse({ error: `行程資料超過 ${MAX_SIZE / 1024}KB 上限` }, 413);
   }
 
-  // 10 字元 hex ID（16^10 ≈ 1.1 兆組合，撞 ID 機率忽略）
-  const id = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+  // 32 個 hex 字元（128 bits）：公開分享連結是 bearer token，不能用短碼當保護。
+  const id = crypto.randomUUID().replace(/-/g, '');
 
   await env.TRIPS.put(`trip:${id}`, json, { expirationTtl: TTL_SECONDS });
 

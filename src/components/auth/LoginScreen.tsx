@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { verifyPassword, saveUnlock } from '../../services/auth';
+import { verifyPassword } from '../../services/auth';
 
 interface Props {
   onSuccess: () => void;
@@ -16,7 +16,6 @@ export default function LoginScreen({ onSuccess }: Props) {
     setBusy(true);
     try {
       if (await verifyPassword(password)) {
-        saveUnlock();
         onSuccess();
       } else {
         setError('密碼不對');

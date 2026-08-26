@@ -1,5 +1,4 @@
-// GET /api/trips?u=<userId>
-// 列出使用者的所有行程，依 updatedAt 倒序
+// GET /api/trips（只允許已登入的同源 session）
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -10,41 +9,22 @@ interface KVNamespace {
   }>;
 }
 
-interface Env {
-  TRIPS?: KVNamespace;
-}
+import { requirePrivateAccess, privateJson, type AuthEnv } from '../../_lib/auth';
+
+type Env = AuthEnv & { TRIPS?: KVNamespace; };
 
 type PagesContext = {
   request: Request;
   env: Env;
 };
 
-const USER_ID_RE = /^[a-f0-9]{16,64}$/i;
-
-function parseUserId(url: URL): string | null {
-  const u = url.searchParams.get('u');
-  if (!u || !USER_ID_RE.test(u)) return null;
-  return u.toLowerCase();
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-  });
-}
-
 export async function onRequestGet(context: PagesContext): Promise<Response> {
   const { request, env } = context;
-  const url = new URL(request.url);
-  const userId = parseUserId(url);
-  if (!userId) return jsonResponse({ error: '無效的同步 ID' }, 400);
-  if (!env.TRIPS) return jsonResponse({ error: 'KV 未設定' }, 500);
+  const access = await requirePrivateAccess(request, env);
+  if (access instanceof Response) return access;
+  if (!env.TRIPS) return privateJson({ error: '資料服務暫時無法使用' }, 503);
 
-  const prefix = `u:${userId}:trip:`;
+  const prefix = `u:${access.dataNamespaceId}:trip:`;
   const trips: unknown[] = [];
   let cursor: string | undefined;
   // 分頁拉，最多 1000 行程（KV list 預設 limit 1000）
@@ -71,16 +51,5 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     return bU - aU;
   });
 
-  return jsonResponse(trips);
-}
-
-export async function onRequestOptions(): Promise<Response> {
-  return new Response(null, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
+  return privateJson(trips);
 }

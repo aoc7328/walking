@@ -30,7 +30,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
   const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
   const id = (rawId ?? '').trim();
 
-  if (!/^[a-f0-9]{6,16}$/i.test(id)) {
+  if (!/^[a-f0-9]{6,32}$/i.test(id)) {
     return jsonResponse({ error: 'ID 格式不對' }, 400);
   }
 
