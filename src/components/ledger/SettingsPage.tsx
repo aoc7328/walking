@@ -188,7 +188,7 @@ ${summary}
               <thead><tr>
                 <th>種類</th><th>對象（飯店・航空・船公司）</th><th>班次・航線</th><th>日期</th><th>至（退房）</th>
                 <th>訂位編號</th><th>姓名</th><th className="num">人數</th><th>補充（寫中文即可）</th>
-                <th>已拿到</th><th></th><th></th>
+                <th>已拿到</th><th className="led-tb-pin">操作</th>
               </tr></thead>
               <tbody>
                 {certs.map((c) => (
@@ -203,8 +203,13 @@ ${summary}
                     <td className="num"><NumCell value={c.partySize} onChange={(v) => ed.patchCert(c.id, { partySize: v || undefined })} placeholder={String(ledger.reservation?.partySize ?? 2)} /></td>
                     <td><TextCell value={c.note} onChange={(v) => ed.patchCert(c.id, { note: v })} placeholder="例：麻煩載明兩位的姓名" /></td>
                     <td><CheckCell checked={!!c.done} onChange={(v) => ed.patchCert(c.id, { done: v })} /></td>
-                    <td><button className="led-export-btn" onClick={() => openCertCards([c], ledger, { tripName })} title="開一張大字的手牌，可直接給對方看或列印">出示 / 列印</button></td>
-                    <td><DeleteCell onClick={() => { if (window.confirm(`刪除「${c.target || '這張'}」的證明申請牌？`)) ed.delCert(c.id); }} /></td>
+                    {/* 欄位多、表格一定會橫向捲，操作鍵釘在右緣才不會被捲出畫面 */}
+                    <td className="led-tb-pin">
+                      <div className="led-cert-actions">
+                        <button className="led-export-btn" onClick={() => openCertCards([c], ledger, { tripName })} title="開一張大字的手牌，可直接給對方看或列印">出示 / 列印</button>
+                        <DeleteCell onClick={() => { if (window.confirm(`刪除「${c.target || '這張'}」的證明申請牌？`)) ed.delCert(c.id); }} />
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

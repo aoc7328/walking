@@ -23,6 +23,8 @@ interface CertLabels {
   docName: Record<CertKind, string>;
   body: Record<CertKind, string[]>;
   fields: { target: string; service: string; date: string; ref: string; name: string; party: string; note: string };
+  /** 兩人以上同行時附加的一句：證明上要把同行者的姓名一起列出來。 */
+  multiName: (n: number) => string;
   thanks: string;
   unit: string;
 }
@@ -59,6 +61,7 @@ const LABELS: Record<Lang, CertLabels> = {
       ],
     },
     fields: { target: '施設・会社名', service: '便名・航路', date: '日付', ref: '予約番号', name: '氏名', party: '人数', note: '補足' },
+    multiName: (n) => `証明書には、同行者を含む${n}名分の氏名をご記載いただけますでしょうか。`,
     thanks: 'お手数をおかけしますが、よろしくお願いいたします。',
     unit: '名',
   },
@@ -93,6 +96,7 @@ const LABELS: Record<Lang, CertLabels> = {
       ],
     },
     fields: { target: 'Hotel / Company', service: 'Flight / Route', date: 'Date', ref: 'Booking No.', name: 'Name', party: 'Party', note: 'Note' },
+    multiName: (n) => `Please include the names of all ${n} travellers on the certificate.`,
     thanks: 'Thank you very much for your help.',
     unit: 'pax',
   },
@@ -127,6 +131,7 @@ const LABELS: Record<Lang, CertLabels> = {
       ],
     },
     fields: { target: '住宿／公司', service: '班次／航線', date: '日期', ref: '訂位編號', name: '姓名', party: '人數', note: '補充' },
+    multiName: (n) => `證明上請一併載明 ${n} 位同行者的姓名。`,
     thanks: '麻煩您了，非常感謝。',
     unit: '位',
   },
@@ -249,12 +254,15 @@ export function buildCertCard(cert: CertRequest, ledger: Ledger): CertCardData {
     : '';
   const zhSummary = `你正在請對方開立「${ZH_KIND[cert.kind]}」${cert.target.trim() ? `／${cert.target.trim()}` : ''}${zhWhen ? `／${zhWhen}` : ''}`;
 
+  // 兩個人一起去、證明卻只開一個人的名字，另一位就請不了款——所以人數 >1 就自動加這句
+  const body = party !== undefined && party > 1 ? [...L.body[cert.kind], L.multiName(party)] : L.body[cert.kind];
+
   return {
     lang,
     heading: L.heading,
     intro: L.intro,
     docName: L.docName[cert.kind],
-    body: L.body[cert.kind],
+    body,
     rows,
     thanks: L.thanks,
     zhSummary,
