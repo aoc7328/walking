@@ -162,6 +162,43 @@ export interface Ticket {
   imageKey: string;
 }
 
+/**
+ * 證明文件的種類。颱風/天災打亂行程後，保險理賠一律要對方開的白紙黑字：
+ * - stay   宿泊証明書：飯店開的住宿證明（住了哪幾天、誰住的）
+ * - delay  遅延証明書：航空/鐵路開的延誤證明（原定時刻、實際時刻、原因）
+ * - cancel 欠航証明書：船班/航班停駛取消的證明
+ * - other  其他（自己填要什麼）
+ */
+export type CertKind = 'stay' | 'delay' | 'cancel' | 'other';
+
+/**
+ * 證明文件申請牌：語言不通時直接把手機遞給櫃台看的那張牌。
+ *
+ * 這裡存的是「事實欄位」，牌面的請求文由 certCard.ts 依 kind 套固定句型產生
+ * （手寫對照表、不經機器翻譯，沒網路也顯示得出來）。私密，不進分享連結。
+ */
+export interface CertRequest {
+  id: string;
+  kind: CertKind;
+  /** 對象：飯店名 / 航空公司 / 船公司。 */
+  target: string;
+  /** 便名・航班編號・航路（住宿類不填）。 */
+  serviceNo?: string;
+  /** 日期 YYYY-MM-DD（住宿＝入住日，班次＝搭乘日）。 */
+  date?: string;
+  /** 住宿的退房日（只有 kind==='stay' 用得到）。 */
+  endDate?: string;
+  /** 訂位 / 預約編號。 */
+  refNo?: string;
+  /** 姓名（訂房名或護照英文名）。 */
+  guestName?: string;
+  partySize?: number;
+  /** 要補充給對方看的話（用中文寫，出示時自動翻成當地語言）。 */
+  note?: string;
+  /** 已經拿到證明了——出示清單裡會沉到最後並變灰。 */
+  done?: boolean;
+}
+
 export interface Ledger {
   /** 旅行目的地國家名稱（選了會自動帶幣別與語言）。 */
   destination?: string;
@@ -177,6 +214,8 @@ export interface Ledger {
   vjw?: VjwEntry[];
   /** 票券 / 訂位截圖（現場出示用，圖存 R2）。 */
   tickets?: Ticket[];
+  /** 證明文件申請牌（颱風延誤/取消/住宿證明，現場出示給櫃台看）。 */
+  certs?: CertRequest[];
   /** 自訂類別清單（含預設五類）。未設時用預設五類。 */
   categories?: string[];
   /** 表格欄寬與隱藏欄設定。 */

@@ -4726,6 +4726,7 @@
 .led-tb td { padding: 6px 10px; border: 0.5px solid var(--border-soft); color: var(--ink-primary); vertical-align: middle; }
 .led-tb td.num, .led-tb th.num { text-align: right; white-space: nowrap; }
 .led-tb tbody tr:hover td { background: var(--bg-softer); }
+.led-tb tbody tr.led-row-done td { opacity: 0.45; } /* 已拿到的證明沉下去，但留著當紀錄 */
 .led-tb tfoot td { font-weight: 600; background: var(--bg-soft); color: var(--ink-primary); }
 .led-strong { color: var(--ink-primary); font-weight: 500; }
 .led-muted { color: var(--ink-secondary); font-size: 12.5px; }

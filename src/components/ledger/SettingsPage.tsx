@@ -4,10 +4,11 @@ import { EXPENSE_CATEGORIES, categoriesOf, categorySplit, DESTINATIONS } from '.
 import { formatAmount } from '../../utils/money';
 import { fileToScaledPngDataUrl, tightenQrCardImage } from '../../utils/image';
 import { downloadVjwCardJpg, printVjwCards } from '../../services/vjwCard';
+import { openCertCards, CERT_KIND_OPTIONS } from '../../services/certCard';
 import { dataUrlToBlob, imageSrc, uploadAsset } from '../../services/assets';
 import { useTripStore } from '../../stores/tripStore';
 import { useLedgerEdit } from './useLedgerEdit';
-import { TextCell, DateCell, NumCell, SelectCell, DeleteCell } from './EditableCells';
+import { TextCell, DateCell, NumCell, SelectCell, CheckCell, DeleteCell } from './EditableCells';
 
 const kindOpts: { value: PaymentKind; label: string }[] = [
   { value: 'card', label: '信用卡' },
@@ -29,6 +30,7 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
   const isDefaultCat = (c: string) => (EXPENSE_CATEGORIES as string[]).includes(c);
   const vjw = ledger.vjw ?? [];
   const tickets = ledger.tickets ?? [];
+  const certs = ledger.certs ?? [];
 
   async function handleVjwFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -63,6 +65,23 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
     } finally {
       setTicketUploading(false);
       if (ticketRef.current) ticketRef.current.value = '';
+    }
+  }
+
+  /** 每一間飯店都要一張住宿證明，手打太累也容易漏，直接從住宿清單一次帶進來。 */
+  function importStayCerts() {
+    const named = ledger.accommodations.filter((a) => a.name.trim());
+    if (named.length === 0) {
+      window.alert('住宿清單裡還沒有填飯店名稱。\n請先到「出發前」把住宿填好，再回來帶入。');
+      return;
+    }
+    const summary = named.map((a) => `${a.checkIn ?? '未定'}　${a.name}（${a.nights} 晚）`).join('\n');
+    if (window.confirm(`幫這 ${named.length} 間住宿各做一張「住宿證明」申請牌？
+
+${summary}
+
+（已經有同名同入住日的不會重複新增）`)) {
+      ed.importStayCerts();
     }
   }
 
@@ -153,6 +172,56 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
           <input ref={ticketRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void handleTicketFiles(e.target.files); }} />
           <button className="led-add-btn" style={{ marginTop: 0 }} disabled={ticketUploading} onClick={() => ticketRef.current?.click()}>{ticketUploading ? '上傳中…' : '＋ 上傳票券圖'}</button>
           <span className="led-muted">單張上限 5MB，可一次選多張</span>
+        </div>
+      </section>
+
+      {/* 證明文件申請牌（颱風延誤 / 停駛 / 住宿證明） */}
+      <section className="led-block">
+        <div className="led-block-head"><h3>證明文件申請牌　<span className="led-muted">{certs.length}</span></h3>
+          <span className="led-muted">遇到颱風要跟飯店 / 航空 / 船公司要理賠用證明時出示。你只填事實欄位，請求文會自動用當地語言寫好（固定句型，沒網路也顯示得出來）；手機版「手牌」分頁同一份</span>
+        </div>
+        {certs.length === 0 ? (
+          <span className="led-muted">尚無——按下方按鈕新增，或直接「從住宿清單帶入」把每間飯店的住宿證明一次做好</span>
+        ) : (
+          <div className="led-tb-wrap">
+            <table className="led-tb">
+              <thead><tr>
+                <th>種類</th><th>對象（飯店・航空・船公司）</th><th>班次・航線</th><th>日期</th><th>至（退房）</th>
+                <th>訂位編號</th><th>姓名</th><th className="num">人數</th><th>補充（寫中文即可）</th>
+                <th>已拿到</th><th></th><th></th>
+              </tr></thead>
+              <tbody>
+                {certs.map((c) => (
+                  <tr key={c.id} className={c.done ? 'led-row-done' : undefined}>
+                    <td><SelectCell value={c.kind} onChange={(v) => ed.patchCert(c.id, { kind: v })} options={CERT_KIND_OPTIONS} /></td>
+                    <td><TextCell value={c.target} onChange={(v) => ed.patchCert(c.id, { target: v })} placeholder="例：日本航空 / 江ノ島電鉄 / ○○ホテル" /></td>
+                    <td>{c.kind === 'stay' ? <span className="led-muted">—</span> : <TextCell value={c.serviceNo} onChange={(v) => ed.patchCert(c.id, { serviceNo: v })} placeholder="例：JL318" />}</td>
+                    <td><DateCell value={c.date} onChange={(v) => ed.patchCert(c.id, { date: v })} /></td>
+                    <td>{c.kind === 'stay' ? <DateCell value={c.endDate} onChange={(v) => ed.patchCert(c.id, { endDate: v })} /> : <span className="led-muted">—</span>}</td>
+                    <td><TextCell value={c.refNo} onChange={(v) => ed.patchCert(c.id, { refNo: v })} placeholder="訂位 / 訂房編號" /></td>
+                    <td><TextCell value={c.guestName} onChange={(v) => ed.patchCert(c.id, { guestName: v })} placeholder={ledger.reservation?.bookingName ?? '姓名'} /></td>
+                    <td className="num"><NumCell value={c.partySize} onChange={(v) => ed.patchCert(c.id, { partySize: v || undefined })} placeholder={String(ledger.reservation?.partySize ?? 2)} /></td>
+                    <td><TextCell value={c.note} onChange={(v) => ed.patchCert(c.id, { note: v })} placeholder="例：麻煩載明兩位的姓名" /></td>
+                    <td><CheckCell checked={!!c.done} onChange={(v) => ed.patchCert(c.id, { done: v })} /></td>
+                    <td><button className="led-export-btn" onClick={() => openCertCards([c], ledger, { tripName })} title="開一張大字的手牌，可直接給對方看或列印">出示 / 列印</button></td>
+                    <td><DeleteCell onClick={() => { if (window.confirm(`刪除「${c.target || '這張'}」的證明申請牌？`)) ed.delCert(c.id); }} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="led-settings-row" style={{ marginTop: 8 }}>
+          <button className="led-add-btn" style={{ marginTop: 0 }} onClick={() => ed.addCert('stay')}>＋ 住宿證明</button>
+          <button className="led-add-btn" style={{ marginTop: 0 }} onClick={() => ed.addCert('delay')}>＋ 延誤證明</button>
+          <button className="led-add-btn" style={{ marginTop: 0 }} onClick={() => ed.addCert('cancel')}>＋ 取消證明</button>
+          <button className="led-add-btn" style={{ marginTop: 0 }} onClick={() => ed.addCert('other')}>＋ 其他</button>
+          {ledger.accommodations.length > 0 && (
+            <button className="led-export-btn" onClick={importStayCerts} title="住宿清單裡的每一間各做一張住宿證明申請牌">從住宿清單帶入</button>
+          )}
+          {certs.length > 0 && (
+            <button className="led-export-btn" onClick={() => openCertCards(certs, ledger, { print: true, tripName })} title="全部手牌印成 A4，一張一頁帶著走">🖨 列印全部</button>
+          )}
         </div>
       </section>
 

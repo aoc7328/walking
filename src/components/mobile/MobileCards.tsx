@@ -1,19 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Trip } from '../../types/trip';
-import type { Ledger, Restaurant, Ticket, VjwEntry } from '../../types/ledger';
+import type { CertRequest, Ledger, Restaurant, Ticket, VjwEntry } from '../../types/ledger';
 import { buildReservationCard, type ReservationCardData } from '../../services/reservationCard';
+import { buildCertCard, translateCertNote, CERT_KIND_LABEL } from '../../services/certCard';
 import { imageSrc } from '../../services/assets';
 import { getLedger, RESERVATION_LABEL } from '../../utils/ledger';
-import { formatWithWeekday, toISODate } from '../../utils/date';
+import { addDays, formatWithWeekday, toISODate } from '../../utils/date';
 import { placeUrl } from '../../utils/gmaps';
 import MobileSection from './MobileSection';
 
 /**
  * 手機版「手牌」：所有現場要出示的東西都在這一頁。
- * 1. 入境 QR（Visit Japan Web）
- * 2. 票券 / 訂位截圖
- * 3. 餐廳訂位牌（翻成當地語言的文字牌）
+ * 1. 證明文件申請牌（颱風延誤 / 停駛 / 住宿證明，跟櫃台要理賠用文件）
+ * 2. 入境 QR（Visit Japan Web）
+ * 3. 票券 / 訂位截圖
+ * 4. 餐廳訂位牌（翻成當地語言的文字牌）
  *
  * 圖都在 R2，點下去全螢幕放大給對方看／掃。餐廳牌的內容跟電腦版列印的完全一致。
  */
@@ -25,7 +27,8 @@ interface Props {
 /** 目前打開的全螢幕內容：圖片或餐廳文字牌。 */
 type Showing =
   | { kind: 'image'; title: string; sub?: string; src: string }
-  | { kind: 'reservation'; restaurant: Restaurant };
+  | { kind: 'reservation'; restaurant: Restaurant }
+  | { kind: 'cert'; cert: CertRequest };
 
 function sortKey(r: Restaurant): string {
   return `${r.date ?? '9999-99-99'} ${r.time ?? '99:99'}`;
@@ -100,6 +103,92 @@ function ReservationView({
         <button className="mv-cardview-close" onClick={onClose}>
           關閉
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 全螢幕證明申請牌。
+ *
+ * 請求文是手寫的固定句型，同步就畫得出來——櫃台常常沒訊號，這一面不能等網路。
+ * 只有使用者自己打的「補充」是中文自由文字，翻好了才換上去，翻不到就維持中文。
+ */
+function CertView({ cert, ledger, onClose }: { cert: CertRequest; ledger: Ledger; onClose: () => void }) {
+  const card = useMemo(() => buildCertCard(cert, ledger), [cert, ledger]);
+  const rawNote = card.noteRowIndex >= 0 ? card.rows[card.noteRowIndex]!.value : '';
+  const [note, setNote] = useState('');
+
+  // 依賴全放原始值（字串）：ledger / cert 物件每次 render 都是新的，
+  // 拿物件當依賴等於每重繪一次就打一次翻譯 API。
+  useEffect(() => {
+    let cancelled = false;
+    setNote('');
+    if (!rawNote) return;
+    void translateCertNote(rawNote, card.lang).then((t) => {
+      if (!cancelled) setNote(t);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cert.id, rawNote, card.lang]);
+
+  const rows = card.rows.map((r, i) => (i === card.noteRowIndex && note ? { ...r, value: note } : r));
+
+  return (
+    <div className="mv-cardview" onClick={onClose}>
+      <div className="mv-cardview-inner" onClick={(e) => e.stopPropagation()}>
+        <div className="mv-cert-intro">{card.intro}</div>
+        <div className="mv-cardview-heading">{card.heading}</div>
+        <div className="mv-cert-doc">{card.docName}</div>
+        <div className="mv-cert-body">
+          {card.body.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </div>
+        <dl className="mv-cardview-rows">
+          {rows.map((row, i) => (
+            <div key={i} className="mv-cardview-row">
+              <dt>{row.label}</dt>
+              <dd className={row.multiline ? 'multiline' : undefined}>{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mv-cert-thanks">{card.thanks}</div>
+        <div className="mv-cert-zh">{card.zhSummary}</div>
+        <button className="mv-cardview-close" onClick={onClose}>
+          關閉
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CertRow({ c, onShow }: { c: CertRequest; onShow: () => void }) {
+  const when =
+    c.kind === 'stay' && c.date
+      ? `${formatWithWeekday(c.date)} 〜 ${formatWithWeekday(c.endDate || addDays(c.date, 1))}`
+      : c.date
+        ? formatWithWeekday(c.date)
+        : '未指定日期';
+  return (
+    <div className={`mv-resv-row${c.done ? ' mv-cert-got' : ''}`}>
+      <div className="mv-resv-main">
+        <div className="mv-resv-name">
+          {c.target || '（未填對象）'}
+          {c.done && <span className="mv-cert-done-tag">已拿到</span>}
+        </div>
+        <div className="mv-resv-sub">
+          <span className={`mv-cert-kind k-${c.kind}`}>{CERT_KIND_LABEL[c.kind]}</span>
+          <span>{when}</span>
+          {c.serviceNo && <span>{c.serviceNo}</span>}
+          {c.refNo && <span>No. {c.refNo}</span>}
+        </div>
+        <div className="mv-resv-actions">
+          <button className="mv-resv-show" onClick={onShow}>
+            <span aria-hidden>🪪</span> 出示手牌
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -192,6 +281,12 @@ export default function MobileCards({ trip }: Props) {
   const [showing, setShowing] = useState<Showing | null>(null);
 
   const today = toISODate(new Date());
+  // 沒拿到的排前面（依日期），拿到的沉到最後——櫃台前要找的一定是還沒辦的那幾張
+  const certs = [...(ledger.certs ?? [])].sort((a, b) => {
+    if (!!a.done !== !!b.done) return a.done ? 1 : -1;
+    return (a.date ?? '9999-99-99').localeCompare(b.date ?? '9999-99-99');
+  });
+  const certsTodo = certs.filter((c) => !c.done).length;
   const vjw = ledger.vjw ?? [];
   const tickets = [...(ledger.tickets ?? [])].sort((a, b) =>
     (a.date ?? '9999-99-99').localeCompare(b.date ?? '9999-99-99'),
@@ -208,7 +303,7 @@ export default function MobileCards({ trip }: Props) {
   const ticketsToday = tickets.filter((t) => t.date === today).length;
   const resvToday = upcoming.filter((r) => r.date === today).length;
 
-  const nothing = vjw.length === 0 && tickets.length === 0 && active.length === 0;
+  const nothing = certs.length === 0 && vjw.length === 0 && tickets.length === 0 && active.length === 0;
 
   return (
     <div className="mv-resv">
@@ -216,8 +311,22 @@ export default function MobileCards({ trip }: Props) {
         <div className="mv-empty">
           這趟還沒有可出示的東西。
           <br />
-          入境 QR、票券圖、餐廳訂位都在電腦版的帳本建立。
+          入境 QR、票券圖、餐廳訂位、證明申請牌都在電腦版的帳本建立。
         </div>
+      )}
+
+      {certs.length > 0 && (
+        <MobileSection
+          id="certs"
+          title="證明文件"
+          count={certs.length}
+          defaultOpen={certsTodo > 0}
+          badge={certsTodo > 0 ? `待辦 ${certsTodo}` : undefined}
+        >
+          {certs.map((c) => (
+            <CertRow key={c.id} c={c} onShow={() => setShowing({ kind: 'cert', cert: c })} />
+          ))}
+        </MobileSection>
       )}
 
       {vjw.length > 0 && (
@@ -308,6 +417,11 @@ export default function MobileCards({ trip }: Props) {
       {showing?.kind === 'reservation' &&
         createPortal(
           <ReservationView restaurant={showing.restaurant} ledger={ledger} onClose={() => setShowing(null)} />,
+          document.body,
+        )}
+      {showing?.kind === 'cert' &&
+        createPortal(
+          <CertView cert={showing.cert} ledger={ledger} onClose={() => setShowing(null)} />,
           document.body,
         )}
     </div>

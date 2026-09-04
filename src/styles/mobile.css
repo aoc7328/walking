@@ -1309,6 +1309,89 @@
   cursor: pointer;
 }
 
+/* ── 證明申請牌（颱風延誤 / 停駛 / 住宿證明） ─────────────────────────── */
+
+/* 對方要一口氣讀完一段請求文，所以行距放寬、字級不縮 */
+.mv-cert-intro {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #d8d4cc;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: #6b6459;
+}
+
+/* 想請對方開哪一份文件——整張牌的重點，最大字 */
+.mv-cert-doc {
+  margin: 0 0 12px;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  color: #1a1a1a;
+}
+
+.mv-cert-body p {
+  margin: 0 0 8px;
+  font-size: 15.5px;
+  line-height: 1.85;
+}
+
+.mv-cert-body p:last-child {
+  margin-bottom: 0;
+}
+
+.mv-cert-body + .mv-cardview-rows {
+  margin-top: 16px;
+  border-top: 1px solid #e2ded6;
+}
+
+.mv-cert-thanks {
+  margin-top: 14px;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+/* 中文對照：給自己確認正在請對方做什麼，刻意做小做淡，不搶對方的視線 */
+.mv-cert-zh {
+  margin-top: 14px;
+  padding-top: 11px;
+  border-top: 1px dashed #d8d4cc;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #9a9187;
+}
+
+.mv-cert-kind {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-softer);
+  color: var(--ink-secondary);
+  font-size: 11.5px;
+}
+
+/* 延誤 / 停駛是「當下就得去辦」的，標色跟住宿證明區隔開 */
+.mv-cert-kind.k-delay,
+.mv-cert-kind.k-cancel {
+  background: var(--accent-warm);
+  color: #fff;
+}
+
+.mv-resv-row.mv-cert-got {
+  opacity: 0.5;
+}
+
+.mv-cert-done-tag {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--border-soft);
+  color: var(--ink-secondary);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+
 /* ---------- 資料（住宿 / 固定支出） ---------- */
 
 .mv-info {

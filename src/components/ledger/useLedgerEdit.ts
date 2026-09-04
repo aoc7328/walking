@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import type {
-  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults, VjwEntry, Ticket,
+  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults, VjwEntry, Ticket, CertKind, CertRequest,
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
 import { toISODate, addDays } from '../../utils/date';
@@ -83,6 +83,40 @@ export function useLedgerEdit() {
       patchTicket: (id: string, patch: Partial<Omit<Ticket, 'id'>>) =>
         upd((l) => ({ ...l, tickets: (l.tickets ?? []).map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
       delTicket: (id: string) => upd((l) => ({ ...l, tickets: (l.tickets ?? []).filter((t) => t.id !== id) })),
+
+      /** 證明文件申請牌（颱風延誤/取消/住宿證明）。 */
+      addCert: (kind: CertKind) =>
+        upd((l) => ({ ...l, certs: [...(l.certs ?? []), { id: uuid(), kind, target: '', date: todayISO() } as CertRequest] })),
+      patchCert: (id: string, patch: Partial<Omit<CertRequest, 'id'>>) =>
+        upd((l) => ({ ...l, certs: (l.certs ?? []).map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
+      delCert: (id: string) => upd((l) => ({ ...l, certs: (l.certs ?? []).filter((c) => c.id !== id) })),
+      /**
+       * 把住宿清單一次帶成住宿證明牌——每一間飯店都要一張，手打太累也容易漏。
+       * 已經有同名同入住日的牌就跳過（可重複按，不會長出重複的牌）。
+       */
+      importStayCerts: () =>
+        upd((l) => {
+          const certs = [...(l.certs ?? [])];
+          for (const a of l.accommodations) {
+            const target = a.name.trim();
+            if (!target) continue;
+            const date = a.checkIn;
+            const exists = certs.some(
+              (c) => c.kind === 'stay' && c.target.trim() === target && (c.date ?? '') === (date ?? ''),
+            );
+            if (exists) continue;
+            certs.push({
+              id: uuid(),
+              kind: 'stay',
+              target,
+              date,
+              endDate: date ? addDays(date, Math.max(1, a.nights)) : undefined,
+              guestName: l.reservation?.bookingName,
+              partySize: l.reservation?.partySize,
+            });
+          }
+          return { ...l, certs };
+        }),
 
       /**
        * 新增住宿：有前一筆就沿用不常變的欄位當參考——
