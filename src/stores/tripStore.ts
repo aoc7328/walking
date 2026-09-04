@@ -92,6 +92,22 @@ interface TripStore {
   deleteTrip: (id: string) => Promise<void>;
 }
 
+/**
+ * 這趟裡同一個地點（同 placeId）已經設過的圖示。
+ * 圖示是「地點」的屬性，不是「某一天那張卡」的：飯店住三晚會出現三次以上，設一次要全部一樣。
+ * setPlaceIcon 負責把既有的全部更新；這支負責讓「之後再新加進來的」也接上——
+ * 從搜尋加的 place 是 Google 回來的新物件，本身不會帶圖示。
+ */
+function findPlaceIcon(trip: Trip, placeId: string): string | undefined {
+  if (!placeId) return undefined;
+  for (const d of trip.days) {
+    for (const it of d.items) {
+      if (it.place.placeId === placeId && it.place.iconEmoji) return it.place.iconEmoji;
+    }
+  }
+  return trip.favorites.find((f) => f.placeId === placeId && f.iconEmoji)?.iconEmoji;
+}
+
 export const useTripStore = create<TripStore>((set, get) => ({
   trip: null,
   isLoading: false,
@@ -159,6 +175,9 @@ export const useTripStore = create<TripStore>((set, get) => ({
     let newId: string | null = null;
     set((state) => {
       if (!state.trip) return {};
+      // 同一地點之前設過圖示就直接沿用，不管這張是先加還是後加，看起來都要一樣
+      const inherited = place.iconEmoji ? undefined : findPlaceIcon(state.trip, place.placeId);
+      const placeToAdd: Place = inherited ? { ...place, iconEmoji: inherited } : place;
       const days = state.trip.days.map((d) => {
         if (d.id !== dayId) return d;
         // 一律加在當天「最後一站」之後，不再用地理位置自動插中間
@@ -171,7 +190,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
           : '09:00';
         const newItem: ItineraryItem = {
           id: uuid(),
-          place,
+          place: placeToAdd,
           arrivalTime,
           stayMinutes: isHotel ? 30 : 60,
           isHotel,
