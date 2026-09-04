@@ -19,6 +19,14 @@ export default function NoteEditor({
     onChange(notes.filter((_, i) => i !== idx));
   }
 
+  /** 打完離開欄位：清空的就整列拿掉，不留空字串；有內容的去頭尾空白。 */
+  function commitAt(idx: number) {
+    const cur = notes[idx] ?? '';
+    const t = cur.trim();
+    if (!t) removeAt(idx);
+    else if (t !== cur) updateAt(idx, t);
+  }
+
   function addNew() {
     if (!draft.trim()) return;
     onChange([...notes, draft.trim()]);
@@ -33,6 +41,7 @@ export default function NoteEditor({
             className="note-editor-input"
             value={note}
             onChange={(e) => updateAt(idx, e.target.value)}
+            onBlur={() => commitAt(idx)}
             placeholder="備註…"
           />
           <button className="note-remove-btn" onClick={() => removeAt(idx)} title="移除備註">

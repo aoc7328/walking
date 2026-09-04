@@ -4944,3 +4944,6 @@ input.led-cell.num { text-align: right; }
 .led-ea-bar { display: flex; height: 100%; background: var(--bg-soft); border-radius: 99px; overflow: hidden; }
 .led-ea-seg { height: 100%; }
 .led-ea-tick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink-primary); z-index: 2; }
+
+/* 時間鏈跨過午夜後的站：抵達時間旁標「翌日」，不然 01:30 看起來像時間倒退 */
+.item-nextday-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--accent-warm); color: #fff; font-size: 11px; font-weight: 500; vertical-align: middle; letter-spacing: 0.04em; }

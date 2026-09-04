@@ -17,6 +17,7 @@ import TimeField from './TimeField';
 import PlaceIconBadge from '../common/PlaceIconBadge';
 import IconPicker from '../common/IconPicker';
 import { useAutoFitText } from '../../hooks/useAutoFitText';
+import { cleanNotes } from '../../utils/itemNotes';
 
 interface Props {
   item: ItineraryItem;
@@ -137,7 +138,8 @@ export default function ItineraryCard({
   // 但匯入行程第一站可能是機場等真實抵達點，一律顯示比較不會誤導。
   const showArrivalInline = true;
   const showTimeToggle = true;
-  const hasNotes = !!item.notes && item.notes.length > 0;
+  const notesShown = cleanNotes(item.notes);
+  const hasNotes = notesShown.length > 0;
   const showAddNotesBtn = !hasNotes && !editingNotes;
 
   return (
@@ -173,14 +175,17 @@ export default function ItineraryCard({
       </div>
       <div className="item-body">
         {showArrivalInline && (
-          <div className="item-big-time">{item.arrivalTime}</div>
+          <div className="item-big-time">
+            {item.arrivalTime}
+            {item.arrivalNextDay && <span className="item-nextday-tag" title="前面有站跨過午夜，這一站已經是隔天">翌日</span>}
+          </div>
         )}
         <div className="item-head-row">
           <span
             ref={nameRef as React.RefObject<HTMLSpanElement>}
             className="item-name item-name-clickable"
             style={{ fontSize: `${dynamicNameSize.toFixed(2)}px` }}
-            onClick={() => openDetail(item.place.placeId, 'itinerary')}
+            onClick={() => openDetail(item.place.placeId, 'itinerary', { dayId, itemId: item.id })}
             title="點擊查看地點詳細資訊"
           >
             {item.place.name}
@@ -301,7 +306,7 @@ export default function ItineraryCard({
 
         {hasNotes && !editingNotes && (
           <div className="item-notes" onClick={(e) => { e.stopPropagation(); setEditingNotes(true); }}>
-            {item.notes!.map((n, i) => (
+            {notesShown.map((n, i) => (
               <div key={i} className="item-note">{n}</div>
             ))}
           </div>

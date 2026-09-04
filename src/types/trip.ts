@@ -20,6 +20,11 @@ export interface ItineraryItem {
    * false / undefined：抵達時間由前一站 + 停留 + 交通時間 自動算出。
    */
   arrivalManual?: boolean;
+  /**
+   * 時間鏈推算出「這一站已經是隔天」（前面某站跨過午夜）。由 recomputeChain 推導，
+   * 每次重算都會重設；UI 顯示「翌日」用。手動鎖定的站不推導。
+   */
+  arrivalNextDay?: boolean;
 }
 
 export interface Leg {

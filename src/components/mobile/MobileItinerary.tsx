@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DayPlan, Trip } from '../../types/trip';
 import { formatStayDuration, formatWithWeekday, hhmmToMinutes, toISODate } from '../../utils/date';
+import { cleanNotes } from '../../utils/itemNotes';
 import { formatDuration, TRANSPORT_LABEL } from '../../utils/format';
 import { printableDayNote } from '../../utils/dayNote';
 import { getPlaceIcon } from '../../utils/placeIcon';
@@ -184,7 +185,10 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: 
               <article className={`mv-card${state ? ` ${state}` : ''}`}>
                 <div className="mv-card-side">
                   <span className="mv-num">{idx + 1}</span>
-                  <span className="mv-time">{item.arrivalTime}</span>
+                  <span className="mv-time">
+                    {item.arrivalTime}
+                    {item.arrivalNextDay && <span className="mv-nextday">翌日</span>}
+                  </span>
                 </div>
 
                 <div className="mv-card-body">
@@ -217,9 +221,9 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: 
                     </button>
                   )}
 
-                  {item.notes && item.notes.length > 0 && (
+                  {cleanNotes(item.notes).length > 0 && (
                     <ul className="mv-notes">
-                      {item.notes.map((n, i) => (
+                      {cleanNotes(item.notes).map((n, i) => (
                         <li key={i}>{n}</li>
                       ))}
                     </ul>

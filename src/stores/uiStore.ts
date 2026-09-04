@@ -34,6 +34,12 @@ interface UIStore {
   selectedItemId: string | null;
   detailModalPlaceId: string | null;
   detailModalSource: 'search' | 'itinerary' | null;
+  /**
+   * 從行程卡片開詳情時，精確指到那一天的那一個 item。
+   * 同一個地點（飯店、機場）會出現在很多天；只靠 placeId 去掃，永遠撈到第一次出現的那份，
+   * 「✓ 已在 Day N」顯示錯天、「從行程移除」刪錯天，都是這個原因。
+   */
+  detailModalItemRef: { dayId: string; itemId: string } | null;
   dateModalOpen: boolean;
   newTripModalOpen: boolean;
   tripSwitcherOpen: boolean;
@@ -45,7 +51,7 @@ interface UIStore {
   collapse: CollapseState;
   setCurrentDay: (dayId: string | null) => void;
   setSelectedItem: (itemId: string | null) => void;
-  openDetail: (placeId: string, source: 'search' | 'itinerary') => void;
+  openDetail: (placeId: string, source: 'search' | 'itinerary', itemRef?: { dayId: string; itemId: string }) => void;
   closeDetail: () => void;
   openDateModal: () => void;
   closeDateModal: () => void;
@@ -71,6 +77,7 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedItemId: null,
   detailModalPlaceId: null,
   detailModalSource: null,
+  detailModalItemRef: null,
   dateModalOpen: false,
   newTripModalOpen: false,
   tripSwitcherOpen: false,
@@ -82,9 +89,9 @@ export const useUIStore = create<UIStore>((set) => ({
   collapse: loadCollapse(),
   setCurrentDay: (dayId) => set({ currentDayId: dayId }),
   setSelectedItem: (itemId) => set({ selectedItemId: itemId }),
-  openDetail: (placeId, source) =>
-    set({ detailModalPlaceId: placeId, detailModalSource: source }),
-  closeDetail: () => set({ detailModalPlaceId: null, detailModalSource: null }),
+  openDetail: (placeId, source, itemRef) =>
+    set({ detailModalPlaceId: placeId, detailModalSource: source, detailModalItemRef: itemRef ?? null }),
+  closeDetail: () => set({ detailModalPlaceId: null, detailModalSource: null, detailModalItemRef: null }),
   openDateModal: () => set({ dateModalOpen: true }),
   closeDateModal: () => set({ dateModalOpen: false }),
   openNewTripModal: () => set({ newTripModalOpen: true, tripSwitcherOpen: false }),

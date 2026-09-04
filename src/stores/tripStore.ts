@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Trip, DayPlan, ItineraryItem, Leg, DayMark, DayNote, TodoItem } from '../types/trip';
+import type { Trip, DayPlan, ItineraryItem, DayMark, DayNote, TodoItem } from '../types/trip';
 import type { Ledger } from '../types/ledger';
 import type { Place, TransportMode } from '../types/place';
 import { emptyLedger } from '../utils/ledger';
@@ -8,6 +8,13 @@ import { uuid } from '../utils/format';
 import { addDays, addMinutesToTime } from '../utils/date';
 import { dayNoteOf } from '../utils/dayNote';
 import { findBestInsertPosition } from '../services/routing';
+import {
+  recalcLegsArray, buildLegTravelCache, relinkLegs, chainAll, withAutoFill,
+  reindexDays, clearStrayAutoFill, normalizeDaysForView,
+} from '../utils/chain';
+
+// 手機版等其他畫面從這裡拿（邏輯本體在 utils/chain.ts）
+export { normalizeDaysForView };
 import {
   setActiveTripId,
   persistTripImmediate,
@@ -85,188 +92,6 @@ interface TripStore {
   deleteTrip: (id: string) => Promise<void>;
 }
 
-function recalcLegsArray(items: ItineraryItem[], legs: Leg[]): Leg[] {
-  const targetLen = Math.max(0, items.length - 1);
-  if (legs.length === targetLen) return legs;
-  if (legs.length < targetLen) {
-    const padded = [...legs];
-    while (padded.length < targetLen) padded.push({ mode: 'driving' });
-    return padded;
-  }
-  return legs.slice(0, targetLen);
-}
-
-interface LegTravel {
-  durationMinutes: number;
-  distanceMeters?: number;
-}
-
-/** 用座標當鍵（一定有，且與 directions 服務的快取同語意）。 */
-function legPairKey(from: ItineraryItem, to: ItineraryItem, mode: TransportMode): string {
-  const f = from.place.coordinates;
-  const t = to.place.coordinates;
-  return `${f.lat.toFixed(5)},${f.lng.toFixed(5)}|${t.lat.toFixed(5)},${t.lng.toFixed(5)}|${mode}`;
-}
-
-/** 把目前已知的交通時間，以「地點對 + 交通方式」建成快取。 */
-function buildLegTravelCache(items: ItineraryItem[], legs: Leg[]): Map<string, LegTravel> {
-  const cache = new Map<string, LegTravel>();
-  for (let i = 0; i < legs.length && i + 1 < items.length; i++) {
-    const leg = legs[i];
-    if (!leg || leg.durationMinutes === undefined) continue;
-    cache.set(legPairKey(items[i]!, items[i + 1]!, leg.mode), {
-      durationMinutes: leg.durationMinutes,
-      distanceMeters: leg.distanceMeters,
-    });
-  }
-  return cache;
-}
-
-/**
- * 行程順序變動後，依「新順序」重接每段 leg：
- * - 交通方式沿用該位置原本的 mode（維持舊版的 positional 行為）
- * - 交通時間用「新的地點對 + mode」回查 cache；查不到就清空（undefined），
- *   交給 refreshLegsForDay 重新跟 Google 拿。
- *
- * 修正：拖動 / 刪除 / 中插 之後，舊的兩點時間不會再錯留在新的兩點上
- * （這正是「拖動後預估時間沒更新、甚至算錯」的根因）。
- */
-function relinkLegs(items: ItineraryItem[], positionalLegs: Leg[], cache: Map<string, LegTravel>): Leg[] {
-  const out: Leg[] = [];
-  for (let i = 0; i + 1 < items.length; i++) {
-    const mode = positionalLegs[i]?.mode ?? 'driving';
-    const hit = cache.get(legPairKey(items[i]!, items[i + 1]!, mode));
-    out.push(hit ? { mode, durationMinutes: hit.durationMinutes, distanceMeters: hit.distanceMeters } : { mode });
-  }
-  return out;
-}
-
-/**
- * 重算當日時間鏈：非手動鎖定（arrivalManual !== true）的項目，
- * 抵達時間 = 前一站抵達 + 前一站停留 + 對應 leg 的 durationMinutes。
- */
-function recomputeChain(day: DayPlan): DayPlan {
-  if (day.items.length === 0) return day;
-  const items = [...day.items];
-  for (let i = 1; i < items.length; i++) {
-    const item = items[i]!;
-    if (item.arrivalManual) continue;
-    const prev = items[i - 1]!;
-    const leg = day.legs[i - 1];
-    const travel = leg?.durationMinutes ?? 0;
-    const newArrival = addMinutesToTime(prev.arrivalTime, prev.stayMinutes + travel);
-    if (newArrival !== item.arrivalTime) {
-      items[i] = { ...item, arrivalTime: newArrival };
-    }
-  }
-  return { ...day, items };
-}
-
-function chainAll(days: DayPlan[]): DayPlan[] {
-  return days.map(recomputeChain);
-}
-
-/**
- * 「拿出來顯示之前」的正規化：補空白天的銜接點 + 重算時間鏈。
- *
- * ⚠️ KV 裡存的 arrivalTime 不一定等於實際要顯示的時間——電腦版一律在 setTrip
- * 時重算過才畫。任何**另一個**要顯示同一份行程的畫面（手機版）都必須套同一支，
- * 否則兩邊時間會對不起來（2026-08-15 手機版就是漏了這步，整排時間看起來全錯）。
- * 純函數、可重複套用，只影響顯示，不寫回雲端。
- */
-export function normalizeDaysForView(days: DayPlan[]): DayPlan[] {
-  return chainAll(withAutoFill(days));
-}
-
-function reindexDays(days: DayPlan[], startDate: string): DayPlan[] {
-  return days.map((d, idx) => ({
-    ...d,
-    dayIndex: idx + 1,
-    date: addDays(startDate, idx),
-  }));
-}
-
-/**
- * 把每個空白的日子（items.length === 0）自動填入前一天的最後一站，
- * 並標記為 autoFilled，預設 09:00 抵達、停留 30 分。Day 1 不處理。
- *
- * 連續空白天會「逐天接續」：Day N 接 Day N-1 的最後一站。因為前一天填好後
- * next[i-1] 就帶有那個 item，下一輪自然接得上，一路傳遞下去
- * （例如連續住同一間飯店好幾天，每天開頭都會是那間飯店）。
- *
- * 純函數，可重複套用（idempotent）：autoFilled 的天若已對上前一天最後一站，
- * 下一次跑就跳過，不會重複增加地點。
- */
-function withAutoFill(days: DayPlan[]): DayPlan[] {
-  if (days.length <= 1) return days;
-  const next: DayPlan[] = [];
-  for (let i = 0; i < days.length; i++) {
-    const d = days[i]!;
-    const prev = next[i - 1];
-
-    if (!prev || prev.items.length === 0) {
-      next.push(d);
-      continue;
-    }
-
-    const prevLast = prev.items[prev.items.length - 1]!;
-
-    // 情況 1：空白天 → 填入前一天最後一站當銜接點（標 autoFilled）
-    if (d.items.length === 0) {
-      const seed: ItineraryItem = {
-        id: uuid(),
-        place: prevLast.place,
-        arrivalTime: '09:00',
-        stayMinutes: 30,
-        isHotel: false,
-        autoFilled: true,
-        notes: prevLast.notes ? [...prevLast.notes] : undefined,
-      };
-      next.push({ ...d, items: [seed], legs: [] });
-      continue;
-    }
-
-    const firstItem = d.items[0]!;
-
-    // 核心判斷：當天第一站 === 前一天最後一站？（用 placeId 比對）
-    // 相同 → 已經銜接好，什麼都不做。
-    if (firstItem.place.placeId === prevLast.place.placeId) {
-      next.push(d);
-      continue;
-    }
-
-    // 不同 → 要把前一天最後一站接上來：
-    if (firstItem.autoFilled) {
-      // (a) 天首是先前自動補的銜接站，但前一天最後站已變 → 直接更新它（不增加地點）
-      const updated: ItineraryItem = {
-        ...firstItem,
-        place: prevLast.place,
-        notes: prevLast.notes ? [...prevLast.notes] : firstItem.notes,
-      };
-      next.push({ ...d, items: [updated, ...d.items.slice(1)] });
-    } else {
-      // (b) 天首是使用者自排的真實地點，且不等於前一天最後站
-      //     → 在最前面插入一個 autoFilled 銜接站（原行程整段保留往後移）
-      const seed: ItineraryItem = {
-        id: uuid(),
-        place: prevLast.place,
-        arrivalTime: '09:00',
-        stayMinutes: 30,
-        isHotel: false,
-        autoFilled: true,
-        notes: prevLast.notes ? [...prevLast.notes] : undefined,
-      };
-      // 新插入的 seed → 原第一站 之間補一段 leg，原本的 legs 往後接
-      next.push({
-        ...d,
-        items: [seed, ...d.items],
-        legs: [{ mode: 'driving' as const }, ...d.legs],
-      });
-    }
-  }
-  return next;
-}
-
 export const useTripStore = create<TripStore>((set, get) => ({
   trip: null,
   isLoading: false,
@@ -340,8 +165,9 @@ export const useTripStore = create<TripStore>((set, get) => ({
         //（那會打亂使用者原本排好的順序與時間）。
         const insertIndex = d.items.length;
         const previous = d.items[insertIndex - 1];
+        // 交通時間還沒跟 Google 拿到，先接在前站離開時間；leg 回來後 chainAll 會補上
         const arrivalTime = previous
-          ? addMinutesToTime(previous.arrivalTime, previous.stayMinutes + 30)
+          ? addMinutesToTime(previous.arrivalTime, previous.stayMinutes)
           : '09:00';
         const newItem: ItineraryItem = {
           id: uuid(),
@@ -395,10 +221,12 @@ export const useTripStore = create<TripStore>((set, get) => ({
       const days = state.trip.days.map((d) => {
         if (d.id !== dayId) return d;
         const cache = buildLegTravelCache(d.items, d.legs);
-        const items = [...d.items];
-        const [moved] = items.splice(fromIndex, 1);
+        const moving = [...d.items];
+        const [moved] = moving.splice(fromIndex, 1);
         if (!moved) return d;
-        items.splice(toIndex, 0, moved);
+        moving.splice(toIndex, 0, moved);
+        // 銜接站被拖離天首就是使用者刻意放的（多半是拖到天尾當回飯店），不能再被自動覆寫
+        const items = clearStrayAutoFill(moving);
         // 依新順序重接 legs：同一地點對(+mode)的時間沿用，新的兩點清空待重抓
         const legs = relinkLegs(items, recalcLegsArray(items, d.legs), cache);
         return { ...d, items, legs };
@@ -468,7 +296,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
       return {
         trip: {
           ...state.trip,
-          days: withAutoFill(reindexDays(days, state.trip.startDate)),
+          days: chainAll(withAutoFill(reindexDays(days, state.trip.startDate))),
           updatedAt: Date.now(),
         },
       };
@@ -485,15 +313,10 @@ export const useTripStore = create<TripStore>((set, get) => ({
         legs: [],
       };
       const newStart = addDays(state.trip.startDate, -1);
-      // 把原本 Day 1 的天首標記成 autoFilled，這樣使用者之後在新 Day 1 加東西時，
-      // Day 2 的第一站會自動同步成新 Day 1 的最後一站。
-      const tagged = state.trip.days.map((d, i) => {
-        if (i === 0 && d.items.length > 0 && !d.items[0]!.autoFilled) {
-          return { ...d, items: [{ ...d.items[0]!, autoFilled: true }, ...d.items.slice(1)] };
-        }
-        return d;
-      });
-      const days = withAutoFill(reindexDays([newDay, ...tagged], newStart));
+      // 原本會把舊 Day 1 的天首硬標成 autoFilled，讓它之後被新 Day 1 的最後站「更新」——
+      // 但那一站是使用者真的排的地點，這樣等於默默把它換掉。改成不動它：
+      // 新 Day 1 有東西之後，withAutoFill 會在舊 Day 1 前面「插入」銜接站，原站保留。
+      const days = chainAll(withAutoFill(reindexDays([newDay, ...state.trip.days], newStart)));
       return { trip: { ...state.trip, startDate: newStart, days, updatedAt: Date.now() } };
     }),
 
@@ -507,7 +330,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
         items: [],
         legs: [],
       };
-      const days = withAutoFill(reindexDays([...state.trip.days, newDay], state.trip.startDate));
+      const days = chainAll(withAutoFill(reindexDays([...state.trip.days, newDay], state.trip.startDate)));
       return { trip: { ...state.trip, days, updatedAt: Date.now() } };
     }),
 
@@ -519,7 +342,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
       return {
         trip: {
           ...state.trip,
-          days: withAutoFill(reindexDays(days, state.trip.startDate)),
+          days: chainAll(withAutoFill(reindexDays(days, state.trip.startDate))),
           updatedAt: Date.now(),
         },
       };
@@ -758,7 +581,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
     if (target) {
       setActiveTripId(id);
       set({
-        trip: { ...target, days: withAutoFill(target.days) },
+        trip: { ...target, days: normalizeDaysForView(target.days) },
         persisted: true,
         dirty: false,
       });
@@ -774,7 +597,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
       if (remaining.length > 0) {
         setActiveTripId(remaining[0]!.id);
         set({
-          trip: { ...remaining[0]!, days: withAutoFill(remaining[0]!.days) },
+          trip: { ...remaining[0]!, days: normalizeDaysForView(remaining[0]!.days) },
           persisted: true,
           dirty: false,
         });

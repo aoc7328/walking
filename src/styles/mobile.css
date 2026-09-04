@@ -1720,3 +1720,6 @@
   box-shadow: var(--shadow-modal);
   cursor: pointer;
 }
+
+/* 跨午夜的站，抵達時間旁標「翌日」 */
+.mv-nextday { display: inline-block; margin-left: 5px; padding: 0 6px; border-radius: 999px; background: var(--accent-warm); color: #fff; font-size: 10.5px; font-weight: 500; vertical-align: middle; }

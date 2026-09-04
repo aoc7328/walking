@@ -32,6 +32,7 @@ function formatDistance(km: number): string {
 export default function PlaceDetailModal() {
   const placeId = useUIStore((s) => s.detailModalPlaceId);
   const source = useUIStore((s) => s.detailModalSource);
+  const itemRef = useUIStore((s) => s.detailModalItemRef);
   const close = useUIStore((s) => s.closeDetail);
   const trip = useTripStore((s) => s.trip);
   const currentDayId = useUIStore((s) => s.currentDayId);
@@ -110,16 +111,25 @@ export default function PlaceDetailModal() {
 
   if (!placeId || !detail || !trip) return null;
 
-  // 找出該 place 目前在哪天的行程裡
+  // 找出該 place 目前在哪天的行程裡。
+  // 從行程卡片開的：用卡片指定的那一個 item（同一地點會出現在很多天，掃 placeId 只會撈到第一份）。
+  // 從搜尋開的：沒有指定，才退回「第一個出現的那天」，只是拿來顯示「已在 Day N」。
   let dayWithItem: { dayIndex: number; dayId: string; itemId: string } | null = null;
-  for (const d of trip.days) {
-    for (const it of d.items) {
-      if (it.place.placeId === placeId) {
-        dayWithItem = { dayIndex: d.dayIndex, dayId: d.id, itemId: it.id };
-        break;
+  if (itemRef) {
+    const d = trip.days.find((x) => x.id === itemRef.dayId);
+    const it = d?.items.find((x) => x.id === itemRef.itemId);
+    if (d && it) dayWithItem = { dayIndex: d.dayIndex, dayId: d.id, itemId: it.id };
+  }
+  if (!dayWithItem) {
+    for (const d of trip.days) {
+      for (const it of d.items) {
+        if (it.place.placeId === placeId) {
+          dayWithItem = { dayIndex: d.dayIndex, dayId: d.id, itemId: it.id };
+          break;
+        }
       }
+      if (dayWithItem) break;
     }
-    if (dayWithItem) break;
   }
 
   const currentDay = trip.days.find((d) => d.id === currentDayId) ?? null;
