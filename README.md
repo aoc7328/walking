@@ -71,6 +71,9 @@ KV 與 R2 都是本地模擬，不會碰到線上資料。
 
 密碼由後端驗證，登入成功後以 HttpOnly session cookie 保存；瀏覽器不再保存密碼雜湊或資料識別碼。要換密碼，請用新密碼產生雜湊後更新 Cloudflare Pages 的 `AUTH_PASSWORD_HASH` secret：
 
+後端比對前會先把輸入的密碼 `.trim().toLowerCase()`（見 `functions/_lib/auth.ts` 的 `passwordHash`），
+所以產雜湊時也必須先做同樣的處理，否則密碼只要含大寫或前後空白，算出來的值永遠對不上：
+
 ```bash
-node -e "const c=require('crypto');console.log(c.pbkdf2Sync('新密碼','walking:gate',100000,32,'sha256').toString('hex'))"
+node -e "const c=require('crypto');const p=process.argv[1].trim().toLowerCase();console.log(c.pbkdf2Sync(p,'walking:gate',100000,32,'sha256').toString('hex'))" "新密碼"
 ```
