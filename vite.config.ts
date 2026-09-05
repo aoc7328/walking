@@ -44,6 +44,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // 主 bundle 已經超過預設的 2 MiB 上限。超過就「不會被預先快取」，
+        // 而且建置直接失敗——但真正的問題是沒快取到就等於出國沒訊號時開不起來，
+        // 這個 App 的重點就是離線也要看得到行程，所以是把上限拉高而不是放它不快取。
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // 新 SW 立刻接管，不卡在舊 worker 的快取上
         skipWaiting: true,
         clientsClaim: true,

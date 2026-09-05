@@ -1723,3 +1723,67 @@
 
 /* 跨午夜的站，抵達時間旁標「翌日」 */
 .mv-nextday { display: inline-block; margin-left: 5px; padding: 0 6px; border-radius: 999px; background: var(--accent-warm); color: #fff; font-size: 10.5px; font-weight: 500; vertical-align: middle; }
+
+/* ── 行程上的訂位燈號 ──────────────────────────────────────────────
+   帳本裡有訂位的餐廳，在行程那一站直接亮燈：一眼看出哪幾家是訂好的、
+   哪幾家還沒訂。顏色只用來分狀態，旁邊一定有文字，不靠顏色也讀得懂。 */
+.mv-resv-flag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-secondary);
+}
+
+.mv-resv-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.mv-resv-label {
+  font-weight: 500;
+  color: var(--ink-primary);
+}
+
+.mv-resv-time {
+  font-feature-settings: 'tnum' 1;
+  font-weight: 500;
+}
+
+.mv-resv-pax,
+.mv-resv-ref {
+  color: var(--ink-muted);
+}
+
+/* 已預約：綠燈 */
+.mv-resv-flag.s-reserved .mv-resv-dot { background: #3B8E4A; box-shadow: 0 0 0 2px rgba(59, 142, 74, 0.18); }
+.mv-resv-flag.s-reserved .mv-resv-label { color: #2F7A3C; }
+
+/* 未預約：琥珀燈，這是還要處理的 */
+.mv-resv-flag.s-none .mv-resv-dot { background: var(--accent-warm); box-shadow: 0 0 0 2px rgba(200, 130, 40, 0.18); }
+.mv-resv-flag.s-none .mv-resv-label { color: var(--accent-warm); }
+
+/* 不需預約 / 臨時想去：灰燈，純資訊 */
+.mv-resv-flag.s-walkin .mv-resv-dot,
+.mv-resv-flag.s-impromptu .mv-resv-dot { background: var(--ink-faint); }
+
+/* 已取消：紅燈 + 刪除線，不能讓它看起來還有效 */
+.mv-resv-flag.s-cancelled .mv-resv-dot { background: #B3402F; }
+.mv-resv-flag.s-cancelled .mv-resv-label,
+.mv-resv-flag.s-cancelled .mv-resv-time { color: #B3402F; text-decoration: line-through; }
+
+/* 行程排的抵達時間比訂位時間晚：日本餐廳遲到很嚴重，要跳出來 */
+.mv-resv-late {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--accent-warm);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+}

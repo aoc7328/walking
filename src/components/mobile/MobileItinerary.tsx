@@ -5,6 +5,8 @@ import { cleanNotes } from '../../utils/itemNotes';
 import { formatDuration, TRANSPORT_LABEL } from '../../utils/format';
 import { printableDayNote } from '../../utils/dayNote';
 import { getPlaceIcon } from '../../utils/placeIcon';
+import { getLedger, RESERVATION_LABEL } from '../../utils/ledger';
+import { matchDayReservations, type ReservationMap } from '../../utils/reservationMatch';
 import { markKey } from '../../data/markPalette';
 import { navigateUrl, placeUrl } from '../../utils/gmaps';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -36,6 +38,19 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: 
   const todayISO = toISODate(new Date());
   const isToday = day?.date === todayISO;
   const todayIdx = trip.days.findIndex((d) => d.date === todayISO);
+
+  /**
+   * 這天每一站對到的餐廳訂位（帳本 → 行程）。
+   * 依賴用 day?.id 與訂位筆數，不用 day / ledger 物件：trip 只要有任何變動就是新物件，
+   * 拿物件當依賴等於每次重繪都重算一次配對。
+   */
+  const ledger = getLedger(trip);
+  const resvCount = ledger.restaurants.length;
+  const resvMap = useMemo<ReservationMap>(
+    () => (day ? matchDayReservations(day, ledger) : new Map()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [day?.id, day?.items.length, resvCount],
+  );
 
   // 符號 → 說明文字（日期卡上蓋的標記，在這裡直接顯示成文字比較好懂）
   const legendMap = useMemo(() => {
@@ -170,6 +185,11 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: 
           const nUrl = navigateUrl({ lat: c.lat, lng: c.lng, placeId }, mode);
           const tel = phoneNumber ? `tel:${phoneNumber.replace(/[^+\d]/g, '')}` : null;
           const state = idx === currentIdx ? 'now' : idx === currentIdx + 1 && currentIdx >= 0 ? 'next' : '';
+          const resv = resvMap.get(item.id);
+          // 排的抵達時間比訂位時間還晚就要提醒（早到沒關係，遲到才是問題）
+          const resvArr = resv?.time ? hhmmToMinutes(item.arrivalTime) : null;
+          const resvSet = resv?.time ? hhmmToMinutes(resv.time) : null;
+          const lateBy = resvArr !== null && resvSet !== null ? resvArr - resvSet : 0;
 
           return (
             <div key={item.id}>
@@ -212,6 +232,17 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: 
                       <span className="mv-name">{name}</span>
                     )}
                   </div>
+
+                  {resv && (
+                    <div className={`mv-resv-flag s-${resv.status}`}>
+                      <span className="mv-resv-dot" aria-hidden />
+                      <span className="mv-resv-label">{RESERVATION_LABEL[resv.status]}</span>
+                      {resv.time && <span className="mv-resv-time">{resv.time}</span>}
+                      {resv.partySize !== undefined && <span className="mv-resv-pax">{resv.partySize} 位</span>}
+                      {resv.bookingRef && <span className="mv-resv-ref">No. {resv.bookingRef}</span>}
+                      {lateBy > 10 && <span className="mv-resv-late">行程比訂位晚 {lateBy} 分</span>}
+                    </div>
+                  )}
 
                   <div className="mv-stay">{formatStayDuration(item.stayMinutes)}</div>
 
