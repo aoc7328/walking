@@ -22,6 +22,8 @@ interface Props {
   dayIdx: number;
   onSelectDay: (idx: number) => void;
   onToast: (msg: string) => void;
+  /** 點訂位燈號 → 跳到手牌分頁打開那張訂位牌。沒給就只顯示、不可點。 */
+  onOpenReservation?: (restaurantId: string) => void;
 }
 
 /** 現在幾點（分鐘）。用來標「現在在這站 / 下一站」。 */
@@ -30,7 +32,7 @@ function nowMinutes(): number {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: Props) {
+export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, onOpenReservation }: Props) {
   const barRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
 
@@ -190,6 +192,8 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: 
           const resvArr = resv?.time ? hhmmToMinutes(item.arrivalTime) : null;
           const resvSet = resv?.time ? hhmmToMinutes(resv.time) : null;
           const lateBy = resvArr !== null && resvSet !== null ? resvArr - resvSet : 0;
+          // 每家店沒各自填人數時，用帳本的訂位預設（訂位牌本身也是這樣 fallback）
+          const resvPax = resv ? resv.partySize ?? ledger.reservation?.partySize : undefined;
 
           return (
             <div key={item.id}>
@@ -233,16 +237,31 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast }: 
                     )}
                   </div>
 
-                  {resv && (
-                    <div className={`mv-resv-flag s-${resv.status}`}>
-                      <span className="mv-resv-dot" aria-hidden />
-                      <span className="mv-resv-label">{RESERVATION_LABEL[resv.status]}</span>
-                      {resv.time && <span className="mv-resv-time">{resv.time}</span>}
-                      {resv.partySize !== undefined && <span className="mv-resv-pax">{resv.partySize} 位</span>}
-                      {resv.bookingRef && <span className="mv-resv-ref">No. {resv.bookingRef}</span>}
-                      {lateBy > 10 && <span className="mv-resv-late">行程比訂位晚 {lateBy} 分</span>}
-                    </div>
-                  )}
+                  {resv &&
+                    (onOpenReservation ? (
+                      <button
+                        type="button"
+                        className={`mv-resv-flag tappable s-${resv.status}`}
+                        onClick={() => onOpenReservation(resv.id)}
+                        title="打開訂位牌（給店家看的那一張）"
+                      >
+                        <span className="mv-resv-dot" aria-hidden />
+                        <span className="mv-resv-label">{RESERVATION_LABEL[resv.status]}</span>
+                        {resv.time && <span className="mv-resv-time">{resv.time}</span>}
+                        {resvPax !== undefined && <span className="mv-resv-pax">{resvPax} 位</span>}
+                        {lateBy > 10 && <span className="mv-resv-late">行程比訂位晚 {lateBy} 分</span>}
+                        <span className="mv-resv-go" aria-hidden>訂位牌 ›</span>
+                      </button>
+                    ) : (
+                      <div className={`mv-resv-flag s-${resv.status}`}>
+                        <span className="mv-resv-dot" aria-hidden />
+                        <span className="mv-resv-label">{RESERVATION_LABEL[resv.status]}</span>
+                        {resv.time && <span className="mv-resv-time">{resv.time}</span>}
+                        {resvPax !== undefined && <span className="mv-resv-pax">{resvPax} 位</span>}
+                        {resv.bookingRef && <span className="mv-resv-ref">No. {resv.bookingRef}</span>}
+                        {lateBy > 10 && <span className="mv-resv-late">行程比訂位晚 {lateBy} 分</span>}
+                      </div>
+                    ))}
 
                   <div className="mv-stay">{formatStayDuration(item.stayMinutes)}</div>
 

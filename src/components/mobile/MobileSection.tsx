@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 /**
  * 手機版的可收合區塊。
@@ -19,6 +19,11 @@ interface Props {
   defaultOpen?: boolean;
   /** 收起時仍要顯示的提醒，例如「今天 1」。 */
   badge?: string;
+  /**
+   * 外部要求展開（例：從行程點訂位燈號跳過來，那一區一定要是開的）。
+   * 只在這個值變 true 的當下打開，之後使用者還是可以自己收起來。
+   */
+  forceOpen?: boolean;
   children: ReactNode;
 }
 
@@ -35,8 +40,12 @@ function readPref(id: string): boolean | null {
   }
 }
 
-export default function MobileSection({ id, title, count, defaultOpen = false, badge, children }: Props) {
+export default function MobileSection({ id, title, count, defaultOpen = false, badge, forceOpen, children }: Props) {
   const [open, setOpen] = useState<boolean>(() => readPref(id) ?? defaultOpen);
+
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
 
   function toggle() {
     setOpen((v) => {

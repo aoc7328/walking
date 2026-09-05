@@ -62,6 +62,8 @@ export default function MobileApp() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [offline, setOffline] = useState(false);
   const [tab, setTab] = useState<Tab>('trip');
+  /** 從行程點訂位燈號要打開的那張訂位牌；切到手牌分頁後由 MobileCards 消化掉。 */
+  const [focusReservationId, setFocusReservationId] = useState<string | null>(null);
   const [dayIdx, setDayIdx] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -256,9 +258,19 @@ export default function MobileApp() {
             dayIdx={dayIdx}
             onSelectDay={setDayIdx}
             onToast={showToast}
+            onOpenReservation={(id) => {
+              setFocusReservationId(id);
+              setTab('cards');
+            }}
           />
         )}
-        {tab === 'cards' && <MobileCards trip={trip} />}
+        {tab === 'cards' && (
+          <MobileCards
+            trip={trip}
+            focusReservationId={focusReservationId}
+            onFocusHandled={() => setFocusReservationId(null)}
+          />
+        )}
         {tab === 'info' && <MobileInfo trip={trip} />}
         {tab === 'ledger' && (
           <MobileLedger trip={trip} onTripChange={(t) => applyTrip(t, { keepDay: true })} onToast={showToast} />

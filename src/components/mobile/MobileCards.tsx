@@ -22,6 +22,27 @@ import MobileSection from './MobileSection';
 
 interface Props {
   trip: Trip;
+  /** 要求直接打開某一張訂位牌（從行程分頁點訂位燈號跳過來）。 */
+  focusReservationId?: string | null;
+  /** 已經處理完上面那個要求，通知外層清掉，免得切回來又自己彈開。 */
+  onFocusHandled?: () => void;
+}
+
+/**
+ * 捲到某一列訂位。
+ *
+ * 那一列要等區塊展開（另一個元件的 state）才會 render，時機不保證，所以短暫重試。
+ * 刻意寫在元件外、不綁 effect 生命週期：呼叫端在同一輪就會把 focus 清掉，
+ * 綁在 effect 上的話 cleanup 會立刻把重試砍掉，永遠捲不到。
+ * 自己會在 12 次後停，元件收掉也只是找不到元素而已。
+ */
+function scrollToReservationRow(id: string, tries = 0): void {
+  const el = document.getElementById(`resv-row-${id}`);
+  if (el) {
+    el.scrollIntoView({ block: 'center' });
+    return;
+  }
+  if (tries < 12) window.setTimeout(() => scrollToReservationRow(id, tries + 1), 40);
 }
 
 /** 目前打開的全螢幕內容：圖片或餐廳文字牌。 */
@@ -244,7 +265,7 @@ function ReservationRow({
 }) {
   const mapUrl = placeUrl(undefined, r.name);
   return (
-    <div className={`mv-resv-row${r.date === today ? ' today' : ''}`}>
+    <div id={`resv-row-${r.id}`} className={`mv-resv-row${r.date === today ? ' today' : ''}`}>
       <div className="mv-resv-when">
         <span className="mv-resv-date">{r.date ? formatWithWeekday(r.date) : '未定日期'}</span>
         <span className="mv-resv-time">{r.time || '—'}</span>
@@ -276,7 +297,7 @@ function ReservationRow({
   );
 }
 
-export default function MobileCards({ trip }: Props) {
+export default function MobileCards({ trip, focusReservationId, onFocusHandled }: Props) {
   const ledger = getLedger(trip);
   const [showing, setShowing] = useState<Showing | null>(null);
 
@@ -304,6 +325,23 @@ export default function MobileCards({ trip }: Props) {
   const resvToday = upcoming.filter((r) => r.date === today).length;
 
   const nothing = certs.length === 0 && vjw.length === 0 && tickets.length === 0 && active.length === 0;
+
+  /**
+   * 從行程分頁點「已預約」跳過來：直接把那張訂位牌全螢幕打開，
+   * 順便展開它所在的區塊並捲過去——關掉牌之後才不會一臉茫然不知道在哪。
+   * 依賴只放 id：ledger 每次 render 都是新物件。
+   */
+  const focusTarget = focusReservationId
+    ? ledger.restaurants.find((r) => r.id === focusReservationId) ?? null
+    : null;
+  const focusInPast = focusTarget ? past.some((r) => r.id === focusTarget.id) : false;
+  useEffect(() => {
+    if (!focusTarget) return;
+    setShowing({ kind: 'reservation', restaurant: focusTarget });
+    scrollToReservationRow(focusTarget.id);
+    onFocusHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.id]);
 
   return (
     <div className="mv-resv">
@@ -382,6 +420,7 @@ export default function MobileCards({ trip }: Props) {
           title="餐廳訂位"
           count={upcoming.length}
           defaultOpen={resvToday > 0}
+          forceOpen={!!focusTarget && !focusInPast}
           badge={resvToday > 0 ? `今天 ${resvToday}` : undefined}
         >
           {upcoming.map((r) => (
@@ -396,7 +435,7 @@ export default function MobileCards({ trip }: Props) {
       )}
 
       {past.length > 0 && (
-        <MobileSection id="resv-past" title="已過去的訂位" count={past.length}>
+        <MobileSection id="resv-past" title="已過去的訂位" count={past.length} forceOpen={focusInPast}>
           <div className="mv-resv-past">
             {past.map((r) => (
               <ReservationRow

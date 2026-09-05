@@ -45,10 +45,25 @@ function persistCache(): void {
   }
 }
 
+/**
+ * 這段文字是不是已經是目的地語言了？是的話絕對不能再送去翻。
+ *
+ * 使用者的「飲食習慣與語言需求」「補充」有時候本來就是用日文寫的，
+ * 再丟一次 zh-TW→ja 會被弄壞：實際遇過「妻は少し英語が話せます」
+ * 被翻成「私の妻は小さく、英語を話します」（我太太很小），而這張牌是要給店家看的。
+ * - 日文：出現任何假名就一定是日文（中文不會有假名）。
+ * - 英文：幾乎沒有中日文字元就當作已經是英文。
+ */
+function alreadyInTarget(text: string, target: TranslateTarget): boolean {
+  if (target === 'ja') return /[\u3040-\u309F\u30A0-\u30FF]/.test(text);
+  return !/[\u3000-\u9FFF\uFF00-\uFFEF]/.test(text);
+}
+
 /** 用 MyMemory 免費翻譯（zh-TW → 目的地語言）。失敗或警示就回原文。 */
 export async function translateText(text: string, target: TranslateTarget): Promise<string> {
   const t = text.trim();
   if (!t) return '';
+  if (alreadyInTarget(t, target)) return text;
   ensureCacheLoaded();
   const key = `${target}:${t}`;
   if (cache.has(key)) return cache.get(key)!;
