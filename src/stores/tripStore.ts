@@ -24,11 +24,20 @@ import {
 } from '../db/repository';
 import { fetchLegDuration } from './../services/directions';
 
+/** 自動儲存的狀態。 */
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
 interface TripStore {
   trip: Trip | null;
   isLoading: boolean;
-  /** 有未儲存到 KV 的編輯（由 subscribe 自動偵測，按儲存後歸 false） */
+  /** 有還沒寫進 KV 的編輯（由 subscribe 自動偵測，存成功後歸 false） */
   dirty: boolean;
+  /** 自動儲存的狀態，給畫面顯示「儲存中／已儲存／存不進去」。 */
+  saveState: SaveState;
+  /** 最近一次成功寫入 KV 的時間。 */
+  lastSavedAt: number | null;
+  /** 最近一次儲存失敗的原因（成功後清掉）。 */
+  saveError: string | null;
   /** 目前這筆 trip 是否已是 KV 既有行程（從下拉選單／啟動載入／新建進來 = true；
    *  mock 預設範例 = false）。決定按儲存是「覆蓋」還是「另存新行程」。 */
   persisted: boolean;
@@ -37,6 +46,8 @@ interface TripStore {
 
   /** 把目前 trip 覆蓋寫回 KV（給「儲存」按鈕用，persisted 時） */
   saveTrip: () => Promise<void>;
+  /** 存失敗後手動重試（畫面上點那顆「未同步」用）。 */
+  retrySave: () => void;
   /** 用目前 trip 的內容另存成一筆新行程（新 id + 指定名稱），寫入 KV 並切成 current */
   saveAsNewTrip: (name: string) => Promise<string>;
 
@@ -113,6 +124,9 @@ export const useTripStore = create<TripStore>((set, get) => ({
   isLoading: false,
   dirty: false,
   persisted: false,
+  saveState: 'idle',
+  lastSavedAt: null,
+  saveError: null,
 
   setTrip: (trip) => {
     setActiveTripId(trip.id);
@@ -136,11 +150,17 @@ export const useTripStore = create<TripStore>((set, get) => ({
     });
   },
 
+  retrySave: () => {
+    retryIndex = 0;
+    void runAutosave(true);
+  },
+
   saveTrip: async () => {
     const trip = get().trip;
     if (!trip) return;
+    cancelAutosave();
     await persistTripImmediate(trip);
-    set({ dirty: false, persisted: true });
+    set({ dirty: false, persisted: true, saveState: 'saved', lastSavedAt: Date.now(), saveError: null });
   },
 
   saveAsNewTrip: async (name) => {
@@ -628,15 +648,138 @@ export const useTripStore = create<TripStore>((set, get) => ({
 }));
 
 /**
- * 自動把「使用者編輯」標成 dirty。
- * 判斷規則：trip.id 不變、但 trip 物件 reference 變了 → 是同一筆行程的內容被改動。
- * （載入 / 切換 / 新建 / 刪除都會換 id 或從 null 起始，不會誤判成 dirty。）
- * 編輯型 action 因此完全不用各自設 dirty。
+ * ── 自動儲存 ──────────────────────────────────────────────────────
+ *
+ * 不再需要按「儲存」。任何編輯都會在停手 0.8 秒後寫回 KV；一直改個不停的話
+ * 最多 5 秒也一定會存一次（不然拖拉排一整天可能一次都沒存到）。
+ *
+ * 為什麼還是要防抖而不是每次變動都寫：整份 trip 是一次 PUT，這趟 17 天的
+ * 行程就有 330KB，而「在備註欄打一個字」也算一次變動。在國外用飯店 Wi-Fi
+ * 每個按鍵送 330KB 會塞爆上行頻寬，跟寫入額度無關（帳號是 Cloudflare Pro）。
+ *
+ * 失敗（出國沒訊號最常見）不會把變更丟掉：dirty 保持 true、狀態轉成 error，
+ * 依 5s → 15s → 30s → 60s 退避重試，網路一恢復（online 事件）立刻再試一次，
+ * 畫面上也會顯示「未同步」讓使用者知道。關分頁時 AppShell 還有 keepalive 兜底。
+ *
+ * mock 範例行程（persisted === false）刻意不自動存：它沒有可覆寫的目標，
+ * 一定要使用者先取名另存，否則會在 KV 裡默默長出一堆沒人要的範例行程。
+ */
+const AUTOSAVE_DEBOUNCE_MS = 800;
+const AUTOSAVE_MAX_WAIT_MS = 5000;
+const RETRY_DELAYS_MS = [5000, 15000, 30000, 60000];
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let firstDirtyAt = 0;
+let retryIndex = 0;
+let inFlight = false;
+/** 最近一次「已經寫進去」的 trip 物件，用來擋掉內容沒變的重複寫入。 */
+let lastSavedTrip: Trip | null = null;
+
+function cancelAutosave(): void {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  firstDirtyAt = 0;
+  retryIndex = 0;
+}
+
+function scheduleAutosave(delayMs?: number): void {
+  if (saveTimer) clearTimeout(saveTimer);
+  let delay = delayMs;
+  if (delay === undefined) {
+    // 一直在改就不要無限延後：超過上限就立刻存
+    const waited = firstDirtyAt ? Date.now() - firstDirtyAt : 0;
+    delay = waited >= AUTOSAVE_MAX_WAIT_MS ? 0 : AUTOSAVE_DEBOUNCE_MS;
+  }
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    void runAutosave();
+  }, delay);
+}
+
+async function runAutosave(manual = false): Promise<void> {
+  const { trip, persisted, dirty } = useTripStore.getState();
+  if (!trip || !persisted) return;
+  if (!dirty && !manual) return;
+  // 內容沒變就不要重複寫（每個編輯 action 都會產生新物件，reference 比對就夠）
+  if (trip === lastSavedTrip && !manual) {
+    useTripStore.setState({ dirty: false, saveState: 'saved' });
+    return;
+  }
+  if (inFlight) {
+    scheduleAutosave(AUTOSAVE_DEBOUNCE_MS);
+    return;
+  }
+
+  inFlight = true;
+  useTripStore.setState({ saveState: 'saving' });
+  const snapshot = trip;
+  try {
+    await persistTripImmediate(snapshot);
+    lastSavedTrip = snapshot;
+    firstDirtyAt = 0;
+    retryIndex = 0;
+    // 存的期間又改了 → 那些變更還沒進去，維持 dirty 並排下一次
+    const changedDuringSave = useTripStore.getState().trip !== snapshot;
+    useTripStore.setState({
+      dirty: changedDuringSave,
+      saveState: 'saved',
+      lastSavedAt: Date.now(),
+      saveError: null,
+    });
+    if (changedDuringSave) {
+      firstDirtyAt = Date.now();
+      scheduleAutosave();
+    }
+  } catch (err) {
+    // 失敗一律保留 dirty，資料還在記憶體裡，不會因為存不進去就消失
+    useTripStore.setState({
+      dirty: true,
+      saveState: 'error',
+      saveError: err instanceof Error ? err.message : String(err),
+    });
+    const delay = RETRY_DELAYS_MS[Math.min(retryIndex, RETRY_DELAYS_MS.length - 1)]!;
+    retryIndex += 1;
+    scheduleAutosave(delay);
+  } finally {
+    inFlight = false;
+  }
+}
+
+/**
+ * 偵測「使用者編輯」：trip.id 不變、但 trip 物件 reference 變了。
+ * （載入 / 切換 / 新建 / 刪除都會換 id 或從 null 起始，不會誤判。）
+ * 編輯型 action 因此完全不用各自處理 dirty 或儲存。
  */
 useTripStore.subscribe((state, prev) => {
   const cur = state.trip;
   const old = prev.trip;
-  if (cur && old && cur.id === old.id && cur !== old && !state.dirty) {
+  if (!cur || !old || cur.id !== old.id || cur === old) return;
+  if (!state.dirty) {
+    firstDirtyAt = Date.now();
+    // 這行會再觸發一次 subscribe，但那次 cur === old，上面就擋掉了
     useTripStore.setState({ dirty: true });
   }
+  scheduleAutosave();
 });
+
+// 換行程 / 載入新行程：把上一筆的自動儲存排程清掉，免得存到已經不在畫面上的那份
+useTripStore.subscribe((state, prev) => {
+  if (state.trip?.id !== prev.trip?.id) {
+    cancelAutosave();
+    lastSavedTrip = state.trip ?? null;
+    useTripStore.setState({ saveState: 'idle', saveError: null });
+  }
+});
+
+// 網路回來就立刻補存一次，不用等退避計時器
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    const { dirty, persisted, saveState } = useTripStore.getState();
+    if (dirty && persisted && saveState === 'error') {
+      retryIndex = 0;
+      scheduleAutosave(0);
+    }
+  });
+}

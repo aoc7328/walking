@@ -79,7 +79,8 @@ export default function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchResults.length, searchQuery, trip?.favorites.length]);
 
-  // 關閉分頁 / 離開頁面時的存檔保險（解決「忘了按儲存就關分頁，變更丟掉」）。
+  // 關閉分頁 / 離開頁面時的存檔保險。編輯本來就會自動存，這裡兜的是
+  // 「改完 0.8 秒內就關掉分頁」那個空窗，以及自動儲存正在失敗的情況。
   // 事件當下才用 getState() 取最新狀態，所以這個監聽只需掛一次。
   // - 已存過的行程有未存變更 → keepalive 靜默把最新內容送回 KV，不打擾。
   // - 只有 mock 範例被改過（沒有可覆寫的目標，必須先取名另存）→ 跳瀏覽器原生「尚未儲存」確認框攔一下。
@@ -92,8 +93,9 @@ export default function AppShell() {
       }
     }
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      const { dirty, persisted } = useTripStore.getState();
-      if (dirty && !persisted) {
+      const { dirty, persisted, saveState } = useTripStore.getState();
+      // mock 範例被改過（沒有可覆寫的目標），或自動儲存正在失敗（關掉就真的丟了）
+      if (dirty && (!persisted || saveState === 'error')) {
         e.preventDefault();
         e.returnValue = '';
       }

@@ -4947,3 +4947,9 @@ input.led-cell.num { text-align: right; }
 
 /* 時間鏈跨過午夜後的站：抵達時間旁標「翌日」，不然 01:30 看起來像時間倒退 */
 .item-nextday-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--accent-warm); color: #fff; font-size: 11px; font-weight: 500; vertical-align: middle; letter-spacing: 0.04em; }
+
+/* 自動儲存狀態：平常是安靜的純文字，只有存不進去才變成顯眼的可點按鈕 */
+.btn-savestate { cursor: default; color: var(--ink-muted); background: transparent; border-color: transparent; font-feature-settings: 'tnum' 1; }
+.btn-savestate.busy { color: var(--ink-secondary); }
+.btn-savestate.error { cursor: pointer; color: #fff; background: #B3402F; border-color: #B3402F; font-weight: 500; }
+.btn-savestate.error:hover { background: #9A3627; }

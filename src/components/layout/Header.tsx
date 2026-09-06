@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTripStore } from '../../stores/tripStore';
+import SaveStatus from '../common/SaveStatus';
 import { formatRange, diffDays, addDays } from '../../utils/date';
 import TripSwitcher from './TripSwitcher';
 import { useUIStore } from '../../stores/uiStore';
@@ -56,9 +57,6 @@ function EditableTripName({ name, onSave }: { name: string; onSave: (v: string) 
 export default function Header() {
   const trip = useTripStore((s) => s.trip);
   const renameTrip = useTripStore((s) => s.renameTrip);
-  const dirty = useTripStore((s) => s.dirty);
-  const persisted = useTripStore((s) => s.persisted);
-  const saveTrip = useTripStore((s) => s.saveTrip);
   const openShareModal = useUIStore((s) => s.openShareModal);
   const openOverviewModal = useUIStore((s) => s.openOverviewModal);
   const openDownloadModal = useUIStore((s) => s.openDownloadModal);
@@ -66,7 +64,6 @@ export default function Header() {
   const closeLedgerModal = useUIStore((s) => s.closeLedgerModal);
   const openNotesModal = useUIStore((s) => s.openNotesModal);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   if (!trip) return <header className="header" />;
 
@@ -76,23 +73,6 @@ export default function Header() {
   // 未完成（未打勾且有填內容）的待辦數量 → 首頁按鈕上顯示未讀徽章
   const pendingTodos = trip.todos?.filter((t) => !t.done && t.text.trim() !== '').length ?? 0;
 
-  async function handleSave() {
-    if (saving) return;
-    if (!persisted) {
-      // 從未存過（mock 範例）→ 另存新行程
-      setSaveAsOpen(true);
-      return;
-    }
-    // 既有行程 → 覆蓋
-    setSaving(true);
-    try {
-      await saveTrip();
-    } catch (err) {
-      window.alert('儲存失敗：' + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <>
@@ -119,14 +99,7 @@ export default function Header() {
             待辦
             {pendingTodos > 0 && <span className="todo-badge" aria-label={`${pendingTodos} 項未完成`}>{pendingTodos}</span>}
           </button>
-          <button
-            className={`btn${dirty ? ' btn-primary' : ''}`}
-            onClick={handleSave}
-            disabled={saving || !dirty}
-            title={persisted ? '儲存變更到 KV' : '另存為新行程'}
-          >
-            {saving ? '儲存中…' : dirty ? '儲存 ●' : '已儲存'}
-          </button>
+          <SaveStatus onSaveAs={() => setSaveAsOpen(true)} />
           <button className="btn" onClick={openDownloadModal} title="下載 PDF（普通版 / 騎馬釘小冊子）">下載</button>
           <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結，讓朋友掃描看手機版行程">分享</button>
         </div>

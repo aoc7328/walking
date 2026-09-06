@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
+import SaveStatus from '../common/SaveStatus';
 import { getLedger } from '../../utils/ledger';
 import { printLedgerReport } from '../../services/ledgerReport';
 import PreDeparturePage from './PreDeparturePage';
@@ -26,32 +27,21 @@ export default function LedgerPage() {
   const openDownloadModal = useUIStore((s) => s.openDownloadModal);
   const openShareModal = useUIStore((s) => s.openShareModal);
   const trip = useTripStore((s) => s.trip);
-  const dirty = useTripStore((s) => s.dirty);
-  const saveTrip = useTripStore((s) => s.saveTrip);
   const saveAsNewTrip = useTripStore((s) => s.saveAsNewTrip);
-  const persisted = useTripStore((s) => s.persisted);
   const [tab, setTab] = useState<Tab>('pre');
-  const [saving, setSaving] = useState(false);
 
   if (!open || !trip) return null;
 
   const ledger = getLedger(trip);
   const pendingTodos = trip.todos?.filter((t) => !t.done && t.text.trim() !== '').length ?? 0;
 
-  async function handleSave() {
-    if (saving) return;
-    setSaving(true);
+  async function handleSaveAs() {
+    const name = window.prompt('這趟還沒存過，要存成新行程。行程名稱：', trip?.name ?? '新行程');
+    if (!name) return;
     try {
-      if (persisted) {
-        await saveTrip();
-      } else {
-        const name = window.prompt('這趟還沒存過，要存成新行程。行程名稱：', trip?.name ?? '新行程');
-        if (name) await saveAsNewTrip(name);
-      }
+      await saveAsNewTrip(name);
     } catch (err) {
       window.alert('儲存失敗：' + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -75,14 +65,7 @@ export default function LedgerPage() {
           <button className="btn" onClick={() => printLedgerReport(trip, ledger)} title="列印整本帳結算單（可存成 PDF）">列印 / PDF</button>
           <button className="btn" onClick={openDownloadModal} title="下載 PDF（普通版 / 騎馬釘小冊子）">下載</button>
           <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結">分享</button>
-          <button
-            className={`btn${dirty || !persisted ? ' btn-primary' : ''}`}
-            onClick={handleSave}
-            disabled={saving || (persisted && !dirty)}
-            title="把帳本變更存到雲端，重整也不會不見"
-          >
-            {saving ? '儲存中…' : !persisted ? '另存行程' : dirty ? '儲存 ●' : '已儲存'}
-          </button>
+          <SaveStatus onSaveAs={() => void handleSaveAs()} />
         </div>
       </div>
 
