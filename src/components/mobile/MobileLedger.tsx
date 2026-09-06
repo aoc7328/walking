@@ -57,14 +57,33 @@ function writePending(tripId: string, list: Expense[]): void {
   }
 }
 
-function blankDraft(ledger: Ledger, cats: string[]): Draft {
+/**
+ * 上一筆用的支付方式（還沒送出的優先，其次是已存雲端的流水帳，都由新到舊找）。
+ *
+ * 出國時整天多半刷同一張卡，每記一筆都要重選很煩。送出後表單本來就會沿用，
+ * 但 App 一關掉重開就歸零——這支就是讓重開之後也接得上。
+ * 只回目前還存在的支付方式，卡被刪掉就當作沒有。
+ */
+function lastPaymentMethodId(ledger: Ledger, pending: Expense[]): string {
+  const known = new Set(ledger.paymentMethods.map((p) => p.id));
+  const during = ledger.expenses.filter((e) => e.phase === 'during');
+  for (const list of [pending, during]) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const id = list[i]?.paymentMethodId;
+      if (id && known.has(id)) return id;
+    }
+  }
+  return '';
+}
+
+function blankDraft(ledger: Ledger, cats: string[], pending: Expense[] = []): Draft {
   return {
     date: toISODate(new Date()),
     category: cats.includes('飲食') ? '飲食' : cats[0] ?? '其他',
     title: '',
     amount: '',
     currency: ledger.localCurrency,
-    pay: '',
+    pay: lastPaymentMethodId(ledger, pending),
   };
 }
 
@@ -187,16 +206,17 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
 
   const [pending, setPending] = useState<Expense[]>(() => readPending(trip.id));
   const [syncing, setSyncing] = useState(false);
-  const [draft, setDraft] = useState<Draft>(() => blankDraft(ledger, cats));
+  const [draft, setDraft] = useState<Draft>(() => blankDraft(ledger, cats, readPending(trip.id)));
 
   /** 正在修改的那一筆（開底部編輯抽屜）。 */
   const [editing, setEditing] = useState<{ id: string; unsent: boolean; draft: Draft } | null>(null);
 
   // 換行程時把待送佇列與表單換成新行程的
   useEffect(() => {
-    setPending(readPending(trip.id));
+    const nextPending = readPending(trip.id);
+    setPending(nextPending);
     const l = getLedger(trip);
-    setDraft(blankDraft(l, categoriesOf(l)));
+    setDraft(blankDraft(l, categoriesOf(l), nextPending));
     setEditing(null);
   }, [trip.id]);
 
