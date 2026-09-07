@@ -72,24 +72,54 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
     if (scroller) scroller.scrollTop = 0;
   }, [dayIdx]);
 
-  // 看的是今天時，每分鐘重算一次「現在在哪一站」
+  // 看的是今天時，每分鐘重算一次「現在在哪一站」。
+  // ⚠️ 手機把背景分頁的計時器凍結，所以口袋裡放兩小時再打開，光靠 interval
+  // 標記會停在收起來的那一刻。回到前景 / 視窗取得焦點時一定要再算一次。
   useEffect(() => {
     if (!isToday) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => window.clearInterval(id);
+    const bump = () => setTick((t) => t + 1);
+    const id = window.setInterval(bump, 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') bump();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', bump);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', bump);
+    };
   }, [isToday]);
 
-  /** 目前所在站的 index（最後一個抵達時間已經過去的站）；不是今天就回 -1。 */
-  const currentIdx = useMemo(() => {
-    void tick; // 讓每分鐘的 tick 觸發重算
-    if (!isToday || !day) return -1;
+  /**
+   * 「現在人在哪一站」與「下一站是哪一站」。不是今天就都回 -1。
+   *
+   * hereIdx 一定要看停留時間，不能只看「抵達時間過了沒」：
+   * 09:34 到、待 60 分的一站，如果下一站排在 17:45，光看抵達時間會讓它整個下午
+   * 都掛著「現在」，看起來像程式卡住（實際回報過）。離開之後就不算在那一站，
+   * 這時候沒有任何站是「現在」，只顯示下一站還有多久——那才是真正有用的資訊。
+   */
+  const { hereIdx, nextIdx, nextInMin } = useMemo(() => {
+    void tick; // 讓每分鐘的 tick 與回到前景觸發重算
+    if (!isToday || !day) return { hereIdx: -1, nextIdx: -1, nextInMin: 0 };
     const now = nowMinutes();
-    let idx = -1;
-    day.items.forEach((it, i) => {
+    /** 跨過午夜的站算隔天，時間要加一整天才比得對。 */
+    const arrivalOf = (it: (typeof day.items)[number]): number | null => {
       const m = hhmmToMinutes(it.arrivalTime);
-      if (m !== null && m <= now) idx = i;
-    });
-    return idx;
+      if (m === null) return null;
+      return it.arrivalNextDay ? m + 24 * 60 : m;
+    };
+    let here = -1;
+    let next = -1;
+    for (let i = 0; i < day.items.length; i++) {
+      const it = day.items[i]!;
+      const arr = arrivalOf(it);
+      if (arr === null) continue;
+      if (arr <= now && now < arr + Math.max(1, it.stayMinutes)) here = i;
+      if (next === -1 && arr > now) next = i;
+    }
+    const nextArr = next >= 0 ? arrivalOf(day.items[next]!) : null;
+    return { hereIdx: here, nextIdx: next, nextInMin: nextArr === null ? 0 : nextArr - now };
   }, [isToday, day, tick]);
 
   async function copyAddress(addr: string) {
@@ -186,7 +216,7 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
           const pUrl = placeUrl(placeId, name, c.lat, c.lng);
           const nUrl = navigateUrl({ lat: c.lat, lng: c.lng, placeId }, mode);
           const tel = phoneNumber ? `tel:${phoneNumber.replace(/[^+\d]/g, '')}` : null;
-          const state = idx === currentIdx ? 'now' : idx === currentIdx + 1 && currentIdx >= 0 ? 'next' : '';
+          const state = idx === hereIdx ? 'now' : idx === nextIdx ? 'next' : '';
           const resv = resvMap.get(item.id);
           // 排的抵達時間比訂位時間還晚就要提醒（早到沒關係，遲到才是問題）
           const resvArr = resv?.time ? hhmmToMinutes(item.arrivalTime) : null;
@@ -217,7 +247,11 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
 
                 <div className="mv-card-body">
                   {state === 'now' && <span className="mv-state-tag now">現在</span>}
-                  {state === 'next' && <span className="mv-state-tag next">下一站</span>}
+                  {state === 'next' && (
+                    <span className="mv-state-tag next">
+                      下一站{nextInMin > 0 ? `　·　${nextInMin >= 60 ? `${Math.floor(nextInMin / 60)} 小時${nextInMin % 60 ? ` ${nextInMin % 60} 分` : ''}` : `${nextInMin} 分`}後` : ''}
+                    </span>
+                  )}
 
                   <div className="mv-name-row">
                     {emoji && (
