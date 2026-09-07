@@ -8,6 +8,7 @@ import MobileItinerary from './MobileItinerary';
 import MobileLedger from './MobileLedger';
 import MobileCards from './MobileCards';
 import MobileInfo from './MobileInfo';
+import MobileBudget from './MobileBudget';
 
 /**
  * 手機版外殼。
@@ -20,7 +21,7 @@ import MobileInfo from './MobileInfo';
  * 寫入方面只有記帳會寫 KV，而且是「按一次『記一筆』才寫一次」，不是每打一個字寫一次。
  */
 
-type Tab = 'trip' | 'cards' | 'info' | 'ledger';
+type Tab = 'trip' | 'cards' | 'budget' | 'info' | 'ledger';
 type LoadState = 'loading' | 'ready' | 'error';
 
 /** 離線快取：只留「目前這一份」行程，出國沒訊號時至少看得到。 */
@@ -271,6 +272,7 @@ export default function MobileApp() {
             onFocusHandled={() => setFocusReservationId(null)}
           />
         )}
+        {tab === 'budget' && <MobileBudget trip={trip} />}
         {tab === 'info' && <MobileInfo trip={trip} />}
         {tab === 'ledger' && (
           <MobileLedger trip={trip} onTripChange={(t) => applyTrip(t, { keepDay: true })} onToast={showToast} />
@@ -295,6 +297,15 @@ export default function MobileApp() {
             🪪
           </span>
           <span>手牌</span>
+        </button>
+        <button
+          className={`mv-tab${tab === 'budget' ? ' active' : ''}`}
+          onClick={() => setTab('budget')}
+        >
+          <span className="mv-tab-icon" aria-hidden>
+            💰
+          </span>
+          <span>預算</span>
         </button>
         <button
           className={`mv-tab${tab === 'info' ? ' active' : ''}`}

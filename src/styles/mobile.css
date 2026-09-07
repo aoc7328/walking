@@ -1814,3 +1814,149 @@
   font-size: 11.5px;
   font-weight: 500;
 }
+
+/* ── 預算分頁 ──────────────────────────────────────────────────────
+   出門在外只想知道三件事：可以花多少、花掉多少、還剩多少。
+   所以「還可以花」放最大，其他都是輔助。 */
+.mv-budget-page {
+  padding-bottom: 8px;
+}
+
+.mv-budget-note {
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  font-size: 12px;
+  color: var(--ink-secondary);
+}
+
+.mv-budget-hero {
+  padding: 16px 14px 14px;
+  margin-bottom: 10px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.mv-budget-hero-label {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.mv-budget-hero-num {
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1.15;
+  color: var(--accent-primary);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-budget-hero-num.over {
+  color: #B3402F;
+}
+
+.mv-budget-hero-sub {
+  margin-top: 2px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-budget-hero-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-secondary);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-budget-hero-foot b {
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.mv-budget-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mv-budget-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.mv-budget-cell-label {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+
+.mv-budget-cell-num {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink-primary);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-budget-cell-num.over {
+  color: #B3402F;
+}
+
+.mv-budget-cell-sub {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-feature-settings: 'tnum' 1;
+}
+
+/* 類別色點，跟電腦版消費分析同一組顏色 */
+.mv-budget-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.mv-budget-page .mv-budget {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.mv-budget-line {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-budget-foot {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 0.5px dashed var(--border-soft);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
+/* 五個分頁：字要縮一點才不會擠 */
+.mv-tab {
+  font-size: 10.5px;
+}

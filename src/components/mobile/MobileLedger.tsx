@@ -7,6 +7,7 @@ import { budgetBreakdown, categoriesOf, emptyLedger, getLedger } from '../../uti
 import { formatAmount, formatMoney, toTWD } from '../../utils/money';
 import { formatWithWeekday, toISODate } from '../../utils/date';
 import { uuid } from '../../utils/format';
+import { readPending, writePending } from '../../utils/mobilePending';
 import MobileSection from './MobileSection';
 
 /**
@@ -33,28 +34,6 @@ interface Draft {
   amount: string;
   currency: string;
   pay: string;
-}
-
-function pendingKey(tripId: string): string {
-  return `walking.mobilePending.${tripId}`;
-}
-
-function readPending(tripId: string): Expense[] {
-  try {
-    const raw = localStorage.getItem(pendingKey(tripId));
-    const arr = raw ? (JSON.parse(raw) as Expense[]) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-function writePending(tripId: string, list: Expense[]): void {
-  try {
-    localStorage.setItem(pendingKey(tripId), JSON.stringify(list));
-  } catch {
-    // ignore
-  }
 }
 
 /**
