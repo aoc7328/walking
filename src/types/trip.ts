@@ -98,6 +98,30 @@ export interface TodoItem {
   amount?: number;
 }
 
+/**
+ * 從行程裡被刪掉的地點，留一筆紀錄。
+ *
+ * 為什麼要這個：規劃時常常整段路線換掉，幾個月後想起「我之前有記過一間讀谷的設計旅館」
+ * 卻再也找不到——那筆資料已經被覆蓋掉了，只能去舊的分享快照裡碰運氣挖。
+ * 所以刪除時主動留存，而且刻意只留輕量欄位（不含照片與評論），
+ * 整份 trip 是一次 PUT，不能因為記錄刪除就把檔案養肥。
+ */
+export interface RemovedPlace {
+  placeId: string;
+  name: string;
+  address: string;
+  coordinates: { lat: number; lng: number };
+  types: string[];
+  phoneNumber?: string;
+  iconEmoji?: string;
+  /** 被刪掉的那一站上的備註。常常這個比地點本身還重要，一定要留。 */
+  notes?: string[];
+  /** 原本排在哪一天（日期字串），純紀錄。 */
+  fromDate?: string;
+  /** 刪除時間（epoch ms）。0 = 時間不明（例如從舊資料回收的）。 */
+  removedAt: number;
+}
+
 export interface Trip {
   id: string;
   name: string;
@@ -110,6 +134,8 @@ export interface Trip {
   markLegend?: MarkLegendEntry[];
   /** 旅遊帳本（出發前預訂/出發後流水帳/預算/消費分析）。舊行程為 undefined，讀寫時 fallback 空帳本。 */
   ledger?: Ledger;
+  /** 被刪掉的地點紀錄（最新的在前）。給「我之前記過某個地方，現在找不到了」用。 */
+  removedPlaces?: RemovedPlace[];
   createdAt: number;
   updatedAt: number;
 }

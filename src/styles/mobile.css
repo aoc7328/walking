@@ -1960,3 +1960,12 @@
 .mv-tab {
   font-size: 10.5px;
 }
+
+/* 手機版的刪除紀錄（唯讀；要加回行程回電腦版） */
+.mv-removed { padding: 10px 12px; margin-bottom: 8px; background: var(--bg-card); border: 0.5px solid var(--border-soft); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.mv-removed-name { font-size: 14.5px; font-weight: 500; line-height: 1.35; word-break: break-word; }
+.mv-removed-name a { color: inherit; text-decoration: none; }
+.mv-removed-addr { margin-top: 2px; font-size: 11.5px; color: var(--ink-muted); word-break: break-word; }
+.mv-removed-meta { margin-top: 3px; font-size: 11px; color: var(--ink-faint); }
+.mv-removed-notes { margin-top: 5px; padding-left: 8px; border-left: 2px solid var(--border-soft); font-size: 12px; line-height: 1.6; color: var(--ink-secondary); word-break: break-word; }
+

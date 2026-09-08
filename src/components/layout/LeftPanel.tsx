@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useTripStore } from '../../stores/tripStore';
 import SearchResultCard, { THUMB_LIMIT } from '../search/SearchResultCard';
+import RemovedList from '../search/RemovedList';
 
 export default function LeftPanel() {
   const collapsed = useUIStore((s) => s.collapse.leftPanel);
@@ -13,6 +14,8 @@ export default function LeftPanel() {
   const query = useSearchStore((s) => s.query);
   const currentDayId = useUIStore((s) => s.currentDayId);
   const trip = useTripStore((s) => s.trip);
+  // 沒在搜尋時，左欄在「我的收藏」與「刪除紀錄」之間切換
+  const [tab, setTab] = useState<'fav' | 'trash'>('fav');
 
   const currentDay = trip?.days.find((d) => d.id === currentDayId) ?? null;
   const favorites = trip?.favorites ?? [];
@@ -30,9 +33,11 @@ export default function LeftPanel() {
     return [...favored, ...others];
   }, [results, favoritePlaceIds]);
 
-  // 標題與資料來源依「是否在搜尋」切換
-  const title = isSearching ? '搜尋結果' : '我的收藏';
-  const count = isSearching ? results.length : favorites.length;
+  const removed = trip?.removedPlaces ?? [];
+  // 搜尋中一律顯示搜尋結果；沒搜尋時才輪到收藏 / 刪除紀錄
+  const showTrash = !isSearching && tab === 'trash';
+  const title = isSearching ? '搜尋結果' : showTrash ? '刪除紀錄' : '我的收藏';
+  const count = isSearching ? results.length : showTrash ? removed.length : favorites.length;
   const listData = isSearching ? sortedResults : favorites;
 
   return (
@@ -52,15 +57,30 @@ export default function LeftPanel() {
             </button>
           </div>
         </div>
+        {!isSearching && (
+          <div className="left-panel-tabs">
+            <button className={`lp-tab${tab === 'fav' ? ' active' : ''}`} onClick={() => setTab('fav')}>
+              收藏 {favorites.length > 0 && <span>{favorites.length}</span>}
+            </button>
+            <button
+              className={`lp-tab${tab === 'trash' ? ' active' : ''}`}
+              onClick={() => setTab('trash')}
+              title="從行程刪掉過的地點都留在這裡，連當時的備註一起"
+            >
+              刪除紀錄 {removed.length > 0 && <span>{removed.length}</span>}
+            </button>
+          </div>
+        )}
         <div className="left-panel-list thin-scroll">
-          {isLoading && <div className="empty-search">搜尋中…</div>}
-          {error && <div className="empty-search">{error}</div>}
-          {!isLoading && !error && listData.length === 0 && (
+          {showTrash && <RemovedList />}
+          {!showTrash && isLoading && <div className="empty-search">搜尋中…</div>}
+          {!showTrash && error && <div className="empty-search">{error}</div>}
+          {!showTrash && !isLoading && !error && listData.length === 0 && (
             <div className="empty-search">
               {isSearching ? '沒有結果' : '還沒有收藏的地點　·　點搜尋結果上的 ♡ 來收藏'}
             </div>
           )}
-          {listData.map((place, idx) => (
+          {!showTrash && listData.map((place, idx) => (
             <SearchResultCard
               key={place.id}
               place={place}

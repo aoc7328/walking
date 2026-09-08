@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Trip, DayPlan, ItineraryItem, DayMark, DayNote, TodoItem } from '../types/trip';
+import type { Trip, DayPlan, ItineraryItem, DayMark, DayNote, TodoItem, RemovedPlace } from '../types/trip';
 import type { Ledger } from '../types/ledger';
 import type { Place, TransportMode } from '../types/place';
 import { emptyLedger } from '../utils/ledger';
@@ -71,6 +71,9 @@ interface TripStore {
   refreshLegsForDay: (dayId: string) => Promise<void>;
 
   toggleFavorite: (place: Place) => void;
+  /** 刪除紀錄：加回某一天 / 永久移除一筆。 */
+  restoreRemoved: (placeId: string, dayId: string) => void;
+  purgeRemoved: (placeId: string) => void;
   isFavorited: (placeId: string) => boolean;
 
   /** 設定某地點的 emoji 圖示（同 placeId 的所有 item 與收藏同步更新；傳 undefined 清除） */
@@ -117,6 +120,42 @@ function findPlaceIcon(trip: Trip, placeId: string): string | undefined {
     }
   }
   return trip.favorites.find((f) => f.placeId === placeId && f.iconEmoji)?.iconEmoji;
+}
+
+/** 刪除紀錄最多留幾筆（整份 trip 是一次 PUT，不能無限長大）。 */
+const MAX_REMOVED = 200;
+
+/**
+ * 把「這次刪掉的站」記進刪除紀錄。
+ *
+ * 只記那些刪完之後整趟行程都不再出現的地點：同一間飯店會出現七、八次，
+ * 刪掉其中一天的那一份不算真的失去它，記下來只會洗版。
+ */
+function recordRemoved(trip: Trip, removed: ItineraryItem[], fromDate?: string): RemovedPlace[] | undefined {
+  const stillThere = new Set<string>();
+  for (const d of trip.days) for (const it of d.items) stillThere.add(it.place.placeId);
+  const now = Date.now();
+  const fresh: RemovedPlace[] = [];
+  for (const it of removed) {
+    const p = it.place;
+    if (!p.placeId || stillThere.has(p.placeId)) continue;
+    if (fresh.some((x) => x.placeId === p.placeId)) continue;
+    fresh.push({
+      placeId: p.placeId,
+      name: p.name,
+      address: p.address,
+      coordinates: p.coordinates,
+      types: p.types ?? [],
+      ...(p.phoneNumber ? { phoneNumber: p.phoneNumber } : {}),
+      ...(p.iconEmoji ? { iconEmoji: p.iconEmoji } : {}),
+      ...(it.notes && it.notes.length ? { notes: [...it.notes] } : {}),
+      ...(fromDate ? { fromDate } : {}),
+      removedAt: now,
+    });
+  }
+  if (fresh.length === 0) return trip.removedPlaces;
+  const kept = (trip.removedPlaces ?? []).filter((r) => !fresh.some((f) => f.placeId === r.placeId));
+  return [...fresh, ...kept].slice(0, MAX_REMOVED);
 }
 
 export const useTripStore = create<TripStore>((set, get) => ({
@@ -229,6 +268,8 @@ export const useTripStore = create<TripStore>((set, get) => ({
   removeItem: (dayId, itemId) =>
     set((state) => {
       if (!state.trip) return {};
+      const srcDay = state.trip.days.find((d) => d.id === dayId);
+      const gone = srcDay?.items.find((it) => it.id === itemId);
       const days = state.trip.days.map((d) => {
         if (d.id !== dayId) return d;
         const idx = d.items.findIndex((it) => it.id === itemId);
@@ -240,7 +281,8 @@ export const useTripStore = create<TripStore>((set, get) => ({
         const legs = relinkLegs(items, positional, cache);
         return { ...d, items, legs };
       });
-      return { trip: { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() } };
+      const next = { ...state.trip, days: chainAll(withAutoFill(days)), updatedAt: Date.now() };
+      return { trip: { ...next, removedPlaces: gone ? recordRemoved(next, [gone], srcDay?.date) : next.removedPlaces } };
     }),
 
   updateItem: (dayId, itemId, patch) =>
@@ -377,15 +419,47 @@ export const useTripStore = create<TripStore>((set, get) => ({
     set((state) => {
       if (!state.trip) return {};
       if (state.trip.days.length <= 1) return {};
+      const goneDay = state.trip.days.find((d) => d.id === dayId);
       const days = state.trip.days.filter((d) => d.id !== dayId);
+      const next = {
+        ...state.trip,
+        days: chainAll(withAutoFill(reindexDays(days, state.trip.startDate))),
+        updatedAt: Date.now(),
+      };
       return {
         trip: {
-          ...state.trip,
-          days: chainAll(withAutoFill(reindexDays(days, state.trip.startDate))),
-          updatedAt: Date.now(),
+          ...next,
+          removedPlaces: goneDay ? recordRemoved(next, goneDay.items, goneDay.date) : next.removedPlaces,
         },
       };
     }),
+
+  /** 從刪除紀錄把地點加回某一天（加回後就從紀錄裡拿掉）。 */
+  restoreRemoved: (placeId, dayId) => {
+    const rec = get().trip?.removedPlaces?.find((r) => r.placeId === placeId);
+    if (!rec) return;
+    const place: Place = {
+      id: uuid(),
+      placeId: rec.placeId,
+      name: rec.name,
+      address: rec.address,
+      coordinates: rec.coordinates,
+      types: rec.types,
+      ...(rec.phoneNumber ? { phoneNumber: rec.phoneNumber } : {}),
+      ...(rec.iconEmoji ? { iconEmoji: rec.iconEmoji } : {}),
+    };
+    const newId = get().addItemToDay(dayId, place);
+    if (newId && rec.notes?.length) get().updateItem(dayId, newId, { notes: [...rec.notes] });
+    set((state) => (state.trip
+      ? { trip: { ...state.trip, removedPlaces: (state.trip.removedPlaces ?? []).filter((r) => r.placeId !== placeId) } }
+      : {}));
+  },
+
+  /** 從刪除紀錄永久移掉一筆（確定再也不需要了）。 */
+  purgeRemoved: (placeId) =>
+    set((state) => (state.trip
+      ? { trip: { ...state.trip, removedPlaces: (state.trip.removedPlaces ?? []).filter((r) => r.placeId !== placeId), updatedAt: Date.now() } }
+      : {})),
 
   toggleFavorite: (place) =>
     set((state) => {

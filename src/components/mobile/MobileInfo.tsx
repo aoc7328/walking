@@ -9,6 +9,7 @@ import MobileSection from './MobileSection';
  * 手機版「資料」：出國時偶爾要查、但每次都不能沒有的東西。
  * 1. 住宿：住哪、幾晚、訂哪個平台、付了沒、免費取消到哪天
  * 2. 固定項目支出：機票 / KKday 行程 / 租車 / 保險 / eSIM… 出發前就付掉的那些
+ * 3. 刪除紀錄：從行程刪掉過的地點（「我之前明明記過一間店」的時候來這裡找）
  *
  * 純唯讀。要改一律回電腦版。
  */
@@ -26,6 +27,7 @@ export default function MobileInfo({ trip }: Props) {
     (a.checkIn ?? '9999-99-99').localeCompare(b.checkIn ?? '9999-99-99'),
   );
   const fixed = ledger.expenses.filter((e) => e.phase === 'pre');
+  const removed = trip.removedPlaces ?? [];
   const fixedTotal = fixed.reduce((s, e) => s + toTWD(e.amount, e.currency, fx), 0);
   const payName = (id?: string) => ledger.paymentMethods.find((p) => p.id === id)?.name ?? '';
 
@@ -140,6 +142,39 @@ export default function MobileInfo({ trip }: Props) {
         </div>
       ))}
       </MobileSection>
+
+      {/* 刪除紀錄：從行程刪掉過的地點。手機只讀，要加回去回電腦版。 */}
+      {removed.length > 0 && (
+        <MobileSection id="info-removed" title="刪除紀錄" count={removed.length}>
+          {removed.map((r) => (
+            <div key={r.placeId} className="mv-removed">
+              <div className="mv-removed-name">
+                {r.iconEmoji && <span aria-hidden>{r.iconEmoji} </span>}
+                {placeUrl(r.placeId, r.name, r.coordinates.lat, r.coordinates.lng) ? (
+                  <a href={placeUrl(r.placeId, r.name, r.coordinates.lat, r.coordinates.lng)!} target="_blank" rel="noreferrer">
+                    {r.name}
+                  </a>
+                ) : (
+                  r.name
+                )}
+              </div>
+              <div className="mv-removed-addr">{r.address}</div>
+              <div className="mv-removed-meta">
+                {r.removedAt ? new Date(r.removedAt).toLocaleDateString('zh-TW') + ' 刪的' : '刪除時間不明'}
+                {r.fromDate ? `　·　原本在 ${r.fromDate}` : ''}
+                {r.phoneNumber ? `　·　${r.phoneNumber}` : ''}
+              </div>
+              {r.notes && r.notes.length > 0 && (
+                <div className="mv-removed-notes">
+                  {r.notes.map((n, i) => (
+                    <div key={i}>· {n}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </MobileSection>
+      )}
 
       {/* 餐廳的錢與訂位狀態在「手牌」分頁，這裡只補一句指路，免得以為漏了 */}
       {ledger.restaurants.length > 0 && (
