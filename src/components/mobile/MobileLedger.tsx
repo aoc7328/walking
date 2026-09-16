@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 import type { Trip } from '../../types/trip';
 import type { Expense, Ledger } from '../../types/ledger';
 import { loadTripById, persistTripImmediate } from '../../db/repository';
-import { budgetBreakdown, categoriesOf, emptyLedger, getLedger } from '../../utils/ledger';
-import { formatAmount, formatMoney, toTWD } from '../../utils/money';
+import { categoriesOf, categoryOverview, emptyLedger, getLedger } from '../../utils/ledger';
+import { formatMoney, toTWD } from '../../utils/money';
 import { formatWithWeekday, toISODate } from '../../utils/date';
 import { uuid } from '../../utils/format';
 import { readPending, writePending } from '../../utils/mobilePending';
+import MobileBudget from './MobileBudget';
 import MobileSection from './MobileSection';
 
 /**
@@ -229,7 +230,7 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, fx]);
 
-  const budgets = budgetBreakdown(ledger);
+  const overview = categoryOverview(ledger);
 
   /**
    * 把待送的支出寫回雲端：重抓最新行程 → 附加（依 id 去重）→ PUT。
@@ -412,29 +413,9 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
         </div>
       </MobileSection>
 
-      {budgets.length > 0 && (
-        <MobileSection id="led-budget" title="預算" count={budgets.length}>
-          <div className="mv-budgets">
-            {budgets.map((b) => {
-              const pct = b.extra > 0 ? Math.min(100, (b.during / b.extra) * 100) : 0;
-              const over = b.remaining < 0;
-              return (
-                <div key={b.category} className="mv-budget">
-                  <div className="mv-budget-top">
-                    <span>{b.category}</span>
-                    <span className={over ? 'mv-over' : 'mv-muted'}>
-                      {over
-                        ? `超支 ${formatAmount(-b.remaining)}`
-                        : `剩 ${formatAmount(b.remaining)} / ${formatAmount(b.extra)}`}
-                    </span>
-                  </div>
-                  <div className="mv-budget-bar">
-                    <div className={`mv-budget-fill${over ? ' over' : ''}`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {overview.length > 0 && (
+        <MobileSection id="led-budget" title="預算 vs 實際" count={overview.length}>
+          <MobileBudget ledger={ledger} />
         </MobileSection>
       )}
 

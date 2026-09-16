@@ -1824,3 +1824,116 @@
 .mv-removed-meta { margin-top: 3px; font-size: 11px; color: var(--ink-faint); }
 .mv-removed-notes { margin-top: 5px; padding-left: 8px; border-left: 2px solid var(--border-soft); font-size: 12px; line-height: 1.6; color: var(--ink-secondary); word-break: break-word; }
 
+
+/* ── 預算 vs 實際 ───────────────────────────────────────────── */
+
+.mv-under {
+  color: var(--accent-primary);
+}
+
+.mv-bg {
+  margin-top: 14px;
+}
+
+.mv-bg-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.mv-bg-row:last-of-type {
+  border-bottom: none;
+}
+
+.mv-bg-head {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+  margin-bottom: 5px;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mv-bg-cat {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mv-bg-nums {
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.mv-bg-diff {
+  margin-top: 4px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.mv-bg-total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 2px solid var(--border-medium);
+  font-size: 14px;
+}
+
+.mv-bg-note {
+  margin-top: 8px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.mv-bg-list {
+  list-style: none;
+  margin: 10px 0 2px;
+  padding: 10px 12px;
+  background: var(--bg-softer);
+  border-radius: var(--radius-md);
+}
+
+.mv-bg-item {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.mv-bg-item:last-child {
+  border-bottom: none;
+}
+
+.mv-bg-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.mv-bg-item-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mv-bg-item-amt {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mv-bg-item-sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+  font-size: 11.5px;
+}
+
+.mv-bg-partial {
+  font-size: 11px;
+}

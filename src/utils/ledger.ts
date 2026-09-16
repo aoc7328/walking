@@ -1,6 +1,6 @@
 import type { Ledger, ExpenseCategory, AnalysisBucket, ReservationStatus, Accommodation, ReservationDefaults } from '../types/ledger';
 import type { Trip } from '../types/trip';
-import { toTWD } from './money';
+import { formatMoney, toTWD } from './money';
 import { addDays, formatMonthDay, weekdayLabel } from './date';
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = ['交通', '住宿', '飲食', '購物', '其他'];
@@ -223,6 +223,118 @@ export function budgetBreakdown(l: Ledger): BudgetRow[] {
     const s = split[b.category] ?? EMPTY_SPLIT;
     return { category: b.category, extra: b.amount, budget: s.planned + b.amount, committed: s.planned, during: s.during, remaining: b.amount - s.during };
   });
+}
+
+export interface OverviewRow {
+  category: string;
+  /** 當初抓的預算（住宿房價、餐廳預估、出發前預訂，加上手動加的額度）。 */
+  planned: number;
+  /** 到目前為止實際花掉的（出發前已付 + 旅途中記的流水帳）。 */
+  actual: number;
+  /** 正數＝超出預算，負數＝還沒花到。 */
+  diff: number;
+  /** 這類有沒有抓過預算；沒抓的（例如購物）不該顯示差額。 */
+  hasBudget: boolean;
+}
+
+/**
+ * 各分類「預算 vs 實際」。
+ *
+ * 跟 budgetBreakdown 的差別：那支只認手動設定的 l.budgets，沒設就一列都不出來。
+ * 這支改成直接看實際資料算——住宿房價、餐廳的預估費用、出發前預訂的支出
+ * 本來就是當初抓的預算，不必再讓人重填一次。手動設的額度仍會疊加上去。
+ */
+export function categoryOverview(l: Ledger): OverviewRow[] {
+  const split = categorySplit(l);
+  const extra = new Map(l.budgets.map((b) => [b.category, b.amount]));
+  for (const c of extra.keys()) split[c] ??= { pre: 0, during: 0, planned: 0 };
+
+  return Object.entries(split)
+    .map(([category, s]) => {
+      const planned = s.planned + (extra.get(category) ?? 0);
+      const actual = s.pre + s.during;
+      return { category, planned, actual, diff: actual - planned, hasBudget: planned > 0 };
+    })
+    .filter((r) => r.planned > 0 || r.actual > 0)
+    .sort((a, b) => b.actual - a.actual);
+}
+
+export interface DetailItem {
+  key: string;
+  date?: string;
+  title: string;
+  /** 台幣金額；訂位還沒吃時為 0。 */
+  twd: number;
+  /** 原幣顯示，例如 '¥9,980'；沒有金額就留空。 */
+  raw: string;
+  /** 這筆當初抓的預算（台幣），只有住宿與餐廳訂位才有。 */
+  planned?: number;
+  /** 右邊那顆徽章：訂位狀態、已付與否。 */
+  badge?: string;
+  note?: string;
+}
+
+/**
+ * 單一分類的逐筆明細，給人一行一行對帳用。
+ *
+ * 飲食比較特別：先列出當初訂的餐廳（帶預算），再列實際餐費，
+ * 這樣「哪一間花了多少」可以自己眼睛比對——不硬做自動配對，
+ * 因為同一天有兩筆訂位時（例如晚餐加酒吧）猜錯比不猜更誤導。
+ */
+export function categoryDetail(l: Ledger, category: string): DetailItem[] {
+  const money = (amt: number | undefined, cur: string | undefined): string =>
+    amt === undefined || amt === null ? '' : formatMoney(amt, cur ?? 'TWD');
+  const twd = (amt: number | undefined, cur: string | undefined): number =>
+    amt === undefined || amt === null ? 0 : toTWD(amt, cur ?? 'TWD', l.fxRate);
+
+  const out: DetailItem[] = [];
+
+  if (category === '住宿') {
+    for (const a of l.accommodations) {
+      out.push({
+        key: `stay-${a.id}`,
+        date: a.checkIn,
+        title: `${a.area}｜${a.name}`,
+        twd: twd(a.price, a.currency),
+        raw: money(a.price, a.currency),
+        planned: twd(a.price, a.currency),
+        badge: `${a.nights} 晚${a.paid ? '・已付' : ''}`,
+        note: a.platform,
+      });
+    }
+  }
+
+  if (category === '飲食') {
+    for (const r of l.restaurants) {
+      const est = twd(r.estimated, r.estimatedCurrency ?? r.currency);
+      out.push({
+        key: `resv-${r.id}`,
+        date: r.date,
+        title: `[訂位] ${r.name}`,
+        twd: twd(r.amount, r.currency),
+        raw: money(r.amount, r.currency),
+        planned: r.status === 'cancelled' ? 0 : est,
+        badge: RESERVATION_LABEL[r.status],
+        note: [r.time, r.cuisine, r.note].filter(Boolean).join('・'),
+      });
+    }
+  }
+
+  for (const e of l.expenses) {
+    if (e.category !== category) continue;
+    out.push({
+      key: `exp-${e.id}`,
+      date: e.date,
+      title: e.title,
+      twd: twd(e.amount, e.currency),
+      raw: money(e.amount, e.currency),
+      planned: e.phase === 'pre' ? twd(e.amount, e.currency) : undefined,
+      badge: e.phase === 'pre' ? '出發前' : undefined,
+      note: e.note,
+    });
+  }
+
+  return out.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
 }
 
 export interface CardUsage {
