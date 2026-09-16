@@ -1937,3 +1937,9 @@
 .mv-bg-partial {
   font-size: 11px;
 }
+
+.mv-bg-item-date {
+  margin-right: 6px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}

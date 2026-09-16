@@ -1,4 +1,4 @@
-import type { Ledger, ExpenseCategory, AnalysisBucket, ReservationStatus, Accommodation, ReservationDefaults } from '../types/ledger';
+import type { Ledger, ExpenseCategory, AnalysisBucket, ReservationStatus, Accommodation, ReservationDefaults, Expense, Restaurant } from '../types/ledger';
 import type { Trip } from '../types/trip';
 import { formatMoney, toTWD } from './money';
 import { addDays, formatMonthDay, weekdayLabel } from './date';
@@ -274,6 +274,69 @@ export interface DetailItem {
   note?: string;
 }
 
+/** 中日文字（拿來比店名時只認這些，才不會被英數字和符號干擾）。 */
+const CJK = /[一-鿿぀-ゟ゠-ヿ]/;
+
+function sharedChars(a: string, b: string): number {
+  const setB = new Set(b.replace(/[\s　]/g, ''));
+  let n = 0;
+  for (const c of new Set(a.replace(/[\s　]/g, ''))) if (CJK.test(c) && setB.has(c)) n++;
+  return n;
+}
+
+/**
+ * 把「訂位的餐廳」和「當天實際那筆餐費」配成一對，回傳 restaurantId -> expenseId。
+ *
+ * 流水帳沒有欄位指回餐廳，所以只能用同一天的資料猜。兩輪：
+ * 1. 先比店名——名字撞得上（兩個以上共同的中日文字）幾乎不會錯，
+ *    例如「すき焼き松山　燦別館」對上「松山燦本店」。
+ * 2. 名字對不上的（「鳥拓 久茂地店」記成「串燒」），才退而求其次看金額：
+ *    只收當天最大的那筆，而且要跟預估落在 0.65～1.8 倍之間。
+ *
+ * 定這個區間是為了擋掉「同一天訂了兩攤但只去一攤」的情況——
+ * 例如 9/06 訂了晚餐加酒吧，酒吧沒去，剩下的餐費是中午的鰻魚飯，
+ * 金額只有預估的六成，落在區間外就不會被硬湊成一對。
+ * 寧可漏配讓人自己看，也不要配錯給出一個假的對照。
+ */
+export function matchReservations(l: Ledger): Map<string, string> {
+  const pairs = new Map<string, string>();
+  const used = new Set<string>();
+  const amt = (e: Expense) => toTWD(e.amount, e.currency, l.fxRate);
+  const est = (r: Restaurant) =>
+    r.estimated ? toTWD(r.estimated, r.estimatedCurrency ?? r.currency ?? 'TWD', l.fxRate) : 0;
+
+  const byDate = new Map<string, Expense[]>();
+  for (const e of l.expenses) {
+    if (e.category !== '飲食' || !e.date) continue;
+    byDate.set(e.date, [...(byDate.get(e.date) ?? []), e]);
+  }
+
+  const resv = l.restaurants.filter((r) => r.status !== 'cancelled' && r.date);
+  const free = (r: Restaurant) => (byDate.get(r.date) ?? []).filter((e) => !used.has(e.id));
+
+  for (const r of resv) {
+    let best: Expense | null = null;
+    let bestN = 1; // 至少要兩個共同字才算數
+    for (const e of free(r)) {
+      const n = sharedChars(r.name, e.title);
+      if (n > bestN) [bestN, best] = [n, e];
+    }
+    if (best) (pairs.set(r.id, best.id), used.add(best.id));
+  }
+
+  for (const r of resv) {
+    if (pairs.has(r.id)) continue;
+    const target = est(r);
+    const cands = free(r);
+    if (!target || cands.length === 0) continue;
+    const top = cands.reduce((a, b) => (amt(a) >= amt(b) ? a : b));
+    const ratio = amt(top) / target;
+    if (ratio >= 0.65 && ratio <= 1.8) (pairs.set(r.id, top.id), used.add(top.id));
+  }
+
+  return pairs;
+}
+
 /**
  * 單一分類的逐筆明細，給人一行一行對帳用。
  *
@@ -304,24 +367,39 @@ export function categoryDetail(l: Ledger, category: string): DetailItem[] {
     }
   }
 
+  /** 已經併進訂位那一列的餐費，後面就不要再單獨列一次。 */
+  const merged = new Set<string>();
+
   if (category === '飲食') {
+    const pairs = matchReservations(l);
+    const byId = new Map(l.expenses.map((e) => [e.id, e]));
+
     for (const r of l.restaurants) {
       const est = twd(r.estimated, r.estimatedCurrency ?? r.currency);
+      const hit = pairs.get(r.id);
+      const e = hit ? byId.get(hit) : undefined;
+      if (e) merged.add(e.id);
+
+      // 實際金額優先用配到的那筆餐費，其次才是訂位上自己填的
+      const actual = e ? twd(e.amount, e.currency) : twd(r.amount, r.currency);
+      const rawAmt = e ? money(e.amount, e.currency) : money(r.amount, r.currency);
+
       out.push({
         key: `resv-${r.id}`,
         date: r.date,
-        title: `[訂位] ${r.name}`,
-        twd: twd(r.amount, r.currency),
-        raw: money(r.amount, r.currency),
+        title: r.name,
+        twd: actual,
+        raw: rawAmt,
         planned: r.status === 'cancelled' ? 0 : est,
-        badge: RESERVATION_LABEL[r.status],
-        note: [r.time, r.cuisine, r.note].filter(Boolean).join('・'),
+        badge: r.status === 'cancelled' ? RESERVATION_LABEL[r.status] : e ? undefined : '未對到',
+        // 配到的餐費記成什麼名字也寫出來，配錯了才看得出來
+        note: [r.time, e && e.title !== r.name ? `記為「${e.title}」` : '', r.note].filter(Boolean).join('・'),
       });
     }
   }
 
   for (const e of l.expenses) {
-    if (e.category !== category) continue;
+    if (e.category !== category || merged.has(e.id)) continue;
     out.push({
       key: `exp-${e.id}`,
       date: e.date,

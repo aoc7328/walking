@@ -103,26 +103,41 @@ function DetailList({ items }: { ledger: Ledger; category: string; items: Detail
   return (
     <ul className="mv-bg-list">
       {items.map((it) => {
-        const gap = it.planned !== undefined && it.planned > 0 ? it.twd - it.planned : null;
+        const budget = it.planned ?? 0;
+        // 預算和實際是同一個數字時（出發前就付掉的、住宿房價）不用箭頭，
+        // 寫成「22,066 → 22,066」只是佔位子。
+        const paired = budget > 0 && it.twd > 0 && Math.round(budget) !== Math.round(it.twd);
+        const gap = paired ? it.twd - budget : 0;
         return (
           <li key={it.key} className="mv-bg-item">
             <div className="mv-bg-item-top">
-              <span className="mv-bg-item-name">{it.title}</span>
-              <span className="mv-bg-item-amt">{it.raw || '—'}</span>
-            </div>
-            <div className="mv-bg-item-sub">
-              <span className="mv-muted">
-                {it.date ? formatWithWeekday(it.date) : ''}
-                {it.badge ? `・${it.badge}` : ''}
-                {it.note ? `・${it.note}` : ''}
+              <span className="mv-bg-item-name">
+                {it.date && <span className="mv-bg-item-date">{formatWithWeekday(it.date)}</span>}
+                {it.title}
               </span>
-              {it.planned !== undefined && it.planned > 0 && (
-                <span className={gap !== null && gap > 0 ? 'mv-over' : 'mv-muted'}>
-                  預算 {formatAmount(it.planned)}
-                  {it.twd > 0 && gap !== null ? `｜${gap > 0 ? '+' : ''}${formatAmount(gap)}` : ''}
-                </span>
-              )}
+              <span className="mv-bg-item-amt">
+                {paired ? (
+                  <>
+                    <span className="mv-muted">{formatAmount(budget)} → </span>
+                    {formatAmount(it.twd)}
+                    <span className={gap > 0 ? 'mv-over' : 'mv-under'}>
+                      {' '}
+                      {gap > 0 ? '+' : '−'}
+                      {formatAmount(Math.abs(gap))}
+                    </span>
+                  </>
+                ) : budget > 0 && it.twd === 0 ? (
+                  <span className="mv-muted">預算 {formatAmount(budget)}</span>
+                ) : (
+                  it.raw || '—'
+                )}
+              </span>
             </div>
+            {(it.badge || it.note) && (
+              <div className="mv-bg-item-sub">
+                <span className="mv-muted">{[it.badge, it.note].filter(Boolean).join('・')}</span>
+              </div>
+            )}
           </li>
         );
       })}
