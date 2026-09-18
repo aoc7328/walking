@@ -2,7 +2,7 @@ import type { Trip } from '../../types/trip';
 import { getLedger, formatStayRange, RESERVATION_LABEL } from '../../utils/ledger';
 import { formatAmount, formatMoney, toTWD } from '../../utils/money';
 import { toISODate } from '../../utils/date';
-import { placeUrl } from '../../utils/gmaps';
+import { navigateUrl, placeUrl } from '../../utils/gmaps';
 import MobileSection from './MobileSection';
 
 /**
@@ -42,6 +42,21 @@ export default function MobileInfo({ trip }: Props) {
   // 今晚住哪預設展開，其餘收起來
   const tonightCount = stays.filter((a) => isTonight(a.checkIn, a.nights)).length;
 
+  /**
+   * 住宿列對回行程裡的同一個地點，為的是拿座標——有座標才能一按就導航，
+   * 不然只能把名字丟給 Google 搜，名字裡有全形括號那類字元時會搜不到。
+   * 先比 placeId（帳本從行程帶入時會寫），比不到才退回比名字。
+   */
+  const stayDest = new Map<string, { lat: number; lng: number; placeId?: string }>();
+  for (const day of trip.days) {
+    for (const item of day.items) {
+      const p = item.place;
+      const dest = { lat: p.coordinates.lat, lng: p.coordinates.lng, placeId: p.placeId };
+      if (p.placeId && !stayDest.has(`id:${p.placeId}`)) stayDest.set(`id:${p.placeId}`, dest);
+      if (!stayDest.has(`name:${p.name}`)) stayDest.set(`name:${p.name}`, dest);
+    }
+  }
+
   return (
     <div className="mv-info">
       <MobileSection
@@ -54,7 +69,8 @@ export default function MobileInfo({ trip }: Props) {
       {stays.length === 0 && <div className="mv-empty">還沒有住宿資料</div>}
       {stays.map((a) => {
         const tonight = isTonight(a.checkIn, a.nights);
-        const mapUrl = placeUrl(undefined, a.name);
+        const dest = (a.placeId ? stayDest.get(`id:${a.placeId}`) : undefined) ?? stayDest.get(`name:${a.name}`);
+        const mapUrl = dest ? navigateUrl(dest) : placeUrl(a.placeId, a.name);
         return (
           <div key={a.id} className={`mv-info-card${tonight ? ' now' : ''}`}>
             <div className="mv-info-title">
@@ -104,7 +120,7 @@ export default function MobileInfo({ trip }: Props) {
             </dl>
             {mapUrl && (
               <a className="mv-resv-map" href={mapUrl} target="_blank" rel="noreferrer">
-                找這間飯店 ↗
+                {dest ? '🧭 Google 導航' : '找這間飯店 ↗'}
               </a>
             )}
           </div>
