@@ -34,7 +34,10 @@ function nowMinutes(): number {
 
 export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, onOpenReservation }: Props) {
   const barRef = useRef<HTMLDivElement>(null);
+  const dayRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
+  /** 「現在」那張卡在不在畫面上。看不到才需要那顆引導鈕。 */
+  const [focusVisible, setFocusVisible] = useState(true);
 
   const day: DayPlan | undefined = trip.days[dayIdx];
   const todayISO = toISODate(new Date());
@@ -122,6 +125,64 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
     return { hereIdx: here, nextIdx: next, nextInMin: nextArr === null ? 0 : nextArr - now };
   }, [isToday, day, tick]);
 
+  /**
+   * 引導鈕要把人帶去哪一張卡：人在某站就是那站，站與站之間的空檔就指下一站。
+   * 兩者都沒有（今天跑完了 / 這天沒排東西）就不出現。
+   */
+  const focusIdx = hereIdx >= 0 ? hereIdx : nextIdx;
+
+  /**
+   * 那張卡捲出畫面外了沒。日期列是 sticky 蓋在上緣的，被它蓋住的那段不算看得到。
+   *
+   * 這裡刻意用捲動事件量位置，沒有用 IntersectionObserver：兩者在手機上效果一樣，
+   * 但 IO 的回呼要等瀏覽器繪製才送，畫面沒在繪製時（背景分頁、視窗收起來）就完全不回報，
+   * 很難驗。量 rect 是同步的，什麼情況下都算得出來。
+   * 監聽器是 passive 的，一次捲動只讀 rect 不寫樣式，不會拖慢捲動。
+   */
+  useEffect(() => {
+    if (!isToday || focusIdx < 0) {
+      setFocusVisible(true);
+      return;
+    }
+    const scroller = dayRef.current?.closest('.mv-scroll');
+    if (!scroller) return;
+    const measure = () => {
+      const card = dayRef.current?.querySelector<HTMLElement>(`[data-item="${focusIdx}"]`);
+      if (!card) return;
+      const view = scroller.getBoundingClientRect();
+      const top = view.top + (barRef.current?.offsetHeight ?? 0);
+      const r = card.getBoundingClientRect();
+      setFocusVisible(r.bottom > top && r.top < view.bottom);
+    };
+    measure();
+    scroller.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    return () => {
+      scroller.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, [isToday, focusIdx, dayIdx, day?.id]);
+
+  function jumpToFocus() {
+    dayRef.current
+      ?.querySelector<HTMLElement>(`[data-item="${focusIdx}"]`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  /**
+   * 引導鈕只有一顆，分兩段：先把人帶回今天，回到今天之後再帶去「現在」那張卡。
+   * 沒有要引導的時候就整顆不出現，不要佔著畫面。
+   */
+  const guide =
+    todayIdx >= 0 && dayIdx !== todayIdx
+      ? {
+          label: `回到今天 · Day ${trip.days[todayIdx]?.dayIndex}`,
+          onClick: () => onSelectDay(todayIdx),
+        }
+      : isToday && focusIdx >= 0 && !focusVisible
+        ? { label: hereIdx >= 0 ? '↓ 回到現在這站' : '↓ 跳到下一站', onClick: jumpToFocus }
+        : null;
+
   async function copyAddress(addr: string) {
     if (!addr) return;
     const ok = await copyToClipboard(addr);
@@ -162,7 +223,7 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
         })}
       </div>
 
-      <div className="mv-day">
+      <div className="mv-day" ref={dayRef}>
         <div className="mv-day-head">
           <div className="mv-day-title">
             Day <em>{day.dayIndex}</em>
@@ -187,11 +248,8 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
               })}
             </div>
           )}
-          {todayIdx >= 0 && todayIdx !== dayIdx && (
-            <button className="mv-jump-today" onClick={() => onSelectDay(todayIdx)}>
-              跳到今天（Day {trip.days[todayIdx]?.dayIndex}）
-            </button>
-          )}
+          {/* 原本這裡有一顆「跳到今天」，但它只在捲到最上面才看得到。
+              改成頁面下緣那顆常駐的引導鈕（mv-guide），不要兩顆並存。 */}
         </div>
 
         {dayNote && (
@@ -236,7 +294,7 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
                 </div>
               )}
 
-              <article className={`mv-card${state ? ` ${state}` : ''}`}>
+              <article className={`mv-card${state ? ` ${state}` : ''}`} data-item={idx}>
                 <div className="mv-card-side">
                   <span className="mv-num">{idx + 1}</span>
                   <span className="mv-time">
@@ -328,6 +386,14 @@ export default function MobileItinerary({ trip, dayIdx, onSelectDay, onToast, on
             </div>
           );
         })}
+
+        {guide && (
+          <div className="mv-guide-wrap">
+            <button className="mv-guide" onClick={guide.onClick}>
+              {guide.label}
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

@@ -261,16 +261,36 @@
   color: var(--ink-secondary);
 }
 
-.mv-jump-today {
-  margin-top: 10px;
-  padding: 7px 14px;
-  border: 0.5px solid var(--accent-warm);
+/* 「回到今天 / 回到現在」引導鈕。
+   用 sticky 釘在捲動區下緣，不用 fixed——分頁列是一般排版流裡的元素，
+   fixed 就得把它的高度硬寫進來，之後改分頁列高度這顆就會跑位。
+   wrap 不吃點擊，只有按鈕本身吃，免得它那條橫帶擋住底下的卡片。 */
+.mv-guide-wrap {
+  position: sticky;
+  bottom: 12px;
+  z-index: 6;
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  pointer-events: none;
+}
+
+.mv-guide {
+  pointer-events: auto;
+  padding: 10px 18px;
+  border: none;
   border-radius: 999px;
-  background: var(--accent-warm-soft);
-  color: var(--accent-warm);
+  background: var(--accent-warm);
+  color: #fff;
   font-family: var(--font-body);
   font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(60, 45, 20, 0.22);
   cursor: pointer;
+}
+
+.mv-guide:active {
+  transform: scale(0.97);
 }
 
 .mv-daynote {
