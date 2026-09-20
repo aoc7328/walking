@@ -50,16 +50,22 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
   const setQty = (id: string, qty: number) =>
     patchSplits((list) => list.map((s) => (s.id === id ? { ...s, qty: Math.max(1, Number.isFinite(qty) ? qty : 1) } : s)), '已改數量');
 
-  /** 同一項要分給兩個人：複製成另一列，兩邊各自改數量。 */
-  const duplicate = (s: ExpenseSplit) =>
+  /**
+   * 同一項要分給兩個人：從原本那列「分」一件出來成為新的一列，
+   * 兩列數量加起來不變（10 → 9 + 1，再自己調成 6 + 4）。
+   *
+   * 不能用「複製一列」做——那會讓總件數多一件、明細加總超過刷卡金額，
+   * 差額一被攤下去，連沒動到的人金額都會跟著跳。
+   */
+  const splitOff = (s: ExpenseSplit) =>
     patchSplits((list) => {
       const i = list.findIndex((x) => x.id === s.id);
-      if (i < 0) return list;
-      const copy: ExpenseSplit = { ...s, id: uuid(), qty: 1, person: undefined };
+      if (i < 0 || !(s.qty > 1)) return list;
       const next = [...list];
-      next.splice(i + 1, 0, copy);
+      next[i] = { ...s, qty: s.qty - 1 };
+      next.splice(i + 1, 0, { ...s, id: uuid(), qty: 1, person: undefined });
       return next;
-    }, '已複製一列，兩邊各自改數量');
+    }, '已拆成兩列，數量各自調');
 
   const remove = (id: string) => patchSplits((list) => list.filter((s) => s.id !== id), '已刪除這項');
 
@@ -109,6 +115,15 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
             </div>
           )}
 
+          {/* 明細跟刷卡金額對不上時一定要講出來：差額會按比例攤進每個人的金額，
+              沒看到這行的話，只會覺得別人的錢莫名其妙變來變去。 */}
+          {splits.length > 0 && diff !== 0 && (
+            <div className="mv-split-warn">
+              明細加總比刷卡金額{diff < 0 ? '多' : '少'} {formatMoney(Math.abs(diff), cur)}
+              ，差額已按比例攤進每個人的金額。數量還沒調完的話先調完。
+            </div>
+          )}
+
           {splits.length === 0 ? (
             <p className="mv-empty">
               這筆還沒有明細。
@@ -155,7 +170,12 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
                           <button className="mv-btn mv-btn-small" onClick={() => setQty(s.id, s.qty - 1)} disabled={busy || s.qty <= 1}>−</button>
                           <b>{s.qty}</b>
                           <button className="mv-btn mv-btn-small" onClick={() => setQty(s.id, s.qty + 1)} disabled={busy}>＋</button>
-                          <button className="mv-btn mv-btn-small" onClick={() => duplicate(s)} disabled={busy}>拆成兩列</button>
+                          <button
+                            className="mv-btn mv-btn-small"
+                            onClick={() => splitOff(s)}
+                            disabled={busy || !(s.qty > 1)}
+                            title={s.qty > 1 ? '分一件出來成為新的一列，配給別人' : '只有一件，沒得拆'}
+                          >拆成兩列</button>
                           <button className="mv-btn mv-btn-small mv-btn-danger" onClick={() => remove(s.id)} disabled={busy}>刪除</button>
                         </div>
                       </div>
