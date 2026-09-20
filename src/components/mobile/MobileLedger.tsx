@@ -528,7 +528,7 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
                   disabled={syncing}
                   title="幫別人買的東西，拆成一項項配給誰"
                 >
-                  拆給誰
+                  拆帳
                 </button>
               )}
               <button className="mv-submit mv-edit-save" onClick={() => void saveEdit()} disabled={syncing}>

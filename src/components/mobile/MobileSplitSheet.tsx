@@ -100,7 +100,7 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
     <div className="mv-sheet-backdrop" onClick={(ev) => { if (ev.target === ev.currentTarget) onClose(); }}>
       <div className="mv-sheet">
         <div className="mv-sheet-head">
-          <span>拆給誰　·　{expense.title || '（未命名）'}</span>
+          <span>拆帳　·　{expense.title || '（未命名）'}</span>
           <button className="mv-sheet-close" onClick={onClose} aria-label="關閉">×</button>
         </div>
 

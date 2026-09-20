@@ -8,7 +8,7 @@ interface Props {
   ledger: Ledger;
   busy: boolean;
   mutate: (fn: (l: Ledger) => Ledger, okMsg: string) => Promise<boolean>;
-  /** 點某一筆已拆的支出 → 打開那筆的「拆給誰」。 */
+  /** 點某一筆已拆的支出 → 打開那筆的「拆帳」。 */
   onOpenExpense: (expenseId: string) => void;
 }
 
@@ -99,7 +99,7 @@ export default function MobileSplit({ ledger, busy, mutate, onOpenExpense }: Pro
       )}
 
       <p className="mv-bg-note">
-        金額換算台幣（匯率 {ledger.fxRate}）。要拆一筆還沒拆的，到下面流水帳點那一筆，選「拆給誰」。
+        金額換算台幣（匯率 {ledger.fxRate}）。要拆一筆還沒拆的，到下面流水帳點那一筆，選「拆帳」。
       </p>
     </div>
   );
