@@ -1963,3 +1963,138 @@
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* 代買分帳（手機） */
+.mv-split-sum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.mv-split-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 0.5px solid var(--border-medium);
+  border-radius: 999px;
+  background: var(--bg-card);
+  font-size: 13px;
+  color: var(--ink-secondary);
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-split-chip b {
+  color: var(--ink-primary);
+  font-weight: 500;
+}
+
+.mv-split-list {
+  display: grid;
+  gap: 6px;
+}
+
+.mv-split-row {
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.mv-split-row.open {
+  border-color: var(--accent-primary);
+}
+
+.mv-split-head {
+  width: 100%;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mv-split-name {
+  font-size: 14px;
+  color: var(--ink-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.mv-split-amt {
+  font-size: 13px;
+  color: var(--ink-secondary);
+  white-space: nowrap;
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-split-who {
+  min-width: 52px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--ink-muted);
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.mv-split-who.assigned {
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
+}
+
+.mv-split-edit {
+  padding: 0 12px 12px;
+  border-top: 0.5px dashed var(--border-soft);
+}
+
+.mv-split-edit .mv-cat-row {
+  margin-top: 10px;
+}
+
+.mv-split-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mv-split-add {
+  margin-top: 14px;
+}
+
+.mv-split-settle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 2px 8px;
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+  cursor: pointer;
+}
+
+.mv-split-settle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-primary);
+}
+
+.mv-split-foot-note {
+  padding: 8px 2px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mv-split-reopen-label {
+  margin-top: 14px;
+  font-size: 12.5px;
+}

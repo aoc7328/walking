@@ -11,6 +11,7 @@ import { uuid } from '../../utils/format';
 import { readPending, writePending } from '../../utils/mobilePending';
 import MobileBudget from './MobileBudget';
 import MobileSplit from './MobileSplit';
+import MobileSplitSheet from './MobileSplitSheet';
 import MobileSection from './MobileSection';
 
 /**
@@ -192,6 +193,8 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
 
   /** 正在修改的那一筆（開底部編輯抽屜）。 */
   const [editing, setEditing] = useState<{ id: string; unsent: boolean; draft: Draft } | null>(null);
+  /** 正在拆代買明細的那一筆支出 id。 */
+  const [splitting, setSplitting] = useState<string | null>(null);
 
   // 換行程時把待送佇列與表單換成新行程的
   useEffect(() => {
@@ -200,6 +203,7 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
     const l = getLedger(trip);
     setDraft(blankDraft(l, categoriesOf(l), nextPending));
     setEditing(null);
+    setSplitting(null);
   }, [trip.id]);
 
   const during = useMemo(() => ledger.expenses.filter((e) => e.phase === 'during'), [ledger.expenses]);
@@ -276,19 +280,15 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
     [flush, onTripChange, onToast, trip.id],
   );
 
-  /** 已經在雲端的那些：改一筆 / 刪一筆，都是「重抓最新版 → 動一筆 → 寫回」。 */
-  const mutateRemote = useCallback(
-    async (fn: (list: Expense[]) => Expense[], okMsg: string) => {
+  /** 改帳本裡的任何東西：「重抓最新版 → 改 → 寫回」。 */
+  const mutateLedger = useCallback(
+    async (fn: (l: Ledger) => Ledger, okMsg: string) => {
       setSyncing(true);
       try {
         const fresh = await loadTripById(trip.id);
         if (!fresh) throw new Error('無法取得雲端行程');
         const base = fresh.ledger ?? emptyLedger();
-        const next: Trip = {
-          ...fresh,
-          ledger: { ...base, expenses: fn(base.expenses) },
-          updatedAt: Date.now(),
-        };
+        const next: Trip = { ...fresh, ledger: fn(base), updatedAt: Date.now() };
         await persistTripImmediate(next);
         onTripChange(next);
         onToast(okMsg);
@@ -301,6 +301,13 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
       }
     },
     [onTripChange, onToast, trip.id],
+  );
+
+  /** 已經在雲端的那些：改一筆 / 刪一筆。 */
+  const mutateRemote = useCallback(
+    (fn: (list: Expense[]) => Expense[], okMsg: string) =>
+      mutateLedger((l) => ({ ...l, expenses: fn(l.expenses) }), okMsg),
+    [mutateLedger],
   );
 
   function submit() {
@@ -375,6 +382,7 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
   }
 
   const payName = (id?: string) => ledger.paymentMethods.find((p) => p.id === id)?.name ?? '';
+  const splitExpense = splitting ? (ledger.expenses.find((e) => e.id === splitting) ?? null) : null;
 
   return (
     <div className="mv-ledger">
@@ -424,7 +432,12 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
 
       {payees.length > 0 && (
         <MobileSection id="led-split" title="代買 · 每人要付" count={payees.length}>
-          <MobileSplit ledger={ledger} />
+          <MobileSplit
+            ledger={ledger}
+            busy={syncing}
+            mutate={mutateLedger}
+            onOpenExpense={(id) => setSplitting(id)}
+          />
         </MobileSection>
       )}
 
@@ -504,6 +517,20 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
               <button className="mv-btn mv-btn-danger" onClick={() => void removeEntry()} disabled={syncing}>
                 刪除
               </button>
+              {!editing.unsent && (
+                <button
+                  className="mv-btn"
+                  onClick={() => {
+                    const id = editing.id;
+                    setEditing(null);
+                    setSplitting(id);
+                  }}
+                  disabled={syncing}
+                  title="幫別人買的東西，拆成一項項配給誰"
+                >
+                  拆給誰
+                </button>
+              )}
               <button className="mv-submit mv-edit-save" onClick={() => void saveEdit()} disabled={syncing}>
                 {syncing ? '儲存中…' : '儲存修改'}
               </button>
@@ -511,6 +538,16 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
           </div>
         </div>,
         document.body,
+      )}
+
+      {splitExpense && (
+        <MobileSplitSheet
+          expense={splitExpense}
+          ledger={ledger}
+          busy={syncing}
+          mutate={mutateLedger}
+          onClose={() => setSplitting(null)}
+        />
       )}
     </div>
   );
