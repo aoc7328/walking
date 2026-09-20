@@ -4977,3 +4977,18 @@ input.led-cell.num { text-align: right; }
 .removed-restore:disabled { opacity: 0.4; cursor: not-allowed; }
 .removed-purge { padding: 2px 7px; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--ink-faint); font-size: 14px; line-height: 1; cursor: pointer; }
 .removed-purge:hover { color: #B3402F; background: var(--bg-softer); }
+
+/* 代買 · 分帳 */
+.led-payee-grid { grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
+.led-payee.settled { opacity: 0.55; }
+.led-payee-settle { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-secondary); white-space: nowrap; cursor: pointer; }
+.led-payee-lines { list-style: none; margin: 8px 0 0; padding: 8px 0 0; border-top: 0.5px dashed var(--border-soft); display: grid; gap: 4px; }
+.led-payee-lines li { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ink-primary); font-feature-settings: 'tnum' 1; }
+.led-split-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.led-split-tb td .led-cell { min-width: 72px; }
+.led-split-shares { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.led-split-chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 11px; border: 0.5px solid var(--border-medium); border-radius: 999px; background: var(--bg-card); font-size: 13px; color: var(--ink-secondary); font-feature-settings: 'tnum' 1; }
+.led-split-chip b { color: var(--ink-primary); font-weight: 500; }
+.led-split-chip i { font-style: normal; font-size: 11.5px; }
+.led-split-paste { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }
+.led-split-textarea { flex: 1; max-width: none; min-height: 84px; resize: vertical; font-family: var(--font-body); line-height: 1.6; }

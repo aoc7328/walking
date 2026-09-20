@@ -4,11 +4,13 @@ import type { Trip } from '../../types/trip';
 import type { Expense, Ledger } from '../../types/ledger';
 import { loadTripById, persistTripImmediate } from '../../db/repository';
 import { categoriesOf, categoryOverview, emptyLedger, getLedger } from '../../utils/ledger';
+import { payeeTotals } from '../../utils/split';
 import { formatMoney, toTWD } from '../../utils/money';
 import { formatWithWeekday, toISODate } from '../../utils/date';
 import { uuid } from '../../utils/format';
 import { readPending, writePending } from '../../utils/mobilePending';
 import MobileBudget from './MobileBudget';
+import MobileSplit from './MobileSplit';
 import MobileSection from './MobileSection';
 
 /**
@@ -231,6 +233,7 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
   }, [rows, fx]);
 
   const overview = categoryOverview(ledger);
+  const payees = payeeTotals(ledger);
 
   /**
    * 把待送的支出寫回雲端：重抓最新行程 → 附加（依 id 去重）→ PUT。
@@ -416,6 +419,12 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
       {overview.length > 0 && (
         <MobileSection id="led-budget" title="預算 vs 實際" count={overview.length}>
           <MobileBudget ledger={ledger} />
+        </MobileSection>
+      )}
+
+      {payees.length > 0 && (
+        <MobileSection id="led-split" title="代買 · 每人要付" count={payees.length}>
+          <MobileSplit ledger={ledger} />
         </MobileSection>
       )}
 

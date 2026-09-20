@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import type {
-  Ledger, Accommodation, Restaurant, Expense, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults, VjwEntry, Ticket, CertKind, CertRequest,
+  Ledger, Accommodation, Restaurant, Expense, ExpenseSplit, PaymentMethod, CategoryBudget, ExpensePhase, ExpenseCategory, ReservationDefaults, VjwEntry, Ticket, CertKind, CertRequest,
 } from '../../types/ledger';
 import { uuid } from '../../utils/format';
 import { toISODate, addDays } from '../../utils/date';
@@ -174,6 +174,54 @@ export function useLedgerEdit() {
       patchExpense: (id: string, patch: Partial<Expense>) =>
         upd((l) => ({ ...l, expenses: l.expenses.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
       delExpense: (id: string) => upd((l) => ({ ...l, expenses: l.expenses.filter((e) => e.id !== id) })),
+
+      /** 代買分帳：一筆支出底下的商品明細。 */
+      addSplit: (expenseId: string) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) =>
+            e.id === expenseId
+              ? { ...e, splits: [...(e.splits ?? []), { id: uuid(), label: '', price: 0, qty: 1 }] }
+              : e,
+          ),
+        })),
+      /** 一次貼上整張收據；照原本的順序接在後面。 */
+      addSplitLines: (expenseId: string, lines: { label: string; price: number; qty: number; person?: string }[]) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) =>
+            e.id === expenseId
+              ? { ...e, splits: [...(e.splits ?? []), ...lines.map((x) => ({ id: uuid(), ...x }))] }
+              : e,
+          ),
+        })),
+      patchSplit: (expenseId: string, splitId: string, patch: Partial<Omit<ExpenseSplit, 'id'>>) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) =>
+            e.id === expenseId
+              ? { ...e, splits: (e.splits ?? []).map((s) => (s.id === splitId ? { ...s, ...patch } : s)) }
+              : e,
+          ),
+        })),
+      delSplit: (expenseId: string, splitId: string) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) =>
+            e.id === expenseId ? { ...e, splits: (e.splits ?? []).filter((s) => s.id !== splitId) } : e,
+          ),
+        })),
+      clearSplits: (expenseId: string) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) => (e.id === expenseId ? { ...e, splits: undefined } : e)),
+        })),
+      /** 代買對象的收款狀態（勾＝錢收到了）。 */
+      toggleSettledPayee: (name: string) =>
+        upd((l) => {
+          const cur = l.settledPayees ?? [];
+          return { ...l, settledPayees: cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name] };
+        }),
       /** 只重排某 phase 的通用支出（固定項=pre），其餘 phase 的項目位置不動。 */
       reorderExpenses: (phase: ExpensePhase, activeId: string, overId: string) =>
         upd((l) => {

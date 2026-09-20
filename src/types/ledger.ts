@@ -100,6 +100,24 @@ export interface Restaurant {
   note?: string;
 }
 
+/**
+ * 代買明細：一筆支出底下的單項商品，指定這項是幫誰買的。
+ *
+ * 一項只歸一個人（藥妝店代買多半是這樣，勾多人反而慢）。
+ * person 留空＝自己的，不必特地選。金額幣別跟著所屬支出走，不另存。
+ */
+export interface ExpenseSplit {
+  id: string;
+  /** 品名（照收據抄）。 */
+  label: string;
+  /** 單價（折扣後的實付單價）。 */
+  price: number;
+  /** 數量。 */
+  qty: number;
+  /** 幫誰買的；留空＝自己。 */
+  person?: string;
+}
+
 /** 通用支出：交通/簽證/保險/eSIM 等固定項(pre) + 出發後流水帳(during)。 */
 export interface Expense {
   id: string;
@@ -114,6 +132,11 @@ export interface Expense {
   paid: boolean;
   paymentMethodId?: string;
   note?: string;
+  /**
+   * 代買分帳明細。有填才會出現在「代買分帳」頁；沒填的支出完全不受影響。
+   * 明細加總跟 amount 對不上時（免稅、整單折扣、湊整），差額按各人金額比例分攤。
+   */
+  splits?: ExpenseSplit[];
 }
 
 /** 餐廳訂位的全域預設（同行成員固定，不必每餐重填）。 */
@@ -218,6 +241,11 @@ export interface Ledger {
   certs?: CertRequest[];
   /** 自訂類別清單（含預設五類）。未設時用預設五類。 */
   categories?: string[];
+  /**
+   * 已經跟對方收到錢的代買對象（存名字，就是 ExpenseSplit.person）。
+   * 名字改掉會視為新的人、收款狀態要重勾——代買對象通常只有幾個，這樣最單純。
+   */
+  settledPayees?: string[];
   /** 表格欄寬與隱藏欄設定。 */
   view?: LedgerView;
   budgets: CategoryBudget[];
