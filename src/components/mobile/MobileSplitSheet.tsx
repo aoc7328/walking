@@ -1,46 +1,62 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Expense, ExpenseSplit, Ledger } from '../../types/ledger';
-import { SELF, allocate, knownPayees, lineTotal, parseSplitLines, splitDiff, splitsSubtotal } from '../../utils/split';
+import { SELF, knownPayees, lineTotal, parseSplitLines, purchaseOf, splitDiff, splitsSubtotal } from '../../utils/split';
 import { formatMoney } from '../../utils/money';
 import { uuid } from '../../utils/format';
+import { assetUrl, dataUrlToBlob, uploadAsset } from '../../services/assets';
+import { fileToScaledJpegDataUrl } from '../../utils/image';
+
+/**
+ * 一張發票照片 → 可上傳的 Blob。
+ *
+ * 後端單張上限 5MB。相機照片先用 JPEG 1600px 壓一次，萬一還是太大
+ * （超長的收據、超高畫素手機）就再降一階，不要讓使用者在店門口卡住。
+ */
+async function receiptBlob(file: File): Promise<Blob> {
+  let blob = dataUrlToBlob(await fileToScaledJpegDataUrl(file, 1600, 0.82));
+  if (blob.size > 4.5 * 1024 * 1024) blob = dataUrlToBlob(await fileToScaledJpegDataUrl(file, 1200, 0.7));
+  return blob;
+}
 
 interface Props {
   expense: Expense;
   ledger: Ledger;
+  tripId: string;
   busy: boolean;
   /** 把整本帳改掉並寫回雲端；回傳有沒有成功。 */
   mutate: (fn: (l: Ledger) => Ledger, okMsg: string) => Promise<boolean>;
+  onToast: (msg: string) => void;
   onClose: () => void;
 }
 
 /**
- * 手機版「這筆是幫誰買的」。
+ * 一筆代買自己的處理視窗：明細配人、發票照片、跟誰收到錢了，全在這一攤裡面。
  *
- * 一次代買常常十幾項，站著用手機打品名不可能，所以這裡的設計是
+ * 一次代買常常十幾項，站著用手機打品名不可能，所以設計是
  * 「明細先進得來、然後只用點的」：點一列展開人名按鈕，點一下就指定完。
- * 人名按鈕是這本帳出現過的名字，第一次用才要打字。
  */
-export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClose }: Props) {
+export default function MobileSplitSheet({ expense, ledger, tripId, busy, mutate, onToast, onClose }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [paste, setPaste] = useState('');
   const [showPaste, setShowPaste] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const splits = expense.splits ?? [];
-  const shares = allocate(expense);
+  const receipts = expense.receiptKeys ?? [];
+  const p = purchaseOf(expense);
   const names = knownPayees(ledger);
   const cur = expense.currency;
   const diff = splitDiff(expense);
 
-  /** 所有改動都是「改這筆支出的 splits」。 */
+  /** 這一攤的任何改動，都是改這筆支出。 */
+  const patchExpense = (fn: (e: Expense) => Expense, msg: string) =>
+    void mutate((l) => ({ ...l, expenses: l.expenses.map((e) => (e.id === expense.id ? fn(e) : e)) }), msg);
+
   const patchSplits = (fn: (list: ExpenseSplit[]) => ExpenseSplit[], msg: string) =>
-    void mutate(
-      (l) => ({
-        ...l,
-        expenses: l.expenses.map((e) => (e.id === expense.id ? { ...e, splits: fn(e.splits ?? []) } : e)),
-      }),
-      msg,
-    );
+    patchExpense((e) => ({ ...e, splits: fn(e.splits ?? []) }), msg);
 
   const setPerson = (id: string, person: string | undefined) => {
     setExpanded(null);
@@ -96,6 +112,35 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
     patchSplits((list) => [...list, ...lines.map((x) => ({ id: uuid(), ...x }))], `已帶進 ${lines.length} 項`);
   };
 
+  const toggleSettled = (name: string) =>
+    patchExpense((e) => {
+      const cur2 = e.settledPersons ?? [];
+      return { ...e, settledPersons: cur2.includes(name) ? cur2.filter((n) => n !== name) : [...cur2, name] };
+    }, '已更新收款狀態');
+
+  /** 發票照片：一次可以選好幾張（長長一條的收據要分開拍）。 */
+  async function addReceipts(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const keys: string[] = [];
+      for (const f of Array.from(files)) {
+        keys.push(await uploadAsset(await receiptBlob(f), tripId));
+      }
+      patchExpense((e) => ({ ...e, receiptKeys: [...(e.receiptKeys ?? []), ...keys] }), `已加 ${keys.length} 張發票`);
+    } catch (err) {
+      onToast('發票上傳失敗：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  const removeReceipt = (key: string) => {
+    if (!window.confirm('把這張發票從這筆代買移掉？')) return;
+    patchExpense((e) => ({ ...e, receiptKeys: (e.receiptKeys ?? []).filter((k) => k !== key) }), '已移除一張發票');
+  };
+
   return createPortal(
     <div className="mv-sheet-backdrop" onClick={(ev) => { if (ev.target === ev.currentTarget) onClose(); }}>
       <div className="mv-sheet">
@@ -105,11 +150,17 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
         </div>
 
         <div className="mv-sheet-body">
-          {shares.length > 0 && (
+          <div className="mv-split-total">
+            這筆刷了 <b>{formatMoney(expense.amount, cur)}</b>
+            {'　·　'}自己 <b>{formatMoney(p.self, cur)}</b>
+            {p.others.length > 0 && <>{'　·　'}要收回 <b>{formatMoney(p.outstanding, cur)}</b></>}
+          </div>
+
+          {p.shares.length > 0 && (
             <div className="mv-split-sum">
-              {shares.map((s) => (
-                <span key={s.person} className="mv-split-chip">
-                  {s.person}<b>{formatMoney(s.amount, cur)}</b>
+              {p.shares.map((s) => (
+                <span key={s.person} className={`mv-split-chip${s.settled ? ' done' : ''}`}>
+                  {s.person}<b>{formatMoney(s.amount, cur)}</b>{s.settled ? ' ✓' : ''}
                 </span>
               ))}
             </div>
@@ -185,10 +236,7 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
               })}
 
               <div className="mv-split-foot-note">
-                <span className="mv-muted">
-                  明細加總 {formatMoney(splitsSubtotal(splits), cur)}　·　這筆刷了 {formatMoney(expense.amount, cur)}
-                  {diff !== 0 && <>　·　差額 {formatMoney(diff, cur)} 已按比例攤進各人金額</>}
-                </span>
+                <span className="mv-muted">明細加總 {formatMoney(splitsSubtotal(splits), cur)}</span>
               </div>
             </div>
           )}
@@ -210,12 +258,63 @@ export default function MobileSplitSheet({ expense, ledger, busy, mutate, onClos
               <button className="mv-btn" onClick={() => setShowPaste(true)} disabled={busy}>貼上收據</button>
             </div>
           )}
+
+          {/* 發票照片 */}
+          <div className="mv-split-block-head">發票 · 收據{receipts.length > 0 && `（${receipts.length} 張）`}</div>
+          <div className="mv-receipts">
+            {receipts.map((k) => (
+              <div key={k} className="mv-receipt">
+                <img src={assetUrl(k)} alt="發票" onClick={() => setViewing(k)} />
+                <button className="mv-receipt-del" onClick={() => removeReceipt(k)} aria-label="移除這張">×</button>
+              </div>
+            ))}
+            <button className="mv-receipt-add" onClick={() => fileRef.current?.click()} disabled={busy || uploading}>
+              {uploading ? '上傳中…' : '＋ 加照片'}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => void addReceipts(e.target.files)}
+            />
+          </div>
+          <div className="mv-split-foot-note">
+            <span className="mv-muted">收據太長可以分好幾張拍，一次選起來一起加。</span>
+          </div>
+
+          {/* 收款 */}
+          {p.others.length > 0 && (
+            <>
+              <div className="mv-split-block-head">收款</div>
+              {p.others.map((s) => (
+                <label key={s.person} className="mv-settle-row">
+                  <input
+                    type="checkbox"
+                    checked={s.settled}
+                    disabled={busy}
+                    onChange={() => toggleSettled(s.person)}
+                  />
+                  <span className="mv-settle-name">{s.person}</span>
+                  <span className="mv-settle-amt">{formatMoney(s.amount, cur)}</span>
+                  <span className={s.settled ? 'mv-under' : 'mv-muted'}>{s.settled ? '已收' : '還沒收'}</span>
+                </label>
+              ))}
+            </>
+          )}
         </div>
 
         <div className="mv-sheet-foot">
           <button className="mv-submit" onClick={onClose} disabled={busy}>{busy ? '儲存中…' : '完成'}</button>
         </div>
       </div>
+
+      {viewing && (
+        <div className="mv-receipt-view" onClick={() => setViewing(null)}>
+          <img src={assetUrl(viewing)} alt="發票" />
+        </div>
+      )}
     </div>,
     document.body,
   );

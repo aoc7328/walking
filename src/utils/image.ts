@@ -36,6 +36,48 @@ export function fileToScaledPngDataUrl(file: File, maxDim = 720): Promise<string
   });
 }
 
+/**
+ * 讀圖檔 → 縮到 maxDim → 回傳 JPEG data URL。
+ *
+ * 給「相機拍的照片」用（發票、收據）。同一張照片存成 PNG 常常是 JPEG 的十幾倍大，
+ * 一張 1600px 的長條發票就能吃掉後端 5MB 上限；照片本來也不需要 PNG 的無損。
+ * QR / 截圖仍走 fileToScaledPngDataUrl，銳利邊緣比檔案大小重要。
+ */
+export function fileToScaledJpegDataUrl(file: File, maxDim = 1600, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('請上傳圖片檔（JPG / PNG）'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('讀取檔案失敗'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('圖片解析失敗'));
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('瀏覽器不支援 canvas'));
+          return;
+        }
+        // JPEG 沒有透明度，先鋪白底，免得去背的 PNG 轉過來變黑塊
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 const DARK_LUM = 160; // 亮度低於此視為「有墨」（黑 QR / 黑字）
 
 interface Box { x: number; y: number; w: number; h: number }

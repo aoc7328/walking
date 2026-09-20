@@ -2072,32 +2072,12 @@
   margin-top: 14px;
 }
 
-.mv-split-settle {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 2px 2px 8px;
-  font-size: 12.5px;
-  color: var(--ink-secondary);
-  cursor: pointer;
-}
-
-.mv-split-settle input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent-primary);
-}
-
 .mv-split-foot-note {
   padding: 8px 2px 0;
   font-size: 12px;
   line-height: 1.6;
 }
 
-.mv-split-reopen-label {
-  margin-top: 14px;
-  font-size: 12.5px;
-}
 
 .mv-split-warn {
   margin-bottom: 10px;
@@ -2109,3 +2089,158 @@
   font-size: 12.5px;
   line-height: 1.6;
 }
+
+/* 代買總覽：一攤一張卡 */
+.mv-purchases { display: grid; gap: 8px; }
+
+.mv-purchase-sum {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 2px 6px;
+  font-size: 13px;
+  color: var(--ink-secondary);
+}
+
+.mv-purchase-sum strong { font-size: 18px; font-feature-settings: 'tnum' 1; }
+
+.mv-purchase {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 11px 13px;
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.mv-purchase.settled { opacity: 0.6; }
+
+.mv-purchase-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.mv-purchase-title { font-size: 15px; color: var(--ink-primary); }
+.mv-purchase-date { color: var(--ink-muted); font-size: 12px; margin-right: 7px; }
+.mv-purchase-amt { font-size: 15px; color: var(--ink-primary); white-space: nowrap; font-feature-settings: 'tnum' 1; }
+.mv-purchase-meta { margin-top: 4px; font-size: 12px; line-height: 1.6; }
+
+.mv-purchase-people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.mv-purchase-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-warm-soft);
+  color: var(--accent-warm);
+  font-size: 12px;
+  font-feature-settings: 'tnum' 1;
+}
+
+.mv-purchase-chip.done { background: var(--accent-primary-soft); color: var(--accent-primary); }
+
+.mv-purchase-more {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 6px;
+  border: 0.5px dashed var(--border-medium);
+  border-radius: var(--radius-md);
+  background: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-secondary);
+  cursor: pointer;
+}
+
+/* 拆帳視窗：金額摘要、發票、收款 */
+.mv-split-total {
+  padding: 2px 2px 10px;
+  font-size: 13px;
+  color: var(--ink-secondary);
+  line-height: 1.7;
+}
+
+.mv-split-total b { color: var(--ink-primary); font-weight: 500; font-feature-settings: 'tnum' 1; }
+.mv-split-chip.done { background: var(--accent-primary-soft); border-color: var(--accent-primary); color: var(--accent-primary); }
+
+.mv-split-block-head {
+  margin: 18px 0 8px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--accent-primary);
+}
+
+.mv-receipts { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.mv-receipt { position: relative; width: 78px; height: 78px; }
+
+.mv-receipt img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+
+.mv-receipt-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border: 0.5px solid var(--border-medium);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--ink-secondary);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mv-receipt-add {
+  width: 78px;
+  height: 78px;
+  border: 0.5px dashed var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+  cursor: pointer;
+}
+
+.mv-receipt-view {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(20, 16, 12, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: auto;
+}
+
+.mv-receipt-view img { max-width: 100%; height: auto; }
+
+.mv-settle-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 4px;
+  border-bottom: 0.5px solid var(--border-soft);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.mv-settle-row input { width: 20px; height: 20px; accent-color: var(--accent-primary); }
+.mv-settle-name { color: var(--ink-primary); }
+.mv-settle-amt { color: var(--ink-secondary); font-feature-settings: 'tnum' 1; }
+.mv-entry-split { color: var(--accent-warm); }

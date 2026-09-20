@@ -4992,3 +4992,22 @@ input.led-cell.num { text-align: right; }
 .led-split-chip i { font-style: normal; font-size: 11.5px; }
 .led-split-paste { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }
 .led-split-textarea { flex: 1; max-width: none; min-height: 84px; resize: vertical; font-family: var(--font-body); line-height: 1.6; }
+
+/* 代買 · 拆帳（電腦版）：一攤一個區塊 */
+.led-purchase { border: 0.5px solid var(--border-soft); border-radius: var(--radius-lg); padding: 14px 16px; background: var(--bg-softer); }
+.led-purchase .led-block-head h3 { font-size: 15px; }
+.led-purchase-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; align-items: start; }
+@media (max-width: 900px) { .led-purchase-cols { grid-template-columns: 1fr; } }
+.led-split-warn { margin-bottom: 10px; padding: 8px 11px; border: 0.5px solid var(--accent-warm); border-radius: var(--radius-md); background: var(--accent-warm-soft); color: var(--accent-warm); font-size: 12.5px; }
+.led-split-chip.done { background: var(--accent-primary-soft); border-color: var(--accent-primary); }
+.led-split-paste-btns { display: flex; flex-direction: column; gap: 6px; }
+.led-receipts { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 8px; }
+.led-receipt { position: relative; width: 96px; height: 96px; }
+.led-receipt img { width: 100%; height: 100%; object-fit: cover; border: 0.5px solid var(--border-soft); border-radius: var(--radius-md); background: var(--bg-card); }
+.led-receipt-del { position: absolute; top: -7px; right: -7px; width: 24px; height: 24px; border: 0.5px solid var(--border-medium); border-radius: 50%; background: var(--bg-card); color: var(--ink-secondary); font-size: 15px; line-height: 1; cursor: pointer; }
+.led-receipt-del:hover { color: #B3402F; }
+.led-receipt-add { width: 96px; height: 96px; border: 0.5px dashed var(--border-medium); border-radius: var(--radius-md); background: var(--bg-card); font-family: var(--font-body); font-size: 12.5px; color: var(--ink-secondary); cursor: pointer; }
+.led-receipt-add:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
+.led-settles { display: grid; gap: 2px; }
+.led-settle-row { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 12px; padding: 7px 4px; border-bottom: 0.5px solid var(--border-soft); font-size: 13.5px; cursor: pointer; font-feature-settings: 'tnum' 1; }
+.led-settle-row:hover { background: var(--bg-card); }

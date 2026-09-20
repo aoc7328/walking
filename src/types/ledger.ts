@@ -135,8 +135,21 @@ export interface Expense {
   /**
    * 代買分帳明細。有填才會出現在「代買分帳」頁；沒填的支出完全不受影響。
    * 明細加總跟 amount 對不上時（免稅、整單折扣、湊整），差額按各人金額比例分攤。
+   *
+   * 有明細時，這筆算進「實際開銷」的只有自己那份——別人的部分一定會收回來，
+   * 混進去只會讓「這趟花多少」失真（刷卡額度仍算全額，因為卡真的被刷了那麼多）。
    */
   splits?: ExpenseSplit[];
+  /**
+   * 這筆代買裡已經跟誰收到錢了（存名字，就是 ExpenseSplit.person）。
+   * 每筆代買各自記，因為同一個人可能這攤給了、下一攤還沒給。
+   */
+  settledPersons?: string[];
+  /**
+   * 發票／收據照片的 R2 物件 key。長長一條的收據常要分好幾張拍，所以是陣列。
+   * 私密，不進分享連結。
+   */
+  receiptKeys?: string[];
 }
 
 /** 餐廳訂位的全域預設（同行成員固定，不必每餐重填）。 */
@@ -241,11 +254,6 @@ export interface Ledger {
   certs?: CertRequest[];
   /** 自訂類別清單（含預設五類）。未設時用預設五類。 */
   categories?: string[];
-  /**
-   * 已經跟對方收到錢的代買對象（存名字，就是 ExpenseSplit.person）。
-   * 名字改掉會視為新的人、收款狀態要重勾——代買對象通常只有幾個，這樣最單純。
-   */
-  settledPayees?: string[];
   /** 表格欄寬與隱藏欄設定。 */
   view?: LedgerView;
   budgets: CategoryBudget[];

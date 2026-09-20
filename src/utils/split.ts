@@ -7,6 +7,9 @@ import { toTWD } from './money';
  * 一筆支出（例：藥妝店刷一次 ¥22,418）底下拆成一項項商品，每項指定歸誰。
  * 明細加總常常跟刷卡金額對不上（免稅、整單折扣、湊整），差額一律
  * 按各人金額比例分攤——誰買得多誰吸收得多。
+ *
+ * 每一筆代買是獨立的一攤：自己的收款狀態、發票照片都掛在那筆支出上，
+ * 不跟別攤混在一起。
  */
 
 /** 沒指定歸誰的明細算自己的。 */
@@ -84,67 +87,130 @@ export function splitDiff(expense: Expense): number {
   return Math.round(expense.amount || 0) - splitsSubtotal(expense.splits);
 }
 
-/** 有拆明細的支出（照日期新到舊）。 */
-export function splitExpenses(l: Ledger): Expense[] {
+/** 這筆有沒有在做代買分帳（有明細或有發票照片就算）。 */
+export function isPurchase(e: Expense): boolean {
+  return (e.splits?.length ?? 0) > 0 || (e.receiptKeys?.length ?? 0) > 0;
+}
+
+/**
+ * 這筆支出裡「自己的開銷」（支出幣別）。沒拆明細就是全額。
+ *
+ * 消費分析、預算、每日小計一律用這個而不是 amount——幫別人買的錢一定會收回來，
+ * 算進自己的花費只會讓「這趟花多少」失真。
+ * （刷卡額度是唯一例外，卡真的被刷了全額，見 cardUsage。）
+ */
+export function selfAmount(e: Expense): number {
+  if (!e.splits?.length) return e.amount;
+  return allocate(e).find((s) => s.person === SELF)?.amount ?? 0;
+}
+
+/** 這筆支出裡要跟別人收回來的金額（支出幣別）。 */
+export function owedAmount(e: Expense): number {
+  if (!e.splits?.length) return 0;
+  return allocate(e).reduce((a, s) => a + (s.person === SELF ? 0 : s.amount), 0);
+}
+
+/** 自己的開銷，換成台幣。 */
+export function selfTWD(e: Expense, fxRate: number): number {
+  return toTWD(selfAmount(e), e.currency, fxRate);
+}
+
+export interface PurchaseShare extends PersonShare {
+  /** 這攤已經跟他收到錢了。 */
+  settled: boolean;
+}
+
+/** 一筆代買：自己那份、各人該付多少、收了沒。 */
+export interface Purchase {
+  expense: Expense;
+  /** 含自己。 */
+  shares: PurchaseShare[];
+  /** 不含自己——要跟人收錢的就是這些。 */
+  others: PurchaseShare[];
+  /** 自己那份（支出幣別）。 */
+  self: number;
+  /** 還沒收回來的（支出幣別）。 */
+  outstanding: number;
+  /** 已經收到的。 */
+  collected: number;
+  /** 別人的都收齊了（沒有人要收也算齊）。 */
+  allSettled: boolean;
+}
+
+export function purchaseOf(expense: Expense): Purchase {
+  const settled = new Set(expense.settledPersons ?? []);
+  const shares: PurchaseShare[] = allocate(expense).map((s) => ({
+    ...s,
+    settled: s.person !== SELF && settled.has(s.person),
+  }));
+  const others = shares.filter((s) => s.person !== SELF);
+  return {
+    expense,
+    shares,
+    others,
+    self: shares.find((s) => s.person === SELF)?.amount ?? (expense.splits?.length ? 0 : expense.amount),
+    outstanding: others.reduce((a, s) => a + (s.settled ? 0 : s.amount), 0),
+    collected: others.reduce((a, s) => a + (s.settled ? s.amount : 0), 0),
+    allSettled: others.every((s) => s.settled),
+  };
+}
+
+/** 所有代買（日期新到舊）。 */
+export function purchases(l: Ledger): Purchase[] {
   return l.expenses
-    .filter((e) => (e.splits?.length ?? 0) > 0)
-    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+    .filter(isPurchase)
+    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+    .map(purchaseOf);
+}
+
+/** 全趟還沒收回來的錢（台幣）。 */
+export function outstandingTWD(l: Ledger): number {
+  return purchases(l).reduce((s, p) => s + toTWD(p.outstanding, p.expense.currency, l.fxRate), 0);
 }
 
 export interface PayeeTotal {
   name: string;
-  /** 折成台幣的總額。 */
+  /** 這個人全趟合計（台幣）。 */
   twd: number;
-  /** 幫他買的件數（含數量）。 */
+  /** 其中還沒收的（台幣）。 */
+  outstanding: number;
+  /** 幫他買的件數。 */
   items: number;
-  /** 已經跟他收到錢了。 */
-  settled: boolean;
-  /** 自己那份——不列入要收的錢。 */
-  isSelf: boolean;
-  entries: { expense: Expense; share: PersonShare }[];
+  entries: { expense: Expense; share: PurchaseShare }[];
 }
 
 /**
- * 全趟每個人要付多少（台幣）。
- * 自己那份也算出來但排在最後、不算進「還沒收」，只是讓你知道這趟自己花了多少。
+ * 依「人」跨筆彙總——最後要跟某個人收錢時看這個。
+ * 自己那份不列入（那不是要收的錢）。
  */
 export function payeeTotals(l: Ledger): PayeeTotal[] {
-  const settled = new Set(l.settledPayees ?? []);
   const map = new Map<string, PayeeTotal>();
 
-  for (const expense of splitExpenses(l)) {
-    for (const share of allocate(expense)) {
-      const row =
-        map.get(share.person) ??
-        {
-          name: share.person,
-          twd: 0,
-          items: 0,
-          settled: settled.has(share.person),
-          isSelf: share.person === SELF,
-          entries: [],
-        };
-      row.twd += toTWD(share.amount, expense.currency, l.fxRate);
+  for (const p of purchases(l)) {
+    for (const share of p.others) {
+      const row = map.get(share.person) ?? { name: share.person, twd: 0, outstanding: 0, items: 0, entries: [] };
+      const twd = toTWD(share.amount, p.expense.currency, l.fxRate);
+      row.twd += twd;
+      if (!share.settled) row.outstanding += twd;
       row.items += share.lines.reduce((s, x) => s + (x.qty > 0 ? x.qty : 1), 0);
-      row.entries.push({ expense, share });
+      row.entries.push({ expense: p.expense, share });
       map.set(share.person, row);
     }
   }
 
-  return [...map.values()].sort((a, b) => {
-    if (a.isSelf !== b.isSelf) return a.isSelf ? 1 : -1;
-    return b.twd - a.twd;
-  });
+  return [...map.values()].sort((a, b) => b.outstanding - a.outstanding || b.twd - a.twd);
 }
 
 /** 已經出現過的代買對象名字（給輸入框的建議清單用）。 */
 export function knownPayees(l: Ledger): string[] {
   const names = new Set<string>();
-  for (const e of l.expenses) for (const s of e.splits ?? []) {
-    const p = (s.person ?? '').trim();
-    if (p && p !== SELF) names.add(p);
+  for (const e of l.expenses) {
+    for (const s of e.splits ?? []) {
+      const p = (s.person ?? '').trim();
+      if (p && p !== SELF) names.add(p);
+    }
+    for (const p of e.settledPersons ?? []) if (p !== SELF) names.add(p);
   }
-  for (const p of l.settledPayees ?? []) if (p !== SELF) names.add(p);
   return [...names].sort();
 }
 

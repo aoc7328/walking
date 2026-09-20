@@ -216,12 +216,31 @@ export function useLedgerEdit() {
           ...l,
           expenses: l.expenses.map((e) => (e.id === expenseId ? { ...e, splits: undefined } : e)),
         })),
-      /** 代買對象的收款狀態（勾＝錢收到了）。 */
-      toggleSettledPayee: (name: string) =>
-        upd((l) => {
-          const cur = l.settledPayees ?? [];
-          return { ...l, settledPayees: cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name] };
-        }),
+      /** 某一攤代買跟某人收到錢了沒（每攤各自記）。 */
+      toggleSettledPerson: (expenseId: string, name: string) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) => {
+            if (e.id !== expenseId) return e;
+            const cur = e.settledPersons ?? [];
+            return { ...e, settledPersons: cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name] };
+          }),
+        })),
+      /** 發票／收據照片（R2 key），一次可以加好幾張。 */
+      addReceipts: (expenseId: string, keys: string[]) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) =>
+            e.id === expenseId ? { ...e, receiptKeys: [...(e.receiptKeys ?? []), ...keys] } : e,
+          ),
+        })),
+      delReceipt: (expenseId: string, key: string) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) =>
+            e.id === expenseId ? { ...e, receiptKeys: (e.receiptKeys ?? []).filter((k) => k !== key) } : e,
+          ),
+        })),
       /** 只重排某 phase 的通用支出（固定項=pre），其餘 phase 的項目位置不動。 */
       reorderExpenses: (phase: ExpensePhase, activeId: string, overId: string) =>
         upd((l) => {

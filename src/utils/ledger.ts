@@ -1,6 +1,7 @@
 import type { Ledger, ExpenseCategory, AnalysisBucket, ReservationStatus, Accommodation, ReservationDefaults, Expense, Restaurant } from '../types/ledger';
 import type { Trip } from '../types/trip';
 import { formatMoney, toTWD } from './money';
+import { owedAmount, selfAmount } from './split';
 import { addDays, formatMonthDay, weekdayLabel } from './date';
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = ['交通', '住宿', '飲食', '購物', '其他'];
@@ -130,11 +131,21 @@ export function restaurantTotalsTWD(l: Ledger): { estimated: number; actual: num
   );
 }
 
-/** 某 phase 的通用支出合計（台幣）。 */
+/**
+ * 某 phase 的通用支出合計（台幣）——只算自己的那份。
+ * 代買幫別人出的錢會收回來，不是這趟的開銷（見 selfAmount）。
+ */
 export function expensesTotalTWD(l: Ledger, phase: 'pre' | 'during'): number {
   return l.expenses
     .filter((e) => e.phase === phase)
-    .reduce((s, e) => s + toTWD(e.amount, e.currency, l.fxRate), 0);
+    .reduce((s, e) => s + toTWD(selfAmount(e), e.currency, l.fxRate), 0);
+}
+
+/** 某 phase 還沒收回來／已代墊的代買金額合計（台幣）。 */
+export function expensesOwedTWD(l: Ledger, phase: 'pre' | 'during'): number {
+  return l.expenses
+    .filter((e) => e.phase === phase)
+    .reduce((s, e) => s + toTWD(owedAmount(e), e.currency, l.fxRate), 0);
 }
 
 type CatSplit = Record<string, { pre: number; during: number; planned: number }>;
@@ -171,8 +182,9 @@ export function categorySplit(l: Ledger): CatSplit {
     b.planned += r.status === 'cancelled' ? actual : estimated || actual;
   }
 
+  // 代買只算自己那份：別人的錢會收回來，算進來會讓每一類都虛胖。
   for (const e of l.expenses) {
-    const twd = toTWD(e.amount, e.currency, l.fxRate);
+    const twd = toTWD(selfAmount(e), e.currency, l.fxRate);
     const b = bucket(e.category);
     b[e.phase] += twd;
     if (e.phase === 'pre') b.planned += twd;
@@ -404,10 +416,10 @@ export function categoryDetail(l: Ledger, category: string): DetailItem[] {
       key: `exp-${e.id}`,
       date: e.date,
       title: e.title,
-      twd: twd(e.amount, e.currency),
-      raw: money(e.amount, e.currency),
-      planned: e.phase === 'pre' ? twd(e.amount, e.currency) : undefined,
-      badge: e.phase === 'pre' ? '出發前' : undefined,
+      twd: twd(selfAmount(e), e.currency),
+      raw: money(selfAmount(e), e.currency),
+      planned: e.phase === 'pre' ? twd(selfAmount(e), e.currency) : undefined,
+      badge: e.phase === 'pre' ? '出發前' : owedAmount(e) > 0 ? '代買 · 已扣掉別人的' : undefined,
       note: e.note,
     });
   }
@@ -423,7 +435,12 @@ export interface CardUsage {
   remaining?: number;
 }
 
-/** 每個支付方式累計已刷（台幣）；住宿、餐廳、所有支出都算進對應卡。 */
+/**
+ * 每個支付方式累計已刷（台幣）；住宿、餐廳、所有支出都算進對應卡。
+ *
+ * 這裡刻意用支出全額而不是自己那份：代買是整筆刷在自己卡上，
+ * 卡片額度就是被佔用了那麼多，扣掉別人的部分會讓額度看起來還有很多。
+ */
 export function cardUsage(l: Ledger): CardUsage[] {
   const spent = new Map<string, number>();
   const add = (id: string | undefined, twd: number) => {

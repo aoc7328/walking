@@ -16,7 +16,7 @@ type Tab = 'pre' | 'during' | 'split' | 'analysis' | 'settings';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'pre', label: '出發前 · 預訂' },
   { key: 'during', label: '出發後 · 流水帳' },
-  { key: 'split', label: '代買 · 分帳' },
+  { key: 'split', label: '代買 · 拆帳' },
   { key: 'analysis', label: '消費分析' },
   { key: 'settings', label: '設定' },
 ];
@@ -86,7 +86,7 @@ export default function LedgerPage() {
       <div className="ledger-page-body">
         {tab === 'pre' && <PreDeparturePage ledger={ledger} tripName={trip.name} />}
         {tab === 'during' && <DuringTripPage ledger={ledger} />}
-        {tab === 'split' && <SplitPage ledger={ledger} />}
+        {tab === 'split' && <SplitPage ledger={ledger} tripId={trip.id} />}
         {tab === 'analysis' && <AnalysisPage ledger={ledger} trip={trip} />}
         {tab === 'settings' && <SettingsPage ledger={ledger} tripName={trip.name} />}
       </div>

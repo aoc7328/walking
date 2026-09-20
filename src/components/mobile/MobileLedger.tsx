@@ -4,7 +4,7 @@ import type { Trip } from '../../types/trip';
 import type { Expense, Ledger } from '../../types/ledger';
 import { loadTripById, persistTripImmediate } from '../../db/repository';
 import { categoriesOf, categoryOverview, emptyLedger, getLedger } from '../../utils/ledger';
-import { payeeTotals } from '../../utils/split';
+import { outstandingTWD, owedAmount, purchases, selfTWD } from '../../utils/split';
 import { formatMoney, toTWD } from '../../utils/money';
 import { formatWithWeekday, toISODate } from '../../utils/date';
 import { uuid } from '../../utils/format';
@@ -218,7 +218,10 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
   );
 
   const todayISO = toISODate(new Date());
-  const twd = (e: Expense) => toTWD(e.amount, e.currency, fx);
+  /** 計入花費的金額：代買只算自己那份（別人的會收回來，不是這趟的開銷）。 */
+  const twd = (e: Expense) => selfTWD(e, fx);
+  /** 實際刷掉的金額，列表上照實顯示。 */
+  const twdFull = (e: Expense) => toTWD(e.amount, e.currency, fx);
   const totalAll = rows.reduce((s, r) => s + twd(r.e), 0);
   const totalToday = rows.filter((r) => r.e.date === todayISO).reduce((s, r) => s + twd(r.e), 0);
 
@@ -237,7 +240,8 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
   }, [rows, fx]);
 
   const overview = categoryOverview(ledger);
-  const payees = payeeTotals(ledger);
+  const purchaseList = purchases(ledger);
+  const owedTotal = outstandingTWD(ledger);
 
   /**
    * 把待送的支出寫回雲端：重抓最新行程 → 附加（依 id 去重）→ PUT。
@@ -395,6 +399,12 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
           <span className="mv-sum-label">全趟現場花費</span>
           <span className="mv-sum-value">{formatMoney(totalAll, 'TWD')}</span>
         </div>
+        {owedTotal > 0 && (
+          <div className="mv-sum-cell">
+            <span className="mv-sum-label">代買待收</span>
+            <span className="mv-sum-value mv-over">{formatMoney(owedTotal, 'TWD')}</span>
+          </div>
+        )}
       </div>
 
       {pending.length > 0 && (
@@ -430,14 +440,9 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
         </MobileSection>
       )}
 
-      {payees.length > 0 && (
-        <MobileSection id="led-split" title="代買 · 每人要付" count={payees.length}>
-          <MobileSplit
-            ledger={ledger}
-            busy={syncing}
-            mutate={mutateLedger}
-            onOpenExpense={(id) => setSplitting(id)}
-          />
+      {purchaseList.length > 0 && (
+        <MobileSection id="led-split" title="代買 · 拆帳" count={purchaseList.length}>
+          <MobileSplit ledger={ledger} onOpenExpense={(id) => setSplitting(id)} />
         </MobileSection>
       )}
 
@@ -472,11 +477,16 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
                   {unsent && <span className="mv-unsent-tag">未同步</span>}
                 </div>
                 {e.paymentMethodId && <div className="mv-entry-sub">{payName(e.paymentMethodId)}</div>}
+                {owedAmount(e) > 0 && (
+                  <div className="mv-entry-sub mv-entry-split">
+                    代買 · 自己 {formatMoney(e.amount - owedAmount(e), e.currency)}
+                  </div>
+                )}
               </div>
               <div className="mv-entry-money">
                 <span className="mv-entry-amt">{formatMoney(e.amount, e.currency)}</span>
                 {e.currency !== 'TWD' && (
-                  <span className="mv-entry-twd">{formatMoney(twd(e), 'TWD')}</span>
+                  <span className="mv-entry-twd">{formatMoney(twdFull(e), 'TWD')}</span>
                 )}
               </div>
               <span className="mv-entry-edit" aria-hidden>
@@ -544,8 +554,10 @@ export default function MobileLedger({ trip, onTripChange, onToast }: Props) {
         <MobileSplitSheet
           expense={splitExpense}
           ledger={ledger}
+          tripId={trip.id}
           busy={syncing}
           mutate={mutateLedger}
+          onToast={onToast}
           onClose={() => setSplitting(null)}
         />
       )}
