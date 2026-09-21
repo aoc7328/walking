@@ -3,6 +3,25 @@
  * session cookie。前端拿不到雜湊、session 值或資料命名空間，也不能自行偽造授權。
  */
 
+export type AuthMode = 'password' | 'google';
+
+/**
+ * 後端用的是哪一種登入。
+ *
+ * 單人版（Cloudflare Pages）沒有這支 API，會回 404 → 當成密碼版。
+ * 多人版 Worker 回 { mode: 'google' }。同一份前端才能兩邊都跑。
+ */
+export async function getAuthMode(): Promise<AuthMode> {
+  try {
+    const res = await fetch('/api/auth/mode', { credentials: 'same-origin', cache: 'no-store' });
+    if (!res.ok) return 'password';
+    const body = (await res.json()) as { mode?: string };
+    return body.mode === 'google' ? 'google' : 'password';
+  } catch {
+    return 'password';
+  }
+}
+
 export async function verifyPassword(password: string): Promise<boolean> {
   const response = await fetch('/api/auth/login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',

@@ -1,0 +1,39 @@
+{
+  // 多人版 walking。刻意放在 worker/ 而不是專案根目錄——
+  // 根目錄放 wrangler 設定會被 `wrangler pages deploy` 一起讀到，
+  // 可能影響現有 walking（Pages）的部署。這邊用 -c 指定：
+  //   npm run build
+  //   npx wrangler deploy -c worker/wrangler.jsonc
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "walking-multi",
+  "main": "index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+
+  // build 出來的 SPA 直接由 Worker 供應；找不到的路徑回 index.html（前端自己路由）
+  "assets": {
+    "directory": "../dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  "vars": {
+    // 免費方案「同時」可以保留幾個行程。刪掉舊的就能再建新的。
+    "FREE_TRIP_LIMIT": "3"
+  },
+
+  // ⚠️ 下面三個 id 要先建資源才會有，見 worker/README.md
+  "kv_namespaces": [
+    { "binding": "TRIPS", "id": "TODO_KV_ID" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "walking-multi-media" }
+  ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "walking-multi", "database_id": "TODO_D1_ID" }
+  ]
+
+  // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET 用 secret 放，不寫在這個檔案裡：
+  //   npx wrangler secret put GOOGLE_CLIENT_ID -c worker/wrangler.jsonc
+  //   npx wrangler secret put GOOGLE_CLIENT_SECRET -c worker/wrangler.jsonc
+}
