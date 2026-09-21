@@ -4,6 +4,7 @@ import * as auth from './api/auth';
 import * as trips from './api/trips';
 import * as asset from './api/asset';
 import * as share from './api/share';
+import * as ocr from './api/ocr';
 
 /**
  * 多人版 walking 的進入點。
@@ -47,6 +48,9 @@ export default {
       if (path === '/api/trip' && method === 'POST') return share.create(request, env);
       const shareMatch = /^\/api\/trip\/([^/]+)$/.exec(path);
       if (shareMatch && method === 'GET') return share.read(env, decodeURIComponent(shareMatch[1]!));
+
+      // ── 發票自動判讀 ──
+      if (path === '/api/receipt-scan' && method === 'POST') return ocr.scan(request, env);
 
       // ── 圖片 ──
       if (path === '/api/asset' && method === 'POST') return asset.upload(request, env);

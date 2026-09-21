@@ -94,3 +94,45 @@ npx wrangler deploy -c worker/wrangler.jsonc
 3. **評分／評論數／價位是 Enterprise 欄位**，會把 Details 從 $5（免費 10,000）
    推到 $20～25（免費只剩 1,000）。考慮預設只抓 Essentials，使用者真的想看評分
    再單獨抓。
+
+## 發票自動判讀（已實作，未部署）
+
+`POST /api/receipt-scan`，body：`{ keys: string[], amount: number, currency: string }`
+
+`keys` 是已上傳 R2 的發票照片（前綴必須是自己的 userId，否則 400）。長收據分好幾張拍
+可以一次全帶進去，會當成同一張由上到下接續。回傳一項項 `{label, price, qty}`，
+**不直接寫進行程**——要讓使用者看過改過再套用。
+
+### 對帳是這支 API 最有價值的部分
+
+request 會帶上這筆支出實際刷掉的金額，回傳裡有 `reconciled`：
+
+- `明細加總 === 刷卡金額` → 判讀幾乎確定正確，可以直接套用
+- 對不上 → 回傳 `diff`，前端用既有的橘色差額提示要使用者看一眼
+
+也就是說 AI 有沒有讀錯，系統自己驗得出來，不必靠使用者逐行核對。
+prompt 裡明講「對不上就照實抄，不要為了湊數字改」，就是為了不讓它把錯誤藏起來。
+
+### 成本（Anthropic 官方價，每 1M token）
+
+一張收據約 2,000 input token（圖）+ 800 output token（13 行明細）：
+
+| 模型 | Input | Output | 一張收據約 |
+|---|---|---|---|
+| Claude Opus 5（預設） | $5.00 | $25.00 | $0.030（NT$0.96） |
+| Claude Sonnet 5 | $2.00 | $10.00 | $0.012（NT$0.38） |
+| Claude Haiku 4.5 | $1.00 | $5.00 | $0.006（NT$0.19） |
+
+對照 Google Maps 每加一個地點約 NT$2 —— **判讀一張發票比查一個地點還便宜。**
+換模型只要改 `OCR_MODEL` 這個 var，不必動程式。
+
+需要 secret：
+
+```bash
+npx wrangler secret put ANTHROPIC_API_KEY -c worker/wrangler.jsonc
+```
+
+### 還沒做
+
+- 前端還沒接：上傳發票後要自動呼叫這支、把結果填進明細表讓人校正
+- 判讀失敗時的重試策略（例如對不上就換更強的模型再讀一次）

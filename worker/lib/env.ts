@@ -62,4 +62,9 @@ export interface Env {
 
   /** 免費方案的行程數上限；沒設就用 3。 */
   FREE_TRIP_LIMIT?: string;
+
+  /** 發票自動判讀用。沒設這個 key，掃描功能會回 503，其餘功能不受影響。 */
+  ANTHROPIC_API_KEY?: string;
+  /** 判讀用的模型；沒設就用 claude-opus-5。便宜的選項見 worker/README.md。 */
+  OCR_MODEL?: string;
 }
