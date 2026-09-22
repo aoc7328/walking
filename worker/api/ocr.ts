@@ -115,7 +115,30 @@ export async function scan(request: Request, env: Env): Promise<Response> {
     images.push({ media_type: mediaType, data: bytesToBase64(buf) });
   }
 
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  /**
+   * 走 Cloudflare AI Gateway 還是直連 Anthropic。
+   *
+   * Gateway 是代理，路徑與驗證都不一樣：網址前面多一段 account/gateway/anthropic，
+   * 驗證改用 cf-aig-authorization 標頭。用 Gateway 的好處是快取、用量統計與速率限制
+   * 都在 Cloudflare 這邊看得到，成本也統一計算。
+   */
+  const viaGateway = Boolean(env.AI_GATEWAY);
+  const client = viaGateway
+    ? new Anthropic({
+        baseURL: `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.AI_GATEWAY}/anthropic`,
+        defaultHeaders: {
+          'cf-aig-authorization': `Bearer ${env.ANTHROPIC_API_KEY}`,
+          // 指定要用 Gateway 裡的哪一組 BYOK 憑證（儀表板上那個別名）。
+          // 不指定的話 Gateway 會去找叫 default 的，找不到就回
+          // 「has no BYOK credential named 'default'」。標頭名稱是 cf-aig-byok-alias。
+          ...(env.AI_GATEWAY_CREDENTIAL ? { 'cf-aig-byok-alias': env.AI_GATEWAY_CREDENTIAL } : {}),
+          // 金鑰由 Gateway 保管（BYOK），所以要「明確省略」這兩個標頭。
+          // 給空字串不行：SDK 會抱怨找不到驗證方式，必須傳 null 才算刻意省略。
+          'x-api-key': null,
+          authorization: null,
+        },
+      })
+    : new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   const model = env.OCR_MODEL || 'claude-opus-5';
 
   try {
@@ -172,7 +195,15 @@ export async function scan(request: Request, env: Env): Promise<Response> {
     });
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) return json({ error: '判讀服務忙碌中，稍後再試' }, 429);
-    if (err instanceof Anthropic.APIError) return json({ error: `判讀失敗（${err.status}）` }, 502);
-    return json({ error: '判讀失敗' }, 502);
+    if (err instanceof Anthropic.APIError) {
+      // 把上游訊息帶出來——Gateway 設定不對時，那段訊息是唯一線索
+      const detail = typeof err.message === 'string' ? err.message.slice(0, 200) : '';
+      return json({ error: `判讀失敗（${err.status}）${detail ? '：' + detail : ''}` }, 502);
+    }
+    // 非 Anthropic API 錯誤（網路、Gateway 設定、解析失敗…）。
+    // 訊息帶出來——不然只看到「判讀失敗」四個字，什麼都查不到。
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('receipt-scan failed', msg);
+    return json({ error: '判讀失敗：' + msg.slice(0, 300) }, 502);
   }
 }

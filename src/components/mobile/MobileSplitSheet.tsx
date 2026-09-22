@@ -349,7 +349,7 @@ export default function MobileSplitSheet({ expense, ledger, tripId, busy, mutate
 
           {receipts.length > 0 && !scan && (
             <button className="mv-submit mv-scan-btn" onClick={() => void runScan()} disabled={busy || scanning}>
-              {scanning ? '讀取中…（約 5 秒）' : `讓 AI 讀這 ${receipts.length} 張發票`}
+              {scanning ? '讀取中…（約 15 秒，別關視窗）' : `讓 AI 讀這 ${receipts.length} 張發票`}
             </button>
           )}
 

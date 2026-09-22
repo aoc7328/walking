@@ -24,7 +24,13 @@
 
   "vars": {
     // 免費方案「同時」可以保留幾個行程。刪掉舊的就能再建新的。
-    "FREE_TRIP_LIMIT": "3"
+    "FREE_TRIP_LIMIT": "3",
+    // 走 Cloudflare AI Gateway 讀發票：快取、用量與成本都看得到。
+    // 留空字串就直連 api.anthropic.com。
+    "AI_GATEWAY": "main",
+    "CF_ACCOUNT_ID": "a736ba0868e35e1121acd1e9959051e6",
+    // Gateway 裡那組 Anthropic 憑證的別名（大小寫要跟儀表板上一致）
+    "AI_GATEWAY_CREDENTIAL": "Anthropic"
   },
 
   "kv_namespaces": [

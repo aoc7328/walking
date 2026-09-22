@@ -67,6 +67,17 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   /** 判讀用的模型；沒設就用 claude-opus-5。便宜的選項見 worker/README.md。 */
   OCR_MODEL?: string;
+  /**
+   * Cloudflare AI Gateway 的名稱（例：main）。設了就改走 Gateway：
+   * 網址換成 gateway.ai.cloudflare.com，驗證標頭換成 cf-aig-authorization，
+   * 這時 ANTHROPIC_API_KEY 裡放的是 Gateway token 而不是 Anthropic 金鑰。
+   * 不設就直連 api.anthropic.com。
+   */
+  AI_GATEWAY?: string;
+  /** 走 Gateway 時組網址用；由 wrangler.jsonc 的 vars 帶入。 */
+  CF_ACCOUNT_ID?: string;
+  /** Gateway 裡那組 BYOK 憑證的別名。不設的話 Gateway 會去找叫 default 的。 */
+  AI_GATEWAY_CREDENTIAL?: string;
 
   /**
    * 地點照片代理用的 Google 金鑰。必須是「伺服器端」金鑰：
