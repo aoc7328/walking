@@ -1,6 +1,7 @@
 import type { Place } from '../../types/place';
 import { useTripStore } from '../../stores/tripStore';
 import { useUIStore } from '../../stores/uiStore';
+import { placeThumbUrl } from '../../services/placePhoto';
 
 /** 清單中最多幾筆載縮圖（每張縮圖 = 一次計費的 Place Photo 請求）。 */
 export const THUMB_LIMIT = 5;
@@ -51,7 +52,7 @@ export default function SearchResultCard({
   const openDetail = useUIStore((s) => s.openDetail);
 
   const fav = isFavorited(place.placeId);
-  const photoUrl = showThumb ? place.photoUrls?.[0] : undefined;
+  const photoUrl = showThumb ? placeThumbUrl(place) : undefined;
   const typeLabel = translateType(place.types);
 
   function handleAdd(e: React.MouseEvent) {
