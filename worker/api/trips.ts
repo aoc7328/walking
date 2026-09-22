@@ -18,7 +18,9 @@ import { findById, tripLimit } from '../lib/users';
  */
 
 const TRIP_ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
-const MAX_SIZE = 500 * 1024;
+// 2 MB 而不是 500 KB：沖繩那趟（18 天、98 站）已經 398 KB，再長一點就存不進去。
+// KV 單筆本身允許 25 MB，500 KB 是我們自己設的，設得太保守。
+const MAX_SIZE = 2 * 1024 * 1024;
 
 function keyOf(userId: string, tripId: string): string {
   return `u:${userId}:trip:${tripId}`;

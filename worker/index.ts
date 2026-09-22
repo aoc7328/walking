@@ -5,6 +5,7 @@ import * as trips from './api/trips';
 import * as asset from './api/asset';
 import * as share from './api/share';
 import * as ocr from './api/ocr';
+import * as placePhoto from './api/placePhoto';
 
 /**
  * 多人版 walking 的進入點。
@@ -51,6 +52,9 @@ export default {
 
       // ── 發票自動判讀 ──
       if (path === '/api/receipt-scan' && method === 'POST') return ocr.scan(request, env);
+
+      // ── 地點照片（跨使用者共用快取）──
+      if (path === '/api/place-photo' && method === 'GET') return placePhoto.photo(request, env);
 
       // ── 圖片 ──
       if (path === '/api/asset' && method === 'POST') return asset.upload(request, env);

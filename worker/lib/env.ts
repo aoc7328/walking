@@ -67,4 +67,11 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   /** 判讀用的模型；沒設就用 claude-opus-5。便宜的選項見 worker/README.md。 */
   OCR_MODEL?: string;
+
+  /**
+   * 地點照片代理用的 Google 金鑰。必須是「伺服器端」金鑰：
+   * 前端那把有 HTTP 參照網址限制，從 Worker 打會被擋。
+   * 沒設的話照片代理回 503，其餘功能不受影響。
+   */
+  GOOGLE_MAPS_SERVER_KEY?: string;
 }

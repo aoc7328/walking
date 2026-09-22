@@ -4,7 +4,11 @@ import { toISODate } from '../utils/date';
 
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingWrite: Trip | null = null;
-const DEBOUNCE_MS = 1000;
+// 5 秒而不是 1 秒。每次存檔都是整份行程（沖繩那趟 400 KB）重寫一次 KV，
+// 1 秒的話編輯時每幾秒就寫一次——單人用感覺不到，但那是全 app 最吃「次數」的地方：
+// 1,000 人 × 3 趟就是兩千多萬次寫入。離開頁面時仍有 persistTripKeepalive 保底，
+// 所以放寬不會掉資料。
+const DEBOUNCE_MS = 5000;
 
 const MIGRATION_FLAG_KEY = 'walking.migratedToKV';
 const ACCOUNT_MIGRATION_FLAG_KEY = 'walking.migratedToAccount';

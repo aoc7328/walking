@@ -67,7 +67,11 @@ interface PlaceLite {
 function getPhotoUrls(photos: PlaceLite['photos']): string[] | undefined {
   if (!photos || photos.length === 0) return undefined;
   const urls: string[] = [];
-  for (const photo of photos.slice(0, 6)) {
+  // 只取 1 張，不是 6 張。三個理由：
+  // 1) Places Photo 每抓一次計費，而且免費額度只有 1,000／月，是所有 SKU 裡最緊的
+  // 2) 介面上只用得到第一張（卡片縮圖），其餘 5 張從來沒被顯示過
+  // 3) 每張網址約 200 字元，6 張讓行程 JSON 多出近 100 KB（沖繩那趟 492 個網址）
+  for (const photo of photos.slice(0, 1)) {
     try {
       const url =
         typeof photo.getURI === 'function'
