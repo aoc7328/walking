@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import TripViewer from './components/share/TripViewer';
+import UpdateBanner from './components/common/UpdateBanner';
 import './styles/index.css';
 
 const rootEl = document.getElementById('root');
@@ -17,6 +18,7 @@ function isViewerRoute(): boolean {
 createRoot(rootEl).render(
   <StrictMode>
     {isViewerRoute() ? <TripViewer /> : <App />}
+    <UpdateBanner />
   </StrictMode>,
 );
 

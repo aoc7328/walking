@@ -211,6 +211,14 @@ export function useLedgerEdit() {
             e.id === expenseId ? { ...e, splits: (e.splits ?? []).filter((s) => s.id !== splitId) } : e,
           ),
         })),
+      /** 整份取代明細（AI 判讀結果套用時用）。 */
+      replaceSplits: (expenseId: string, lines: { label: string; price: number; qty: number }[]) =>
+        upd((l) => ({
+          ...l,
+          expenses: l.expenses.map((e) =>
+            e.id === expenseId ? { ...e, splits: lines.map((x) => ({ id: uuid(), ...x })) } : e,
+          ),
+        })),
       clearSplits: (expenseId: string) =>
         upd((l) => ({
           ...l,

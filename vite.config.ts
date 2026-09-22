@@ -16,7 +16,11 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // prompt 而不是 autoUpdate：autoUpdate 的行為是「下次載入背景更新、
+      // 再下次才生效」，使用者要重整兩次才看得到新版。多人版的話每次部署後
+      // 都會有人跑在舊版，回報的 bug 可能早就修好了。改成偵測到新版跳提示，
+      // 由使用者自己按（見 UpdateBanner）。
+      registerType: 'prompt',
       includeAssets: ['logo.png'],
       manifest: {
         name: '胖齊肥柔去走走',

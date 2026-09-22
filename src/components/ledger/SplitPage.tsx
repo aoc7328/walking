@@ -22,6 +22,17 @@ async function receiptBlob(file: File): Promise<Blob> {
   return blob;
 }
 
+interface ScanResult {
+  lines: { label: string; price: number; qty: number }[];
+  storeName: string;
+  unreadable: boolean;
+  subtotal: number;
+  amount: number;
+  diff: number;
+  /** 明細加總等於刷卡金額——判讀幾乎確定正確。 */
+  reconciled: boolean;
+}
+
 const PAYEE_LIST_ID = 'split-payee-options';
 
 /**
@@ -120,6 +131,8 @@ function PurchaseCard({ purchase, ledger, tripId }: { purchase: ReturnType<typeo
   const fileRef = useRef<HTMLInputElement>(null);
   const [paste, setPaste] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scan, setScan] = useState<ScanResult | null>(null);
 
   const e: Expense = purchase.expense;
   const splits = e.splits ?? [];
@@ -136,6 +149,42 @@ function PurchaseCard({ purchase, ledger, tripId }: { purchase: ReturnType<typeo
     }
     ed.addSplitLines(e.id, lines);
     setPaste('');
+  }
+
+  /** 把發票交給 AI 讀成明細。不直接寫進去——判讀會錯，要讓人看過。 */
+  async function runScan() {
+    if (receipts.length === 0) return;
+    setScanning(true);
+    setScan(null);
+    try {
+      const res = await fetch('/api/receipt-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ keys: receipts, amount: e.amount, currency: cur }),
+      });
+      const body = (await res.json()) as ScanResult & { error?: string };
+      if (!res.ok) {
+        window.alert(body.error ?? `判讀失敗（HTTP ${res.status}）`);
+        return;
+      }
+      if (!body.lines?.length) {
+        window.alert('這張照片讀不出商品明細，再拍清楚一點試試。');
+        return;
+      }
+      setScan(body);
+    } catch {
+      window.alert('判讀失敗，檢查一下網路。');
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  function applyScan() {
+    if (!scan) return;
+    if (splits.length > 0 && !window.confirm(`要用判讀結果取代現有的 ${splits.length} 項明細嗎？`)) return;
+    ed.replaceSplits(e.id, scan.lines);
+    setScan(null);
   }
 
   async function addReceipts(files: FileList | null) {
@@ -259,6 +308,35 @@ function PurchaseCard({ purchase, ledger, tripId }: { purchase: ReturnType<typeo
             <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(ev) => void addReceipts(ev.target.files)} />
           </div>
           <div className="led-muted">收據太長可以分好幾張拍，一次選起來一起上傳。</div>
+
+          {receipts.length > 0 && !scan && (
+            <button className="btn led-scan-btn" onClick={() => void runScan()} disabled={scanning}>
+              {scanning ? '讀取中…（約 15 秒）' : `讓 AI 讀這 ${receipts.length} 張發票`}
+            </button>
+          )}
+
+          {scan && (
+            <div className="led-scan">
+              <div className={scan.reconciled ? 'led-ok' : 'led-over-text'}>
+                {scan.reconciled
+                  ? `讀到 ${scan.lines.length} 項，加總剛好等於刷卡金額 ✓`
+                  : `讀到 ${scan.lines.length} 項，加總 ${formatMoney(scan.subtotal, cur)}，比刷卡金額${scan.diff > 0 ? '少' : '多'} ${formatMoney(Math.abs(scan.diff), cur)}——請自己核一遍`}
+              </div>
+              {scan.unreadable && <div className="led-over-text">照片偏糊，AI 自己也沒把握。</div>}
+              <ul className="led-scan-list">
+                {scan.lines.map((l, i) => (
+                  <li key={i}>
+                    <span>{l.label}</span>
+                    <span>{formatMoney(l.price, cur)}{l.qty > 1 && ` ×${l.qty}`}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="led-split-pick">
+                <button className="btn" onClick={() => setScan(null)}>取消</button>
+                <button className="btn btn-primary" onClick={applyScan}>套用這 {scan.lines.length} 項</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {purchase.others.length > 0 && (
