@@ -8,7 +8,8 @@ export type AuthMode = 'password' | 'google';
 /**
  * 後端用的是哪一種登入。
  *
- * 單人版（Cloudflare Pages）沒有這支 API，會回 404 → 當成密碼版。
+ * 單人版（Cloudflare Pages）沒有這支 API：_redirects 會把它導到 index.html，
+ * 所以拿到的是 200 + HTML，解析 JSON 時丟例外 → catch 當成密碼版。
  * 多人版 Worker 回 { mode: 'google' }。同一份前端才能兩邊都跑。
  */
 export async function getAuthMode(): Promise<AuthMode> {

@@ -22,15 +22,14 @@
     "FREE_TRIP_LIMIT": "3"
   },
 
-  // ⚠️ 下面三個 id 要先建資源才會有，見 worker/README.md
   "kv_namespaces": [
-    { "binding": "TRIPS", "id": "TODO_KV_ID" }
+    { "binding": "TRIPS", "id": "d98179bd227d4031959eb20240034d08" }
   ],
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "walking-multi-media" }
   ],
   "d1_databases": [
-    { "binding": "DB", "database_name": "walking-multi", "database_id": "TODO_D1_ID" }
+    { "binding": "DB", "database_name": "walking-multi", "database_id": "f6186721-c66a-40f5-b00b-997c20574a81" }
   ]
 
   // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET 用 secret 放，不寫在這個檔案裡：

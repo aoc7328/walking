@@ -4,7 +4,8 @@
 這是另一個獨立的 Worker：不同網址、不同 KV / R2 / D1，資料不共用。
 
 前端 `src/` 兩邊共用，靠 `GET /api/auth/mode` 分辨後端是哪一種：
-Pages 沒有這支 → 回 404 → 顯示密碼欄；這個 Worker 回 `{"mode":"google"}` → 顯示 Google 登入。
+Pages 沒有這支，_redirects 會導到 index.html（200 + HTML），前端解析 JSON 失敗就顯示密碼欄；
+這個 Worker 回 `{"mode":"google"}` → 顯示 Google 登入。
 
 ## 跟單人版的差別
 
