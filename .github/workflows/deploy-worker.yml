@@ -1,0 +1,56 @@
+name: 部署多人版 Worker
+
+# push 到 master 就自動部署 walking-multi。
+# 只有動到會影響產出的檔案才跑——改 README 不需要重新部署。
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'worker/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch: # 也可以到 Actions 分頁手動按一下
+
+concurrency:
+  # 連續推很多次時只跑最後一次，避免兩個部署打架
+  group: deploy-worker
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # 型別錯了就不要部署上去
+      - name: 型別檢查
+        run: npm run typecheck
+
+      # Maps 金鑰是「建置時」就打包進前端的，所以這裡要給。
+      # 這把是多人版專用（限制在 walking-multi 網域），跟你自己 Pages 版那把不同。
+      - name: 建置
+        run: npm run build:worker
+        env:
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+
+      - name: 部署
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Worker 的 secret（Google OAuth、ANTHROPIC_API_KEY、伺服器端 Maps key）
+          # 存在 Cloudflare 上，不經過這裡，也不需要放進 GitHub。
+          command: deploy -c worker/wrangler.jsonc

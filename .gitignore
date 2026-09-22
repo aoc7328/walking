@@ -39,3 +39,6 @@ nz-trip-import.json
 
 # 多人版 Worker 專用的環境變數（含另一把 Maps key）
 .env.worker.local
+
+# 本機工作區：帳號 ID、收據原始資料、一次性腳本。不進版控。
+work/
