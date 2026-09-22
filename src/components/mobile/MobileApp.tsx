@@ -8,6 +8,7 @@ import MobileItinerary from './MobileItinerary';
 import MobileLedger from './MobileLedger';
 import MobileCards from './MobileCards';
 import MobileInfo from './MobileInfo';
+import AccountButton from '../auth/AccountButton';
 
 /**
  * 手機版外殼。
@@ -249,6 +250,7 @@ export default function MobileApp() {
             ↻
           </span>
         </button>
+        <AccountButton compact />
       </header>
 
       <div className="mv-scroll">
