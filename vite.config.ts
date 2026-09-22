@@ -48,11 +48,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        // /api/* 不能走 SPA 的 navigateFallback。
         // 預設 workbox 會把「所有導覽」都回快取裡的 index.html——OAuth 的
         // 起手式與 callback 都是整頁導覽，會被 SW 在瀏覽器端就攔掉，
         // 請求根本送不到伺服器。用 fetch 打的 API 不受影響，所以很難察覺。
-        navigateFallbackDenylist: [/^\/api\//],
+        // /privacy 與 /terms 同理：預快取的鍵是 privacy.html，Static Assets
+        // 會把 .html 砍掉，無副檔名那組沒進快取，會被換成主畫面。
+        navigateFallbackDenylist: [/^\/api\//, /^\/privacy$/, /^\/terms$/],
         // 主 bundle 已經超過預設的 2 MiB 上限。超過就「不會被預先快取」，
         // 而且建置直接失敗——但真正的問題是沒快取到就等於出國沒訊號時開不起來，
         // 這個 App 的重點就是離線也要看得到行程，所以是把上限拉高而不是放它不快取。

@@ -59,6 +59,11 @@ export default function LoginScreen({ onSuccess }: Props) {
             <div className="login-hint">
               我們只會拿到你的姓名、信箱與大頭貼，用來認得你是誰。
               <strong>不會</strong>讀取你的 Gmail、雲端硬碟或通訊錄。
+              <br />
+              登入即表示你同意
+              <a href="/terms.html" target="_blank" rel="noreferrer">服務條款</a>
+              與
+              <a href="/privacy.html" target="_blank" rel="noreferrer">隱私權政策</a>。
             </div>
           </>
         )}

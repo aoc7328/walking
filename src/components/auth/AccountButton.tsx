@@ -3,6 +3,8 @@ import { getAuthMode } from '../../services/auth';
 
 interface Session {
   ok: boolean;
+  /** 刪除帳號要帶回去當確認參數。 */
+  userId?: string;
   user?: { name: string; email: string; picture: string };
   quota?: { used: number; limit: number };
 }
@@ -46,6 +48,39 @@ export default function AccountButton({ compact = false }: { compact?: boolean }
   if (!session?.ok || !session.user) return null;
   const { name, email, picture } = session.user;
 
+  /**
+   * 刪除帳號。要打兩次字才會執行——這個動作沒有備份、沒有還原，
+   * 一個 confirm 對話框擋不住誤觸。
+   */
+  async function deleteAccount() {
+    const sess = session?.user;
+    if (!sess) return;
+    if (!window.confirm('刪除帳號會一次刪掉你所有的行程、發票照片與票券，無法復原，也沒有備份可以還原。\n\n確定要繼續嗎？')) return;
+    const typed = window.prompt('最後確認：請輸入你的信箱以確認刪除\n' + sess.email);
+    if (typed?.trim().toLowerCase() !== sess.email.toLowerCase()) {
+      if (typed !== null) window.alert('輸入的信箱不符，已取消。');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/account?confirm=' + encodeURIComponent(session?.userId ?? ''), {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        window.alert('刪除失敗：' + (body.error ?? res.status));
+        setBusy(false);
+        return;
+      }
+      window.alert('已刪除：行程 ' + body.deleted.trips + ' 個、圖片 ' + body.deleted.images + ' 張。');
+      window.location.href = '/';
+    } catch {
+      window.alert('刪除失敗，檢查網路後再試。');
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     setBusy(true);
     try {
@@ -81,6 +116,15 @@ export default function AccountButton({ compact = false }: { compact?: boolean }
           )}
           <button className="acct-logout" onClick={() => void logout()} disabled={busy}>
             {busy ? '登出中…' : '登出'}
+          </button>
+
+          <div className="acct-links">
+            <a href="/privacy.html" target="_blank" rel="noreferrer">隱私權政策</a>
+            <a href="/terms.html" target="_blank" rel="noreferrer">服務條款</a>
+          </div>
+
+          <button className="acct-danger" onClick={() => void deleteAccount()} disabled={busy}>
+            刪除帳號
           </button>
         </div>
       )}

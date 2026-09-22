@@ -117,6 +117,8 @@ export async function session(request: Request, env: Env): Promise<Response> {
   const used = await countTrips(env, userId);
   return json({
     ok: true,
+    // 刪除帳號時要帶回來當確認參數，避免誤觸或被 CSRF 打到
+    userId: user.id,
     user: { name: user.name, email: user.email, picture: user.picture },
     quota: { used, limit: tripLimit(env, user) },
   });

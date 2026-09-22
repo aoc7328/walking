@@ -6,6 +6,7 @@ import * as asset from './api/asset';
 import * as share from './api/share';
 import * as ocr from './api/ocr';
 import * as placePhoto from './api/placePhoto';
+import * as account from './api/account';
 
 /**
  * 多人版 walking 的進入點。
@@ -32,6 +33,9 @@ export default {
       if (path === '/api/auth/callback' && method === 'GET') return auth.callback(request, env);
       if (path === '/api/auth/session' && method === 'GET') return auth.session(request, env);
       if (path === '/api/auth/logout' && method === 'POST') return auth.logout(request, env);
+
+      // ── 帳號 ──
+      if (path === '/api/account' && method === 'DELETE') return account.remove(request, env);
 
       // ── 自己的行程 ──
       if (path === '/api/trips' && method === 'GET') return trips.list(request, env);

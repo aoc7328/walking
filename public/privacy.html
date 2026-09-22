@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>隱私權政策｜走走</title>
+    <style>
+      :root { --ink: #2C2620; --ink2: #6B5F50; --bg: #FAF7F0; --card: #fff; --line: #E8DFD0; --accent: #2C4A3D; --warn: #D85A30; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 32px 16px 80px; background: var(--bg); color: var(--ink);
+             font-family: 'Noto Serif TC', Georgia, serif; line-height: 1.85; }
+      main { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 26px; margin: 0 0 6px; color: var(--accent); }
+      h2 { font-size: 18px; margin: 34px 0 10px; color: var(--accent); }
+      .meta { color: var(--ink2); font-size: 13px; margin-bottom: 28px; }
+      p, li { font-size: 15px; }
+      table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+      th, td { text-align: left; padding: 8px 10px; border: 0.5px solid var(--line); vertical-align: top; }
+      th { background: #F2EDE0; font-weight: 600; }
+      .box { padding: 14px 16px; border: 0.5px solid var(--warn); border-radius: 8px; background: #FAEDE4; margin: 16px 0; }
+      a { color: var(--accent); }
+      footer { margin-top: 48px; padding-top: 16px; border-top: 0.5px solid var(--line); font-size: 13px; color: var(--ink2); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>隱私權政策</h1>
+      <p class="meta">走走（walking）· 最後更新：2026 年 9 月 23 日</p>
+
+      <p>這份文件說明「走走」會收集什麼資料、放在哪裡、傳給誰、以及你可以怎麼把它拿回去或刪掉。寫得具體一點，你才判斷得出要不要用。</p>
+
+      <h2>一、我們收集什麼</h2>
+      <table>
+        <tr><th>類別</th><th>內容</th><th>從哪來</th></tr>
+        <tr><td>帳號</td><td>姓名、電子郵件、大頭貼網址</td><td>你用 Google 登入時授權的</td></tr>
+        <tr><td>行程</td><td>地點、日期、時間、交通方式、你寫的備註</td><td>你自己輸入</td></tr>
+        <tr><td>帳本</td><td>消費金額、類別、幣別、你為支付方式取的名稱、預算</td><td>你自己輸入</td></tr>
+        <tr><td>圖片</td><td>發票／收據、票券、入境 QR（Visit Japan Web）</td><td>你自己上傳</td></tr>
+      </table>
+
+      <div class="box">
+        <strong>請特別注意這幾樣。</strong>你上傳的圖片可能含有敏感資訊 ——
+        入境 QR 上有<strong>護照英文姓名</strong>，發票上常有<strong>信用卡末四碼</strong>，
+        訂房與證明文件欄位可能有<strong>同行者姓名與聯絡方式</strong>。
+        這些是你主動放進來的，我們不會額外解析或分類，但你上傳前請自己衡量。
+      </div>
+
+      <p>我們<strong>不會</strong>收集：你的信用卡號、密碼（登入完全交給 Google，我們拿不到你的 Google 密碼）、定位軌跡、通訊錄、你 Google 帳號裡的信件或檔案。</p>
+
+      <h2>二、資料放在哪裡</h2>
+      <p>全部存放在 <strong>Cloudflare</strong> 的服務上（Workers KV 存行程、R2 存圖片、D1 存帳號），由 Cloudflare 的全球節點提供服務，資料可能儲存或經過台灣以外的地區。</p>
+
+      <h2>三、會傳給哪些第三方</h2>
+      <table>
+        <tr><th>對象</th><th>傳什麼</th><th>為什麼</th></tr>
+        <tr><td>Google</td><td>你的登入請求；你搜尋的地點關鍵字與座標</td><td>登入驗證、地圖與地點資料</td></tr>
+        <tr><td>Cloudflare</td><td>上述所有資料</td><td>主機與資料庫</td></tr>
+        <tr><td>Anthropic（透過 Cloudflare AI Gateway）</td><td><strong>你按下「讓 AI 讀發票」時，那幾張發票照片</strong></td><td>把收據判讀成商品明細</td></tr>
+      </table>
+
+      <div class="box">
+        發票判讀是<strong>你按下按鈕才會發生</strong>的，不按就不會傳。
+        如果某張發票上有你不想讓第三方看到的內容，就不要用這個功能，自己手動輸入明細。
+      </div>
+
+      <p>我們不會把你的資料賣給任何人，也不會用於廣告。</p>
+
+      <h2>四、公開分享連結</h2>
+      <p>你按「分享」時，系統會把該行程的一份<strong>快照</strong>另外存一份，並給你一個網址。<strong>拿到那個網址的人都看得到內容，不需要登入。</strong>快照包含地點、時間與你寫的備註，但<strong>不包含帳本、發票、票券與入境 QR</strong>。快照 180 天後自動刪除。你自己的行程之後再修改，不會影響已經分享出去的快照。</p>
+
+      <h2>五、保留多久</h2>
+      <ul>
+        <li>行程與圖片：<strong>你刪掉才會消失</strong>，我們不會主動清理</li>
+        <li>分享快照：建立後 180 天自動刪除</li>
+        <li>登入憑證：30 天，或你按登出時</li>
+      </ul>
+
+      <h2>六、你可以做什麼</h2>
+      <ul>
+        <li><strong>看</strong>：所有資料都在 app 裡看得到，沒有隱藏欄位</li>
+        <li><strong>改／刪單筆</strong>：行程、消費、圖片都可以自己刪</li>
+        <li><strong>整個帳號刪掉</strong>：在帳號選單裡「刪除帳號」，會一次刪掉你的行程、圖片、索引與所有裝置的登入狀態。<strong>這個動作無法復原，也沒有備份可以還原。</strong></li>
+      </ul>
+      <p>刪除帳號不會刪掉你已經分享出去的快照（它們會在 180 天後自己過期），需要立刻撤掉請來信。</p>
+
+      <h2>七、安全</h2>
+      <p>連線一律走 HTTPS。每個人的資料以帳號為前綴分開存放，伺服器端只認登入後的身分，不接受前端指定身分。金鑰存放在 Cloudflare 的加密機制中，不會出現在網頁原始碼裡。</p>
+      <p>不過請理解：這是一個由個人開發、規模很小的服務，沒有專責資安團隊，也沒有通過任何第三方稽核。<strong>不建議在這裡放你承受不起外洩的資料。</strong></p>
+
+      <h2>八、兒童</h2>
+      <p>本服務不針對未滿 13 歲的兒童設計，也不會刻意收集其資料。</p>
+
+      <h2>九、變更</h2>
+      <p>政策若有變更會更新本頁上方的日期。涉及資料用途的重大變更，會在你下次登入時告知。</p>
+
+      <h2>十、聯絡方式</h2>
+      <p>任何關於個人資料的問題、查閱或刪除請求，請寄到：<a href="mailto:aoc7328@gmail.com">aoc7328@gmail.com</a></p>
+
+      <footer>
+        <a href="/">← 回到走走</a>　·　<a href="/terms.html">服務條款</a>
+      </footer>
+    </main>
+  </body>
+</html>
