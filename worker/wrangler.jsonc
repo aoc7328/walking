@@ -14,7 +14,12 @@
   "assets": {
     "directory": "../dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // /api/* 一律先跑 Worker。沒有這行的話，瀏覽器的整頁導覽（Accept: text/html）
+    // 會被 SPA fallback 攔下來回 index.html，Worker 根本不會被執行——
+    // OAuth 的起手式與 callback 都是整頁導覽，正好全中。
+    // 用 fetch 打的 API 不受影響，所以這個坑用 curl 測不出來。
+    "run_worker_first": ["/api/*"]
   },
 
   "vars": {
