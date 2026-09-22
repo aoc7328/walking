@@ -19,6 +19,23 @@ async function receiptBlob(file: File): Promise<Blob> {
   return blob;
 }
 
+interface ScanLine {
+  label: string;
+  price: number;
+  qty: number;
+}
+
+interface ScanResult {
+  lines: ScanLine[];
+  storeName: string;
+  unreadable: boolean;
+  subtotal: number;
+  amount: number;
+  diff: number;
+  /** 明細加總等於刷卡金額——判讀幾乎確定正確。 */
+  reconciled: boolean;
+}
+
 interface Props {
   expense: Expense;
   ledger: Ledger;
@@ -41,6 +58,9 @@ export default function MobileSplitSheet({ expense, ledger, tripId, busy, mutate
   const [paste, setPaste] = useState('');
   const [showPaste, setShowPaste] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  /** AI 判讀結果；套用或取消前先讓人看過。 */
+  const [scan, setScan] = useState<ScanResult | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -134,6 +154,49 @@ export default function MobileSplitSheet({ expense, ledger, tripId, busy, mutate
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  }
+
+  /**
+   * 把發票照片交給 AI 讀成明細。
+   *
+   * 刻意不直接寫進行程：判讀可能有錯，要讓人看過。不過回傳帶了對帳結果——
+   * 明細加總等於刷卡金額就幾乎確定沒讀錯，那種情況可以放心按套用。
+   */
+  async function runScan() {
+    if (receipts.length === 0) return;
+    setScanning(true);
+    setScan(null);
+    try {
+      const res = await fetch('/api/receipt-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ keys: receipts, amount: expense.amount, currency: cur }),
+      });
+      const body = (await res.json()) as ScanResult & { error?: string };
+      if (!res.ok) {
+        onToast(body.error ?? `判讀失敗（HTTP ${res.status}）`);
+        return;
+      }
+      if (!body.lines?.length) {
+        onToast('這張照片讀不出商品明細，再拍清楚一點試試');
+        return;
+      }
+      setScan(body);
+    } catch {
+      onToast('判讀失敗，檢查一下網路');
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  /** 套用判讀結果：整份取代現有明細（有東西的話先問一聲）。 */
+  function applyScan() {
+    if (!scan) return;
+    if (splits.length > 0 && !window.confirm(`要用判讀結果取代現有的 ${splits.length} 項明細嗎？`)) return;
+    const lines = scan.lines.map((l) => ({ id: uuid(), label: l.label, price: l.price, qty: l.qty }));
+    setScan(null);
+    patchSplits(() => lines, `已帶進 ${lines.length} 項，接著指定給誰`);
   }
 
   const removeReceipt = (key: string) => {
@@ -283,6 +346,43 @@ export default function MobileSplitSheet({ expense, ledger, tripId, busy, mutate
           <div className="mv-split-foot-note">
             <span className="mv-muted">收據太長可以分好幾張拍，一次選起來一起加。</span>
           </div>
+
+          {receipts.length > 0 && !scan && (
+            <button className="mv-submit mv-scan-btn" onClick={() => void runScan()} disabled={busy || scanning}>
+              {scanning ? '讀取中…（約 5 秒）' : `讓 AI 讀這 ${receipts.length} 張發票`}
+            </button>
+          )}
+
+          {scan && (
+            <div className="mv-scan">
+              <div className={`mv-scan-head${scan.reconciled ? ' ok' : ''}`}>
+                {scan.reconciled
+                  ? `讀到 ${scan.lines.length} 項，加總剛好等於刷卡金額 ✓`
+                  : `讀到 ${scan.lines.length} 項，加總 ${formatMoney(scan.subtotal, cur)}，比刷卡金額${scan.diff > 0 ? '少' : '多'} ${formatMoney(Math.abs(scan.diff), cur)}`}
+              </div>
+              {!scan.reconciled && (
+                <div className="mv-scan-warn">對不上就是有讀錯或漏讀，套用後請自己核一遍。</div>
+              )}
+              {scan.unreadable && <div className="mv-scan-warn">照片偏糊，AI 自己也沒把握。</div>}
+
+              <ul className="mv-scan-list">
+                {scan.lines.map((l, i) => (
+                  <li key={i}>
+                    <span className="mv-scan-label">{l.label}</span>
+                    <span className="mv-scan-amt">
+                      {formatMoney(l.price, cur)}
+                      {l.qty > 1 && <span className="mv-muted"> ×{l.qty}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mv-split-tools">
+                <button className="mv-btn" onClick={() => setScan(null)} disabled={busy}>取消</button>
+                <button className="mv-submit mv-scan-apply" onClick={applyScan} disabled={busy}>套用這 {scan.lines.length} 項</button>
+              </div>
+            </div>
+          )}
 
           {/* 收款 */}
           {p.others.length > 0 && (

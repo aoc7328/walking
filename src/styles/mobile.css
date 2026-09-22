@@ -2244,3 +2244,52 @@
 .mv-settle-name { color: var(--ink-primary); }
 .mv-settle-amt { color: var(--ink-secondary); font-feature-settings: 'tnum' 1; }
 .mv-entry-split { color: var(--accent-warm); }
+
+/* 發票 AI 判讀 */
+.mv-scan-btn { margin-top: 12px; }
+
+.mv-scan {
+  margin-top: 12px;
+  padding: 12px;
+  border: 0.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+
+.mv-scan-head {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--accent-warm);
+}
+
+.mv-scan-head.ok { color: var(--accent-primary); }
+
+.mv-scan-warn {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--accent-warm);
+}
+
+.mv-scan-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 0.5px dashed var(--border-soft);
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.mv-scan-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-primary);
+}
+
+.mv-scan-label { word-break: break-word; }
+.mv-scan-amt { white-space: nowrap; font-feature-settings: 'tnum' 1; }
+.mv-scan-apply { flex: 1; margin-top: 0; min-height: 42px; }
