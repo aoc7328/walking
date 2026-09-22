@@ -1,0 +1,43 @@
+{
+  // 多人版 walking。刻意放在 worker/ 而不是專案根目錄——
+  // 根目錄放 wrangler 設定會被 `wrangler pages deploy` 一起讀到，
+  // 可能影響現有 walking（Pages）的部署。這邊用 -c 指定：
+  //   npm run build
+  //   npx wrangler deploy -c worker/wrangler.jsonc
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "walking-multi",
+  "main": "index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+
+  // build 出來的 SPA 直接由 Worker 供應；找不到的路徑回 index.html（前端自己路由）
+  "assets": {
+    "directory": "../dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // /api/* 一律先跑 Worker。沒有這行的話，瀏覽器的整頁導覽（Accept: text/html）
+    // 會被 SPA fallback 攔下來回 index.html，Worker 根本不會被執行——
+    // OAuth 的起手式與 callback 都是整頁導覽，正好全中。
+    // 用 fetch 打的 API 不受影響，所以這個坑用 curl 測不出來。
+    "run_worker_first": ["/api/*"]
+  },
+
+  "vars": {
+    // 免費方案「同時」可以保留幾個行程。刪掉舊的就能再建新的。
+    "FREE_TRIP_LIMIT": "3"
+  },
+
+  "kv_namespaces": [
+    { "binding": "TRIPS", "id": "d98179bd227d4031959eb20240034d08" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "walking-multi-media" }
+  ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "walking-multi", "database_id": "f6186721-c66a-40f5-b00b-997c20574a81" }
+  ]
+
+  // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET 用 secret 放，不寫在這個檔案裡：
+  //   npx wrangler secret put GOOGLE_CLIENT_ID -c worker/wrangler.jsonc
+  //   npx wrangler secret put GOOGLE_CLIENT_SECRET -c worker/wrangler.jsonc
+}

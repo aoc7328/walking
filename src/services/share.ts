@@ -339,7 +339,9 @@ export type ShareHashKind =
  */
 export function readShareHash(): ShareHashKind {
   const hash = window.location.hash;
-  const mid = hash.match(/#v=([a-f0-9]{6,16})/i);
+  // 長度必須跟後端發的 id 對得上：後端用 crypto.randomUUID() 去掉連字號 = 32 個字元。
+  // 原本寫 {6,16} 只截到前 16 碼，拿去查一定 404——短連結從來沒成功過。
+  const mid = hash.match(/#v=([a-f0-9]{6,32})/i);
   if (mid) return { type: 'id', id: mid[1]! };
 
   const minl = hash.match(/#view=(.+)/);

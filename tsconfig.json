@@ -25,5 +25,5 @@
     },
     "types": ["vite/client", "google.maps", "node"]
   },
-  "include": ["src", "functions", "vite.config.ts"]
+  "include": ["src", "functions", "worker", "vite.config.ts"]
 }

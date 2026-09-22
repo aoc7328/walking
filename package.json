@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:worker": "vite build --mode worker && node -e \"require('fs').rmSync('dist/_redirects',{force:true})\"",
+    "deploy:worker": "npm run build:worker && npx wrangler deploy -c worker/wrangler.jsonc"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",

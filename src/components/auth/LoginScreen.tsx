@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { verifyPassword } from '../../services/auth';
+import { useEffect, useState } from 'react';
+import { getAuthMode, verifyPassword, type AuthMode } from '../../services/auth';
 
 interface Props {
   onSuccess: () => void;
@@ -9,6 +9,18 @@ export default function LoginScreen({ onSuccess }: Props) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** null = 還在問後端要顯示哪一種登入 */
+  const [mode, setMode] = useState<AuthMode | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void getAuthMode().then((m) => {
+      if (alive) setMode(m);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function unlock(e?: React.FormEvent) {
     e?.preventDefault();
@@ -34,8 +46,24 @@ export default function LoginScreen({ onSuccess }: Props) {
         <h1 className="login-brand">
           <em>胖齊肥柔去走走</em>
         </h1>
-        <p className="login-tagline">輸入密碼解鎖</p>
+        <p className="login-tagline">{mode === 'google' ? '用 Google 帳號登入' : '輸入密碼解鎖'}</p>
 
+        {mode === null && <div className="login-hint">載入中…</div>}
+
+        {mode === 'google' && (
+          <>
+            {/* 走整頁跳轉而不是 fetch：OAuth 同意畫面本來就得離開這一頁 */}
+            <a className="btn btn-primary login-submit login-google" href="/api/auth/google">
+              使用 Google 登入
+            </a>
+            <div className="login-hint">
+              我們只會拿到你的姓名、信箱與大頭貼，用來認得你是誰。
+              <strong>不會</strong>讀取你的 Gmail、雲端硬碟或通訊錄。
+            </div>
+          </>
+        )}
+
+        {mode === 'password' && (
         <form className="login-form" onSubmit={unlock}>
           <label className="login-field">
             <span className="login-label">密碼</span>
@@ -60,10 +88,13 @@ export default function LoginScreen({ onSuccess }: Props) {
             {busy ? '解鎖中…' : '解鎖'}
           </button>
         </form>
+        )}
 
-        <div className="login-hint">
-          解鎖過的裝置會記住，下次開不用再打。密碼打錯只是進不來，<strong>不會動到任何行程資料</strong>。
-        </div>
+        {mode === 'password' && (
+          <div className="login-hint">
+            解鎖過的裝置會記住，下次開不用再打。密碼打錯只是進不來，<strong>不會動到任何行程資料</strong>。
+          </div>
+        )}
       </div>
     </div>
   );

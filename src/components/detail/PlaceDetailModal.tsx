@@ -6,6 +6,7 @@ import { fetchPlaceDetails, getGoogleMapsPlaceUrl, getGoogleMapsReviewsUrl, sear
 import type { Place, PlaceReview } from '../../types/place';
 import { formatStars, uuid } from '../../utils/format';
 import { haversineKm } from '../../utils/geo';
+import { placeThumbUrl } from '../../services/placePhoto';
 
 interface NearbyCategory {
   key: string;
@@ -185,7 +186,9 @@ export default function PlaceDetailModal() {
     useUIStore.getState().openDetail(place.placeId, 'search');
   }
 
-  const photos = detail.photoUrls ?? [];
+  // 多人版走代理（存 R2、金鑰不外流、不會過期）；單人版退回行程裡存的網址
+  const proxied = placeThumbUrl(detail);
+  const photos = proxied ? [proxied] : (detail.photoUrls ?? []);
   const heroUrl = photos[0];
 
   return (

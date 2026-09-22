@@ -5011,3 +5011,19 @@ input.led-cell.num { text-align: right; }
 .led-settles { display: grid; gap: 2px; }
 .led-settle-row { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 12px; padding: 7px 4px; border-bottom: 0.5px solid var(--border-soft); font-size: 13.5px; cursor: pointer; font-feature-settings: 'tnum' 1; }
 .led-settle-row:hover { background: var(--bg-card); }
+
+/* 帳號按鈕（只有多人版會出現） */
+.acct { position: relative; display: inline-flex; }
+.acct-btn { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px 4px 5px; border: 0.5px solid var(--border-medium); border-radius: 999px; background: var(--bg-card); font-family: var(--font-body); font-size: 13px; color: var(--ink-primary); cursor: pointer; }
+.acct-btn:hover { border-color: var(--accent-primary); }
+.acct-btn.compact { padding: 3px; border: none; background: none; }
+.acct-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; display: block; }
+.acct-avatar-fallback { display: flex; align-items: center; justify-content: center; background: var(--accent-primary); color: #fff; font-size: 13px; }
+.acct-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 300; min-width: 208px; padding: 12px; border: 0.5px solid var(--border-medium); border-radius: var(--radius-md); background: var(--bg-card); box-shadow: var(--shadow-modal); }
+.acct-who-name { font-size: 14px; color: var(--ink-primary); }
+.acct-who-mail { font-size: 12px; color: var(--ink-secondary); word-break: break-all; margin-top: 2px; }
+.acct-quota { margin-top: 9px; padding-top: 9px; border-top: 0.5px solid var(--border-soft); font-size: 12.5px; color: var(--ink-secondary); font-feature-settings: 'tnum' 1; }
+.acct-logout { width: 100%; min-height: 38px; margin-top: 10px; border: 0.5px solid var(--border-medium); border-radius: var(--radius-sm); background: var(--bg-page); font-family: var(--font-body); font-size: 13.5px; color: var(--ink-primary); cursor: pointer; }
+.acct-logout:hover:not(:disabled) { background: #B3402F; border-color: #B3402F; color: #fff; }
+.acct-logout:disabled { opacity: 0.6; cursor: not-allowed; }

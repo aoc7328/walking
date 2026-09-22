@@ -5,6 +5,7 @@ import { formatRange, diffDays, addDays } from '../../utils/date';
 import TripSwitcher from './TripSwitcher';
 import { useUIStore } from '../../stores/uiStore';
 import SaveAsModal from './SaveAsModal';
+import AccountButton from '../auth/AccountButton';
 
 function EditableTripName({ name, onSave }: { name: string; onSave: (v: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -102,6 +103,7 @@ export default function Header() {
           <SaveStatus onSaveAs={() => setSaveAsOpen(true)} />
           <button className="btn" onClick={openDownloadModal} title="下載 PDF（普通版 / 騎馬釘小冊子）">下載</button>
           <button className="btn" onClick={openShareModal} title="產生 QR Code 與分享連結，讓朋友掃描看手機版行程">分享</button>
+          <AccountButton />
         </div>
       </header>
       {saveAsOpen && <SaveAsModal onClose={() => setSaveAsOpen(false)} />}
