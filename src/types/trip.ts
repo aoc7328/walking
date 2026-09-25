@@ -136,6 +136,12 @@ export interface Trip {
   ledger?: Ledger;
   /** 被刪掉的地點紀錄（最新的在前）。給「我之前記過某個地方，現在找不到了」用。 */
   removedPlaces?: RemovedPlace[];
+  /**
+   * 行程已確定（日期、要去都定了）。勾了之後，胖齊肥柔記帳會把這趟的起訖日與
+   * 旅途中（phase = during）的帳自動同步過去——旅行時只要記 Walk 就好。
+   * 存檔時會一起寫進 KV metadata（見 functions/api/trips/[id].ts），記帳 App 靠 metadata 找到這趟。
+   */
+  confirmed?: boolean;
   createdAt: number;
   updatedAt: number;
 }

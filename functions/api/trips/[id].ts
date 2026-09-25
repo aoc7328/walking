@@ -2,8 +2,32 @@
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
-  put(key: string, value: string): Promise<void>;
+  put(key: string, value: string, options?: { metadata?: unknown }): Promise<void>;
   delete(key: string): Promise<void>;
+}
+
+/**
+ * 跟著行程一起存的 KV metadata（起訖日、行程已確定、updatedAt）：胖齊肥柔記帳（ledger）列 key 時就看得到，
+ * 不用把每一趟幾百 KB 的行程都抓下來，只抓勾了「行程已確定」、而且有變動的。
+ */
+function tripMeta(body: unknown): Record<string, unknown> {
+  // 只放 ASCII 欄位（名稱記帳 App 會從整趟行程讀，不用放這裡）
+  const t = (body ?? {}) as { startDate?: unknown; days?: { date?: unknown }[]; confirmed?: unknown; updatedAt?: unknown };
+  const start = typeof t.startDate === 'string' ? t.startDate : '';
+  const days = Array.isArray(t.days) ? t.days : [];
+  const last = days.length ? days[days.length - 1]?.date : undefined;
+  let end = typeof last === 'string' ? last : '';
+  if (!end && start && days.length) {
+    const d = new Date(`${start}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days.length - 1);
+    end = d.toISOString().slice(0, 10);
+  }
+  return {
+    start,
+    end,
+    confirmed: t.confirmed === true,
+    updatedAt: typeof t.updatedAt === 'number' ? t.updatedAt : Date.now(),
+  };
 }
 
 import { requirePrivateAccess, privateJson, type AuthEnv } from '../../_lib/auth';
@@ -60,7 +84,7 @@ export async function onRequestPut(context: PagesContext): Promise<Response> {
     return privateJson({ error: `行程超過 ${MAX_SIZE / 1024}KB 上限` }, 413);
   }
 
-  await env.TRIPS.put(`u:${access.dataNamespaceId}:trip:${tripId}`, json);
+  await env.TRIPS.put(`u:${access.dataNamespaceId}:trip:${tripId}`, json, { metadata: tripMeta(body) });
   return privateJson({ ok: true });
 }
 

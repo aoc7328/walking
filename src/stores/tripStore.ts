@@ -52,6 +52,8 @@ interface TripStore {
   saveAsNewTrip: (name: string) => Promise<string>;
 
   renameTrip: (name: string) => void;
+  /** 行程已確定：勾了會同步到記帳 App */
+  setConfirmed: (confirmed: boolean) => void;
   changeStartDate: (newStartDate: string) => void;
 
   addItemToDay: (dayId: string, place: Place, opts?: { isHotel?: boolean }) => string | null;
@@ -221,6 +223,9 @@ export const useTripStore = create<TripStore>((set, get) => ({
 
   renameTrip: (name) =>
     set((state) => (state.trip ? { trip: { ...state.trip, name, updatedAt: Date.now() } } : {})),
+
+  setConfirmed: (confirmed) =>
+    set((state) => (state.trip ? { trip: { ...state.trip, confirmed, updatedAt: Date.now() } } : {})),
 
   changeStartDate: (newStartDate) =>
     set((state) => {

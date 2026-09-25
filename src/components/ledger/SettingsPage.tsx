@@ -25,6 +25,11 @@ export default function SettingsPage({ ledger, tripName }: { ledger: Ledger; tri
   const fileRef = useRef<HTMLInputElement>(null);
   const ticketRef = useRef<HTMLInputElement>(null);
   const tripId = useTripStore((s) => s.trip?.id ?? '');
+  const confirmed = useTripStore((s) => !!s.trip?.confirmed);
+  const setConfirmed = useTripStore((s) => s.setConfirmed);
+  const trip = useTripStore((s) => s.trip);
+  // 多人版（walking-multi）沒有記帳 App，不顯示
+  const showLedgerSync = import.meta.env.MODE !== 'worker';
   const cats = categoriesOf(ledger);
   const split = categorySplit(ledger);
   const isDefaultCat = (c: string) => (EXPENSE_CATEGORIES as string[]).includes(c);
@@ -85,8 +90,35 @@ ${summary}
     }
   }
 
+  const range = (() => {
+    if (!trip?.startDate) return '';
+    const n = trip.days.length;
+    const last = trip.days[n - 1]?.date;
+    return last ? `${trip.startDate} – ${last}` : trip.startDate;
+  })();
+
   return (
     <div className="led-page-cols">
+      {showLedgerSync && (
+        <section className="led-block">
+          <div className="led-block-head"><h3>同步到記帳 App</h3>
+            <span className="led-muted">胖齊肥柔記帳</span>
+          </div>
+          <label className="led-settings-row" style={{ gap: 10, cursor: 'pointer', alignItems: 'flex-start' }}>
+            <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 4, width: 18, height: 18 }} />
+            <span>
+              <strong>行程已確定</strong>
+              <br />
+              <span className="led-muted">
+                勾了之後，記帳 App 會知道這趟{range ? `（${range}）` : ''}在旅行，
+                「出發後」記的帳（信用卡付的；現金、鈺柔的卡不算）會自動同步成流水帳，掛上這趟行程。
+                旅行時只要記 Walk 就好。記得按「儲存」。
+              </span>
+            </span>
+          </label>
+        </section>
+      )}
+
       {/* 目的地・幣別・匯率 */}
       <section className="led-block">
         <div className="led-block-head"><h3>目的地・幣別・匯率</h3>
